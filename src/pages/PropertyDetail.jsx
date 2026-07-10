@@ -6,7 +6,7 @@ import { MapPin, Users, Clock, Shield, Star, ChevronLeft, ChevronRight, Heart, S
 import toast from 'react-hot-toast'
 
 const amenityIcons = { 'Piscina': '🏊', 'Wi-Fi': '📶', 'Estacionamento': '🚗', 'Churrasco': '🍖', 'Spa': '🛁', 'Toalhas': '🛁', 'Drinks': '🥤', 'Vista mar': '🌊', 'Jardim': '🌿', 'Deck': '🪵' }
-const typeLabels = { pool: 'Piscina', chacara: 'Chácara', gourmet: 'Espaço Gourmet', court: 'Quadra', soccer: 'Campo de Futebol', futevolei: 'Quadra de Futevôlei' }
+const typeLabels = { pool: 'Piscina', chacara: 'Chacara', gourmet: 'Espaco Gourmet', court: 'Quadra', soccer: 'Campo de Futebol', futevolei: 'Quadra de Futevolei' }
 
 export default function PropertyDetail() {
   const { id } = useParams()
@@ -33,9 +33,19 @@ export default function PropertyDetail() {
   }
 
   async function handleBooking() {
-    if (!user) { toast.error('Faça login para reservar!'); navigate('/entrar'); return }
+    if (!user) { toast.error('Faca login para reservar!'); navigate('/entrar'); return }
     if (!selectedDate) { toast.error('Selecione uma data!'); return }
-    if (guests < 1) { toast.error('Selecione o número de convidados!'); return }
+    if (guests < 1) { toast.error('Selecione o numero de convidados!'); return }
+
+    const weekday = new Date(selectedDate + 'T00:00:00').getDay()
+    if (property.available_days?.length && !property.available_days.includes(weekday)) {
+      toast.error('O anfitriao nao atende nesse dia da semana.'); return
+    }
+    const { data: blocked } = await supabase.from('blocked_dates').select('id').eq('property_id', property.id).eq('date', selectedDate).maybeSingle()
+    if (blocked) { toast.error('Essa data nao esta disponivel.'); return }
+    const { data: existing } = await supabase.from('bookings').select('id').eq('property_id', property.id).eq('date', selectedDate).in('status', ['pending', 'confirmed']).maybeSingle()
+    if (existing) { toast.error('Essa data ja foi reservada.'); return }
+
     setBookingLoading(true)
     try {
       const totalAmount = Number(property.price_per_day || property.price_per_hour)
@@ -117,13 +127,13 @@ export default function PropertyDetail() {
 
             <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 mb-4">
               <div className="flex items-center gap-1"><MapPin size={14}/>{property.city} — BR</div>
-              <div className="flex items-center gap-1"><Users size={14}/>Até {property.max_capacity} pessoas</div>
-              <div className="flex items-center gap-1"><Clock size={14}/>Mínimo {property.min_duration || 1} dia</div>
+              <div className="flex items-center gap-1"><Users size={14}/>Ate {property.max_capacity} pessoas</div>
+              <div className="flex items-center gap-1"><Clock size={14}/>Minimo {property.min_duration || 1} dia</div>
             </div>
 
             <div className="flex flex-wrap gap-2 mb-6">
               {[
-                { icon: <Users size={14}/>, label: `Até ${property.max_capacity} pessoas` },
+                { icon: <Users size={14}/>, label: `Ate ${property.max_capacity} pessoas` },
                 { icon: <Clock size={14}/>, label: 'Reserva garantida' },
                 { icon: <Shield size={14}/>, label: 'Pagamento seguro' },
               ].map((tag, i) => (
@@ -132,19 +142,20 @@ export default function PropertyDetail() {
             </div>
 
             <div className="border-t pt-5 mb-5">
-              <div className="flex items-center gap-3">
+              <Link to={`/anfitriao/${property.host_id}/perfil`} className="flex items-center gap-3 group">
                 <div className="w-10 h-10 bg-primary-500 rounded-full flex items-center justify-center text-white font-bold">
                   {host?.name?.charAt(0)?.toUpperCase() || 'A'}
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-800">Anfitrião: {host?.name}</p>
+                  <p className="font-semibold text-gray-800 group-hover:text-primary-500 transition-colors">Anfitriao: {host?.name}</p>
+                  <p className="text-xs text-gray-400">Ver perfil</p>
                 </div>
-              </div>
+              </Link>
             </div>
 
             {property.description && (
               <div className="border-t pt-5 mb-5">
-                <h2 className="font-bold text-gray-800 mb-2">Sobre o espaço</h2>
+                <h2 className="font-bold text-gray-800 mb-2">Sobre o espaco</h2>
                 <p className="text-gray-600 text-sm leading-relaxed">{property.description}</p>
               </div>
             )}
@@ -170,21 +181,21 @@ export default function PropertyDetail() {
             )}
 
             <div className="border-t pt-5">
-              <h2 className="font-bold text-gray-800 mb-2">Localização aproximada</h2>
+              <h2 className="font-bold text-gray-800 mb-2">Localizacao aproximada</h2>
               <div className="flex items-center gap-2 text-gray-500 text-sm bg-gray-50 rounded-xl p-4">
                 <MapPin size={16} className="text-primary-500"/>
                 <span>{property.city} — BR</span>
               </div>
-              <p className="text-xs text-gray-400 mt-2">O endereço completo será compartilhado após a confirmação da reserva.</p>
+              <p className="text-xs text-gray-400 mt-2">O endereco completo sera compartilhado apos a confirmacao da reserva.</p>
             </div>
 
             <div className="border-t pt-5 mt-5">
-              <h2 className="font-bold text-gray-800 mb-3">Avaliações</h2>
+              <h2 className="font-bold text-gray-800 mb-3">Avaliacoes</h2>
               <div className="flex items-center gap-3">
                 <div className="flex items-center gap-1">
                   {[1,2,3,4,5].map(s => <Star key={s} size={18} className="text-gray-200 fill-gray-200"/>)}
                 </div>
-                <p className="text-gray-500 text-sm">Nenhuma avaliação ainda.</p>
+                <p className="text-gray-500 text-sm">Nenhuma avaliacao ainda.</p>
               </div>
             </div>
           </div>
@@ -194,7 +205,7 @@ export default function PropertyDetail() {
             <div className="sticky top-20 border-2 border-gray-100 rounded-3xl p-6 shadow-xl">
               <div className="flex items-baseline gap-2 mb-5">
                 <span className="text-2xl font-bold text-gray-800">R$ {totalAmount.toLocaleString('pt-BR')}</span>
-                <span className="text-gray-500">/diária</span>
+                <span className="text-gray-500">/diaria</span>
               </div>
 
               <div className="space-y-3 mb-4">
@@ -209,7 +220,7 @@ export default function PropertyDetail() {
                     <span className="flex-1 text-center font-medium">{guests} pessoa{guests > 1 ? 's' : ''}</span>
                     <button onClick={() => setGuests(g => Math.min(property.max_capacity, g + 1))} className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 text-lg font-medium">+</button>
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">Máx. {property.max_capacity} pessoas</p>
+                  <p className="text-xs text-gray-400 mt-1">Max. {property.max_capacity} pessoas</p>
                 </div>
               </div>
 
@@ -241,7 +252,7 @@ export default function PropertyDetail() {
 
       {/* Bottom bar mobile */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex items-center justify-between lg:hidden">
-        <div><span className="font-bold text-gray-800 text-lg">R$ {totalAmount.toLocaleString('pt-BR')}</span><span className="text-gray-500 text-sm">/diária</span></div>
+        <div><span className="font-bold text-gray-800 text-lg">R$ {totalAmount.toLocaleString('pt-BR')}</span><span className="text-gray-500 text-sm">/diaria</span></div>
         <button onClick={handleBooking} disabled={bookingLoading || !selectedDate} className="btn-primary px-8 py-3 text-sm">
           {bookingLoading ? 'Aguarde...' : 'Reservar'}
         </button>
