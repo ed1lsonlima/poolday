@@ -22,3 +22,61 @@
     @apply bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden;
   }
 }
+
+/* ── Bolhas animadas do hero ─────────────────────────────── */
+@keyframes bubble-rise {
+  0% {
+    transform: translate3d(0, 0, 0) scale(0.85);
+    opacity: 0;
+  }
+  12% {
+    opacity: var(--bubble-opacity, 0.45);
+  }
+  85% {
+    opacity: var(--bubble-opacity, 0.45);
+  }
+  100% {
+    transform: translate3d(var(--bubble-drift, 15px), -420px, 0) scale(1.05);
+    opacity: 0;
+  }
+}
+
+.hero-bubbles {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.bubble {
+  position: absolute;
+  bottom: -60px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, rgba(255, 255, 255, 0.65), rgba(255, 255, 255, 0.05) 70%);
+  animation: bubble-rise linear infinite;
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bubble {
+    animation: none;
+    opacity: 0.12;
+  }
+}
+
+/* ── Dropdown do card de busca ───────────────────────────── */
+@keyframes dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.dropdown-panel {
+  animation: dropdown-in 0.16s ease-out;
+  transform-origin: top;
+}
