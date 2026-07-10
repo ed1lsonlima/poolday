@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { Plus, LayoutDashboard, CreditCard, Star, Calendar, Eye, Edit, Trash2, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { Plus, LayoutDashboard, CreditCard, Star, Calendar, Eye, Edit, Trash2, CheckCircle, XCircle, Clock, Link2, ShieldCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function HostDashboard() {
@@ -13,10 +13,22 @@ export default function HostDashboard() {
   const [stats, setStats] = useState({ total: 0, confirmed: 0, pending: 0, revenue: 0 })
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
 
   useEffect(() => {
     if (user) { fetchProperties(); fetchBookings() }
   }, [user])
+
+  useEffect(() => {
+    if (searchParams.get('mp_connected')) {
+      toast.success('Conta do Mercado Pago conectada com sucesso!')
+      setTab('pagamentos')
+    }
+    if (searchParams.get('mp_error')) {
+      toast.error('Não foi possível conectar o Mercado Pago. Tente novamente.')
+      setTab('pagamentos')
+    }
+  }, [searchParams])
 
   async function fetchProperties() {
     const { data } = await supabase.from('properties').select('*').eq('host_id', user.id).order('created_at', { ascending: false })
@@ -170,21 +182,51 @@ export default function HostDashboard() {
         )}
 
         {tab === 'pagamentos' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h2 className="font-bold text-gray-800 mb-2">Pagamentos via Mercado Pago</h2>
-            <p className="text-gray-500 text-sm mb-6">Os repasses são processados automaticamente. 15% de taxa de serviço é descontada de cada reserva.</p>
-            <div className="grid md:grid-cols-3 gap-4">
-              <div className="bg-green-50 rounded-xl p-5">
-                <p className="text-xs text-green-600 font-semibold uppercase">Total Recebido</p>
-                <p className="text-2xl font-bold text-green-700 mt-1">R$ {stats.revenue.toLocaleString('pt-BR', {minimumFractionDigits:2})}</p>
-              </div>
-              <div className="bg-yellow-50 rounded-xl p-5">
-                <p className="text-xs text-yellow-600 font-semibold uppercase">Pendente</p>
-                <p className="text-2xl font-bold text-yellow-700 mt-1">R$ 0,00</p>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-5">
-                <p className="text-xs text-gray-500 font-semibold uppercase">Total Repasses</p>
-                <p className="text-2xl font-bold text-gray-700 mt-1">{stats.confirmed}</p>
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <h2 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
+                <ShieldCheck size={20} className="text-primary-500" /> Conta Mercado Pago
+              </h2>
+              {profile?.mp_user_id ? (
+                <div className="flex items-center gap-3 bg-green-50 border border-green-100 rounded-xl p-4">
+                  <CheckCircle size={22} className="text-green-600 shrink-0" />
+                  <div>
+                    <p className="font-semibold text-green-700 text-sm">Conta conectada</p>
+                    <p className="text-green-600 text-xs mt-0.5">Você já pode receber pagamentos diretamente na sua conta Mercado Pago.</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-yellow-50 border border-yellow-100 rounded-xl p-4">
+                  <div className="flex-1">
+                    <p className="font-semibold text-yellow-700 text-sm">Conta não conectada</p>
+                    <p className="text-yellow-600 text-xs mt-0.5">Conecte sua conta Mercado Pago pra receber os pagamentos das suas reservas automaticamente.</p>
+                  </div>
+                  <a
+                    href={`/api/mp-connect?host_id=${user?.id}`}
+                    className="btn-primary flex items-center justify-center gap-2 text-sm whitespace-nowrap"
+                  >
+                    <Link2 size={16} /> Conectar Mercado Pago
+                  </a>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <h2 className="font-bold text-gray-800 mb-2">Pagamentos via Mercado Pago</h2>
+              <p className="text-gray-500 text-sm mb-6">Os repasses são processados automaticamente. 15% de taxa de serviço é descontada de cada reserva.</p>
+              <div className="grid md:grid-cols-3 gap-4">
+                <div className="bg-green-50 rounded-xl p-5">
+                  <p className="text-xs text-green-600 font-semibold uppercase">Total Recebido</p>
+                  <p className="text-2xl font-bold text-green-700 mt-1">R$ {stats.revenue.toLocaleString('pt-BR', {minimumFractionDigits:2})}</p>
+                </div>
+                <div className="bg-yellow-50 rounded-xl p-5">
+                  <p className="text-xs text-yellow-600 font-semibold uppercase">Pendente</p>
+                  <p className="text-2xl font-bold text-yellow-700 mt-1">R$ 0,00</p>
+                </div>
+                <div className="bg-gray-50 rounded-xl p-5">
+                  <p className="text-xs text-gray-500 font-semibold uppercase">Total Repasses</p>
+                  <p className="text-2xl font-bold text-gray-700 mt-1">{stats.confirmed}</p>
+                </div>
               </div>
             </div>
           </div>
