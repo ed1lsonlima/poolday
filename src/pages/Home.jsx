@@ -36,8 +36,15 @@ const FAQS = [
   { q: 'Como os anfitriões recebem o pagamento?', a: 'O pagamento é processado com segurança pelo Mercado Pago. Os anfitriões recebem automaticamente após a confirmação da reserva.' },
 ]
 
-const SPACE_TYPES = ['Todos os espaços', 'Piscina', 'Chácara', 'Espaço Gourmet', 'Quadra', 'Campo de Futebol', 'Quadra de Futevôlei']
-const TYPE_IDS    = ['',          'pool',    'chacara', 'gourmet',         'court',   'soccer',              'futevolei']
+const SPACE_TYPES = [
+  { id: '',           label: 'Todos os espaços',       emoji: '🌐' },
+  { id: 'pool',       label: 'Piscina',                emoji: '🏊' },
+  { id: 'chacara',    label: 'Chácara',                emoji: '🌿' },
+  { id: 'gourmet',    label: 'Espaço Gourmet',         emoji: '🍖' },
+  { id: 'court',      label: 'Quadra',                 emoji: '🏀' },
+  { id: 'soccer',     label: 'Campo de Futebol',       emoji: '⚽' },
+  { id: 'futevolei',  label: 'Quadra de Futevôlei',    emoji: '🏐' },
+]
 
 function FaqItem({ q, a }) {
   const [open, setOpen] = useState(false)
@@ -65,7 +72,7 @@ export default function Home() {
     e.preventDefault()
     const params = new URLSearchParams()
     if (city.trim()) params.set('cidade', city.trim())
-    if (TYPE_IDS[typeIdx]) params.set('tipo', TYPE_IDS[typeIdx])
+    if (SPACE_TYPES[typeIdx].id) params.set('tipo', SPACE_TYPES[typeIdx].id)
     navigate(`/explorar?${params.toString()}`)
   }
 
@@ -81,23 +88,48 @@ export default function Home() {
 
       {/* ── HERO ─────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-500 to-blue-400 pt-14 pb-20 px-4">
-        {/* decorative circles */}
+        {/* decorative glow */}
         <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* bolhas animadas */}
+        <div className="hero-bubbles" aria-hidden="true">
+          {[
+            { size: 18, left: '6%',  duration: 13, delay: -2,  opacity: 0.35, drift: '10px' },
+            { size: 34, left: '16%', duration: 18, delay: -9,  opacity: 0.25, drift: '-18px' },
+            { size: 12, left: '27%', duration: 10, delay: -4,  opacity: 0.45, drift: '8px' },
+            { size: 46, left: '38%', duration: 22, delay: -14, opacity: 0.18, drift: '-14px' },
+            { size: 20, left: '50%', duration: 15, delay: -6,  opacity: 0.35, drift: '16px' },
+            { size: 60, left: '62%', duration: 25, delay: -18, opacity: 0.15, drift: '-22px' },
+            { size: 15, left: '73%', duration: 11, delay: -1,  opacity: 0.4,  drift: '12px' },
+            { size: 30, left: '83%', duration: 17, delay: -10, opacity: 0.28, drift: '-10px' },
+            { size: 22, left: '92%', duration: 14, delay: -7,  opacity: 0.3,  drift: '14px' },
+          ].map((b, i) => (
+            <span
+              key={i}
+              className="bubble"
+              style={{
+                width: b.size, height: b.size, left: b.left,
+                animationDuration: `${b.duration}s`, animationDelay: `${b.delay}s`,
+                '--bubble-opacity': b.opacity, '--bubble-drift': b.drift,
+              }}
+            />
+          ))}
+        </div>
 
         <div className="relative max-w-xl mx-auto text-center">
           <h1 className="text-4xl font-extrabold text-white leading-tight mb-3">
             Encontre a piscina perfeita<br/>para o seu dia
           </h1>
           <p className="text-white/80 text-base mb-8">
-            Reserve por diária, com segurança e sem complicação.
+            Reserve por horas ou diária, com segurança e sem complicação.
           </p>
 
           {/* Search card */}
-          <form onSubmit={handleSearch} className="bg-white rounded-3xl shadow-2xl overflow-hidden text-left">
+          <form onSubmit={handleSearch} className="bg-white/95 backdrop-blur rounded-3xl shadow-[0_20px_60px_-15px_rgba(11,63,114,0.45)] ring-1 ring-white/40 overflow-hidden text-left">
             {/* Cidade */}
             <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-              <div className="w-9 h-9 bg-primary-50 rounded-xl flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 bg-gradient-to-br from-primary-50 to-primary-100 rounded-xl flex items-center justify-center shrink-0">
                 <MapPin size={18} className="text-primary-500" />
               </div>
               <div className="flex-1 min-w-0">
@@ -116,27 +148,30 @@ export default function Home() {
               <button
                 type="button"
                 onClick={() => setTypeOpen(!typeOpen)}
-                className="w-full flex items-center gap-3 px-5 py-4 border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                className="w-full flex items-center gap-3 px-5 py-4 border-b border-gray-100 hover:bg-primary-50/40 transition-colors"
               >
-                <div className="w-9 h-9 bg-primary-50 rounded-xl flex items-center justify-center shrink-0">
-                  <Waves size={18} className="text-primary-500" />
+                <div className="w-10 h-10 bg-gradient-to-br from-primary-50 to-primary-100 rounded-xl flex items-center justify-center shrink-0 text-lg">
+                  {SPACE_TYPES[typeIdx].emoji}
                 </div>
                 <div className="flex-1 text-left min-w-0">
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Tipo de espaço</p>
-                  <p className="text-sm text-gray-700 mt-0.5">{SPACE_TYPES[typeIdx]}</p>
+                  <p className="text-sm text-gray-700 mt-0.5 font-medium">{SPACE_TYPES[typeIdx].label}</p>
                 </div>
-                <ChevronDown size={16} className={`text-gray-400 transition-transform ${typeOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${typeOpen ? 'rotate-180' : ''}`} />
               </button>
               {typeOpen && (
-                <div className="absolute left-0 right-0 bg-white border border-gray-100 shadow-xl z-20 rounded-b-2xl overflow-hidden">
+                <div className="dropdown-panel absolute left-2 right-2 top-full mt-1 bg-white border border-gray-100 shadow-xl z-20 rounded-2xl overflow-hidden py-1.5">
                   {SPACE_TYPES.map((t, i) => (
                     <button
-                      key={i}
+                      key={t.id}
                       type="button"
                       onClick={() => { setTypeIdx(i); setTypeOpen(false) }}
-                      className={`w-full text-left px-5 py-3 text-sm transition-colors ${typeIdx === i ? 'bg-primary-50 text-primary-600 font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}
+                      className={`w-full flex items-center gap-3 text-left px-4 py-2.5 text-sm transition-colors rounded-xl mx-1.5 my-0.5 ${typeIdx === i ? 'bg-primary-50 text-primary-600 font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}
+                      style={{ width: 'calc(100% - 0.75rem)' }}
                     >
-                      {t}
+                      <span className="text-base">{t.emoji}</span>
+                      <span className="flex-1">{t.label}</span>
+                      {typeIdx === i && <CheckCircle size={15} className="text-primary-500 shrink-0" />}
                     </button>
                   ))}
                 </div>
@@ -145,7 +180,7 @@ export default function Home() {
 
             {/* Botão */}
             <div className="px-4 py-4">
-              <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-3.5">
+              <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-3.5 shadow-lg shadow-primary-500/30 hover:shadow-primary-600/40 transition-shadow">
                 <Search size={18} />
                 <span className="font-bold">Buscar</span>
               </button>
