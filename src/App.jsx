@@ -11,6 +11,14 @@ import PropertyDetail from './pages/PropertyDetail'
 import HostDashboard from './pages/HostDashboard'
 import NewProperty from './pages/NewProperty'
 import ClientProfile from './pages/ClientProfile'
+import HostWelcome from './pages/HostWelcome'
+import OnboardingWizard from './pages/OnboardingWizard'
+import HostProfile from './pages/HostProfile'
+import AvailabilityCalendar from './pages/AvailabilityCalendar'
+import Termos from './pages/Termos'
+import Privacidade from './pages/Privacidade'
+import AcordoAnfitriao from './pages/AcordoAnfitriao'
+import Cancelamento from './pages/Cancelamento'
 
 function ProtectedRoute({ children, hostOnly = false }) {
   const { user, profile, loading } = useAuth()
@@ -43,13 +51,21 @@ export default function App() {
           <Route path="/" element={<Layout><Home /></Layout>} />
           <Route path="/explorar" element={<Layout><Explore /></Layout>} />
           <Route path="/espaco/:id" element={<Layout noFooter><PropertyDetail /></Layout>} />
+          <Route path="/anfitriao/:id/perfil" element={<Layout><HostProfile /></Layout>} />
           <Route path="/cadastro" element={<Register />} />
           <Route path="/entrar" element={<Login />} />
+          <Route path="/termos" element={<Termos />} />
+          <Route path="/privacidade" element={<Privacidade />} />
+          <Route path="/acordo-anfitriao" element={<AcordoAnfitriao />} />
+          <Route path="/cancelamento" element={<Cancelamento />} />
           <Route path="/perfil" element={<ProtectedRoute><Layout><ClientProfile /></Layout></ProtectedRoute>} />
           <Route path="/reservas" element={<ProtectedRoute><Layout><ClientProfile tab="reservas" /></Layout></ProtectedRoute>} />
           <Route path="/favoritos" element={<ProtectedRoute><Layout><ClientProfile tab="favoritos" /></Layout></ProtectedRoute>} />
           <Route path="/anfitriao" element={<ProtectedRoute hostOnly><Layout><HostDashboard /></Layout></ProtectedRoute>} />
+          <Route path="/anfitriao/boas-vindas" element={<ProtectedRoute hostOnly><Layout><HostWelcome /></Layout></ProtectedRoute>} />
+          <Route path="/anfitriao/cadastrar-espaco" element={<ProtectedRoute hostOnly><Layout noFooter><OnboardingWizard /></Layout></ProtectedRoute>} />
           <Route path="/anfitriao/nova-piscina" element={<ProtectedRoute hostOnly><Layout><NewProperty /></Layout></ProtectedRoute>} />
+          <Route path="/anfitriao/:id/calendario" element={<ProtectedRoute hostOnly><Layout><AvailabilityCalendar /></Layout></ProtectedRoute>} />
           <Route path="/anfitriao/editar/:id" element={<ProtectedRoute hostOnly><Layout><NewProperty /></Layout></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
