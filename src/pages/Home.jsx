@@ -8,42 +8,42 @@ import {
 
 const CATEGORIES = [
   { id: 'pool',      label: 'Piscina',           emoji: '🏊' },
-  { id: 'chacara',  label: 'Chácara',            emoji: '🌿' },
-  { id: 'gourmet',  label: 'Espaço Gourmet',     emoji: '🍖' },
+  { id: 'chacara',  label: 'Chacara',            emoji: '🌿' },
+  { id: 'gourmet',  label: 'Espaco Gourmet',     emoji: '🍖' },
   { id: 'court',    label: 'Quadra',              emoji: '🏀' },
   { id: 'soccer',   label: 'Campo de Futebol',   emoji: '⚽' },
-  { id: 'futevolei',label: 'Quadra de Futevôlei',emoji: '🏐' },
+  { id: 'futevolei',label: 'Quadra de Futevolei',emoji: '🏐' },
 ]
 
 const TESTIMONIALS = [
-  { text: 'Reservei uma piscina em Maceió pelo PoolDay e foi tudo perfeito. Processo super simples e o lugar era exatamente como nas fotos.', name: 'Juliana Souza', location: 'Maceió - AL', initials: 'JS', color: 'bg-pink-400' },
-  { text: 'Usei o PoolDay pra comemorar o aniversário do meu filho. Muito mais barato que alugar salão e foi uma experiência incrível.', name: 'Carlos Henrique', location: 'Recife - PE', initials: 'CH', color: 'bg-blue-400' },
-  { text: 'Fiquei com receio no começo, mas a plataforma é segura e o anfitrião respondeu rápido. Já usei duas vezes.', name: 'Fernanda Lima', location: 'São Paulo - SP', initials: 'FL', color: 'bg-purple-400' },
-  { text: 'Coloquei minha piscina no PoolDay e já recebi várias reservas. Está gerando uma renda extra todo mês.', name: 'Ricardo Alves', location: 'Anfitrião - RJ', initials: 'RA', color: 'bg-green-400' },
-  { text: 'Muito fácil de usar. Em poucos minutos consegui encontrar uma piscina perto de mim e fazer a reserva.', name: 'Amanda Rocha', location: 'Salvador - BA', initials: 'AR', color: 'bg-orange-400' },
-  { text: 'O que mais gostei foi a segurança. Todo o pagamento é feito pela plataforma, sem risco.', name: 'Lucas Martins', location: 'Fortaleza - CE', initials: 'LM', color: 'bg-red-400' },
+  { text: 'Reservei uma piscina em Maceio pelo PoolDay e foi tudo perfeito. Processo super simples e o lugar era exatamente como nas fotos.', name: 'Juliana Souza', location: 'Maceio - AL', initials: 'JS', color: 'bg-pink-400' },
+  { text: 'Usei o PoolDay pra comemorar o aniversario do meu filho. Muito mais barato que alugar salao e foi uma experiencia incrivel.', name: 'Carlos Henrique', location: 'Recife - PE', initials: 'CH', color: 'bg-blue-400' },
+  { text: 'Fiquei com receio no comeco, mas a plataforma e segura e o anfitriao respondeu rapido. Ja usei duas vezes.', name: 'Fernanda Lima', location: 'Sao Paulo - SP', initials: 'FL', color: 'bg-purple-400' },
+  { text: 'Coloquei minha piscina no PoolDay e ja recebi varias reservas. Esta gerando uma renda extra todo mes.', name: 'Ricardo Alves', location: 'Anfitriao - RJ', initials: 'RA', color: 'bg-green-400' },
+  { text: 'Muito facil de usar. Em poucos minutos consegui encontrar uma piscina perto de mim e fazer a reserva.', name: 'Amanda Rocha', location: 'Salvador - BA', initials: 'AR', color: 'bg-orange-400' },
+  { text: 'O que mais gostei foi a seguranca. Todo o pagamento e feito pela plataforma, sem risco.', name: 'Lucas Martins', location: 'Fortaleza - CE', initials: 'LM', color: 'bg-red-400' },
 ]
 
 const FAQS = [
-  { q: 'Como funciona a reserva?', a: 'Busque o espaço ideal, escolha a data, selecione o número de convidados e finalize o pagamento pelo site. Rápido e seguro.' },
-  { q: 'O que está incluído na reserva?', a: 'Cada anfitrião define o que está incluído no espaço. Veja as comodidades na página do espaço antes de reservar.' },
-  { q: 'Quantas pessoas posso levar?', a: 'Cada espaço tem uma capacidade máxima definida pelo anfitrião. Você pode verificar isso na página do espaço.' },
-  { q: 'Terei acesso a banheiro?', a: 'Isso depende de cada espaço. Verifique a descrição e as comodidades listadas na página do espaço.' },
-  { q: 'O anfitrião estará presente durante a reserva?', a: 'Depende do anfitrião. Você pode verificar isso nas instruções de check-in ou perguntar diretamente pelo chat.' },
-  { q: 'O que acontece se o tempo estiver ruim?', a: 'Consulte nossa Política de Cancelamento. Em casos de força maior, trabalhamos para encontrar a melhor solução.' },
-  { q: 'Posso levar comida e bebida?', a: 'Sim, na maioria dos espaços. Mas verifique as regras da casa de cada anfitrião antes da reserva.' },
-  { q: 'Posso fazer uma festa ou evento?', a: 'Muitos espaços permitem. Verifique as regras do espaço específico e entre em contato com o anfitrião se tiver dúvidas.' },
-  { q: 'Como os anfitriões recebem o pagamento?', a: 'O pagamento é processado com segurança pelo Mercado Pago. Os anfitriões recebem automaticamente após a confirmação da reserva.' },
+  { q: 'Como funciona a reserva?', a: 'Busque o espaco ideal, escolha a data, selecione o numero de convidados e finalize o pagamento pelo site. Rapido e seguro.' },
+  { q: 'O que esta incluido na reserva?', a: 'Cada anfitriao define o que esta incluido no espaco. Veja as comodidades na pagina do espaco antes de reservar.' },
+  { q: 'Quantas pessoas posso levar?', a: 'Cada espaco tem uma capacidade maxima definida pelo anfitriao. Voce pode verificar isso na pagina do espaco.' },
+  { q: 'Terei acesso a banheiro?', a: 'Isso depende de cada espaco. Verifique a descricao e as comodidades listadas na pagina do espaco.' },
+  { q: 'O anfitriao estara presente durante a reserva?', a: 'Depende do anfitriao. Voce pode verificar isso nas instrucoes de check-in ou perguntar diretamente pelo chat.' },
+  { q: 'O que acontece se o tempo estiver ruim?', a: 'Consulte nossa Politica de Cancelamento. Em casos de forca maior, trabalhamos para encontrar a melhor solucao.' },
+  { q: 'Posso levar comida e bebida?', a: 'Sim, na maioria dos espacos. Mas verifique as regras da casa de cada anfitriao antes da reserva.' },
+  { q: 'Posso fazer uma festa ou evento?', a: 'Muitos espacos permitem. Verifique as regras do espaco especifico e entre em contato com o anfitriao se tiver duvidas.' },
+  { q: 'Como os anfitrioes recebem o pagamento?', a: 'O pagamento e processado com seguranca pelo Mercado Pago. Os anfitrioes recebem automaticamente apos a confirmacao da reserva.' },
 ]
 
 const SPACE_TYPES = [
-  { id: '',           label: 'Todos os espaços',       emoji: '🌐' },
-  { id: 'pool',       label: 'Piscina',                emoji: '🏊' },
-  { id: 'chacara',    label: 'Chácara',                emoji: '🌿' },
-  { id: 'gourmet',    label: 'Espaço Gourmet',         emoji: '🍖' },
-  { id: 'court',      label: 'Quadra',                 emoji: '🏀' },
-  { id: 'soccer',     label: 'Campo de Futebol',       emoji: '⚽' },
-  { id: 'futevolei',  label: 'Quadra de Futevôlei',    emoji: '🏐' },
+  { id: '',           label: 'Todos os espacos',            emoji: '🌐' },
+  { id: 'pool',       label: 'Piscina',                      emoji: '🏊' },
+  { id: 'chacara',    label: 'Chacara',                      emoji: '🌿' },
+  { id: 'gourmet',    label: 'Espaco Gourmet',               emoji: '🍖' },
+  { id: 'court',      label: 'Quadra',                       emoji: '🏀' },
+  { id: 'soccer',     label: 'Campo de Futebol',             emoji: '⚽' },
+  { id: 'futevolei',  label: 'Quadra de Futevolei',          emoji: '🏐' },
 ]
 
 function FaqItem({ q, a }) {
@@ -55,7 +55,7 @@ function FaqItem({ q, a }) {
         className="w-full flex items-center justify-between px-5 py-4 text-left font-semibold text-gray-800 hover:bg-gray-50 transition-colors"
       >
         <span>{q}</span>
-        <ChevronDown size={18} className={`text-gray-400 transition-transform shrink-0 ml-3 ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={18} className={\`text-gray-400 transition-transform shrink-0 ml-3 \${open ? 'rotate-180' : ''}\`} />
       </button>
       {open && <div className="px-5 pb-4 text-gray-500 text-sm leading-relaxed border-t border-gray-100 pt-3">{a}</div>}
     </div>
@@ -73,7 +73,7 @@ export default function Home() {
     const params = new URLSearchParams()
     if (city.trim()) params.set('cidade', city.trim())
     if (SPACE_TYPES[typeIdx].id) params.set('tipo', SPACE_TYPES[typeIdx].id)
-    navigate(`/explorar?${params.toString()}`)
+    navigate(\`/explorar?\${params.toString()}\`)
   }
 
   function handleLocation() {
@@ -110,7 +110,7 @@ export default function Home() {
               className="bubble"
               style={{
                 width: b.size, height: b.size, left: b.left,
-                animationDuration: `${b.duration}s`, animationDelay: `${b.delay}s`,
+                animationDuration: \`\${b.duration}s\`, animationDelay: \`\${b.delay}s\`,
                 '--bubble-opacity': b.opacity, '--bubble-drift': b.drift,
               }}
             />
@@ -122,25 +122,26 @@ export default function Home() {
             Encontre a piscina perfeita<br/>para o seu dia
           </h1>
           <p className="text-white/80 text-base mb-8">
-            Reserve por horas ou diária, com segurança e sem complicação.
+            Reserve por horas ou diaria, com seguranca e sem complicacao.
           </p>
 
           {/* Search card */}
-          <form onSubmit={handleSearch} className="bg-white/95 backdrop-blur rounded-3xl shadow-[0_20px_60px_-15px_rgba(11,63,114,0.45)] ring-1 ring-white/40 overflow-hidden text-left">
+          <form onSubmit={handleSearch} className="bg-white/95 backdrop-blur rounded-3xl shadow-[0_20px_60px_-15px_rgba(11,63,114,0.45)] ring-1 ring-white/40 text-left">
             {/* Cidade */}
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 rounded-t-3xl">
               <div className="w-10 h-10 bg-gradient-to-br from-primary-50 to-primary-100 rounded-xl flex items-center justify-center shrink-0">
                 <MapPin size={18} className="text-primary-500" />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Qual cidade?</p>
                 <input
-                  className="w-full text-sm text-gray-700 outline-none mt-0.5 placeholder:text-gray-400 bg-transparent"
+                  className="w-full text-base text-gray-800 outline-none mt-0.5 placeholder:text-gray-400 placeholder:font-normal bg-transparent"
                   placeholder="Digite a cidade"
                   value={city}
                   onChange={e => setCity(e.target.value)}
                 />
               </div>
+              <Search size={18} className="text-gray-300 shrink-0" />
             </div>
 
             {/* Tipo */}
@@ -154,32 +155,35 @@ export default function Home() {
                   {SPACE_TYPES[typeIdx].emoji}
                 </div>
                 <div className="flex-1 text-left min-w-0">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Tipo de espaço</p>
-                  <p className="text-sm text-gray-700 mt-0.5 font-medium">{SPACE_TYPES[typeIdx].label}</p>
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Tipo de espaco</p>
+                  <p className="text-base text-gray-800 mt-0.5 font-medium">{SPACE_TYPES[typeIdx].label}</p>
                 </div>
-                <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 ${typeOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown size={16} className={\`text-gray-400 transition-transform duration-200 shrink-0 \${typeOpen ? 'rotate-180' : ''}\`} />
               </button>
               {typeOpen && (
-                <div className="dropdown-panel absolute left-2 right-2 top-full mt-1 bg-white border border-gray-100 shadow-xl z-20 rounded-2xl overflow-hidden py-1.5">
-                  {SPACE_TYPES.map((t, i) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => { setTypeIdx(i); setTypeOpen(false) }}
-                      className={`w-full flex items-center gap-3 text-left px-4 py-2.5 text-sm transition-colors rounded-xl mx-1.5 my-0.5 ${typeIdx === i ? 'bg-primary-50 text-primary-600 font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}
-                      style={{ width: 'calc(100% - 0.75rem)' }}
-                    >
-                      <span className="text-base">{t.emoji}</span>
-                      <span className="flex-1">{t.label}</span>
-                      {typeIdx === i && <CheckCircle size={15} className="text-primary-500 shrink-0" />}
-                    </button>
-                  ))}
-                </div>
+                <>
+                  <div className="fixed inset-0 z-20" onClick={() => setTypeOpen(false)} />
+                  <div className="dropdown-panel absolute left-2 right-2 top-full mt-1 bg-white border border-gray-100 shadow-xl z-30 rounded-2xl max-h-72 overflow-y-auto py-1.5">
+                    {SPACE_TYPES.map((t, i) => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        onClick={() => { setTypeIdx(i); setTypeOpen(false) }}
+                        className={\`w-full flex items-center gap-3 text-left px-4 py-2.5 text-sm transition-colors rounded-xl mx-1.5 my-0.5 \${typeIdx === i ? 'bg-primary-50 text-primary-600 font-semibold' : 'text-gray-700 hover:bg-gray-50'}\`}
+                        style={{ width: 'calc(100% - 0.75rem)' }}
+                      >
+                        <span className="text-base">{t.emoji}</span>
+                        <span className="flex-1">{t.label}</span>
+                        {typeIdx === i && <CheckCircle size={15} className="text-primary-500 shrink-0" />}
+                      </button>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
 
-            {/* Botão */}
-            <div className="px-4 py-4">
+            {/* Botao */}
+            <div className="px-4 py-4 rounded-b-3xl">
               <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-3.5 shadow-lg shadow-primary-500/30 hover:shadow-primary-600/40 transition-shadow">
                 <Search size={18} />
                 <span className="font-bold">Buscar</span>
@@ -187,20 +191,20 @@ export default function Home() {
             </div>
           </form>
 
-          {/* Localização */}
+          {/* Localizacao */}
           <button
             onClick={handleLocation}
             className="mt-4 flex items-center gap-2 mx-auto text-white/80 hover:text-white text-sm transition-colors bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full"
           >
             <MapPin size={15} />
-            <span>📍 Usar minha localização</span>
+            <span>📍 Usar minha localizacao</span>
           </button>
 
           {/* Trust badges */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-white/70 text-xs">
             <span className="flex items-center gap-1.5"><CreditCard size={13}/> Pagamento 100% seguro</span>
             <span className="flex items-center gap-1.5"><Shield size={13}/> Reserva garantida</span>
-            <span className="flex items-center gap-1.5"><MessageCircle size={13}/> Comunicação segura</span>
+            <span className="flex items-center gap-1.5"><MessageCircle size={13}/> Comunicacao segura</span>
           </div>
         </div>
       </section>
@@ -209,13 +213,13 @@ export default function Home() {
       <section className="max-w-2xl mx-auto px-4 py-12">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-extrabold text-gray-800">Explore por categoria</h2>
-          <p className="text-gray-500 mt-1">Encontre o tipo de espaço ideal para o seu evento</p>
+          <p className="text-gray-500 mt-1">Encontre o tipo de espaco ideal para o seu evento</p>
         </div>
         <div className="grid grid-cols-2 gap-4">
           {CATEGORIES.map(cat => (
             <button
               key={cat.id}
-              onClick={() => navigate(`/explorar?tipo=${cat.id}`)}
+              onClick={() => navigate(\`/explorar?tipo=\${cat.id}\`)}
               className="group flex flex-col items-center justify-center gap-3 p-6 bg-white border-2 border-gray-100 rounded-3xl hover:border-primary-400 hover:bg-primary-50 hover:shadow-md transition-all duration-200"
             >
               <span className="text-4xl">{cat.emoji}</span>
@@ -225,12 +229,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── ESPAÇOS EM DESTAQUE ───────────────────────────────── */}
+      {/* ── ESPACOS EM DESTAQUE ───────────────────────────────── */}
       <section className="bg-gray-50 py-12 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-2xl font-extrabold text-gray-800">Espaços em destaque</h2>
+              <h2 className="text-2xl font-extrabold text-gray-800">Espacos em destaque</h2>
               <p className="text-gray-500 text-sm mt-0.5">Os mais bem avaliados da plataforma</p>
             </div>
             <Link to="/explorar" className="text-primary-500 text-sm font-semibold hover:underline flex items-center gap-1">
@@ -241,16 +245,16 @@ export default function Home() {
           {/* Placeholder cards — preenchidos com dados reais quando houver */}
           <div className="space-y-4">
             {[
-              { name: 'Sua piscina aqui', city: 'Cadastre seu espaço', price: '—', rating: '—' },
+              { name: 'Sua piscina aqui', city: 'Cadastre seu espaco', price: '—', rating: '—' },
             ].map((_, i) => (
               <div key={i} className="bg-white rounded-3xl border-2 border-dashed border-gray-200 p-6 flex flex-col items-center text-center gap-3">
                 <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center">
                   <Waves size={28} className="text-primary-400" />
                 </div>
-                <p className="font-semibold text-gray-600">Seja o primeiro a cadastrar seu espaço!</p>
-                <p className="text-gray-400 text-sm">Os espaços aparecerão aqui conforme forem cadastrados.</p>
+                <p className="font-semibold text-gray-600">Seja o primeiro a cadastrar seu espaco!</p>
+                <p className="text-gray-400 text-sm">Os espacos aparecerao aqui conforme forem cadastrados.</p>
                 <Link to="/cadastro?role=host" className="btn-primary text-sm px-5 py-2.5 mt-1">
-                  Cadastrar meu espaço
+                  Cadastrar meu espaco
                 </Link>
               </div>
             ))}
@@ -258,7 +262,7 @@ export default function Home() {
 
           <div className="mt-6 text-center">
             <Link to="/explorar" className="btn-secondary inline-flex items-center gap-2 text-sm">
-              Ver todos os espaços <ChevronRight size={16}/>
+              Ver todos os espacos <ChevronRight size={16}/>
             </Link>
           </div>
         </div>
@@ -272,9 +276,9 @@ export default function Home() {
         </div>
         <div className="space-y-5">
           {[
-            { icon: <Search size={26} className="text-primary-500"/>, title: 'Encontre', desc: 'Busque piscinas e espaços incríveis na sua cidade com filtros inteligentes.' },
-            { icon: <Calendar size={26} className="text-primary-500"/>, title: 'Reserve', desc: 'Escolha data, horário e faça sua reserva com pagamento seguro.' },
-            { icon: <Waves size={26} className="text-primary-500"/>, title: 'Aproveite', desc: 'Curta seu dia de piscina com amigos e família. Diversão garantida!' },
+            { icon: <Search size={26} className="text-primary-500"/>, title: 'Encontre', desc: 'Busque piscinas e espacos incriveis na sua cidade com filtros inteligentes.' },
+            { icon: <Calendar size={26} className="text-primary-500"/>, title: 'Reserve', desc: 'Escolha data, horario e faca sua reserva com pagamento seguro.' },
+            { icon: <Waves size={26} className="text-primary-500"/>, title: 'Aproveite', desc: 'Curta seu dia de piscina com amigos e familia. Diversao garantida!' },
           ].map((step, i) => (
             <div key={i} className="flex items-start gap-5 bg-gray-50 rounded-3xl p-5">
               <div className="w-14 h-14 bg-primary-100 rounded-2xl flex items-center justify-center shrink-0">
@@ -289,19 +293,19 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── SEGURANÇA ─────────────────────────────────────────── */}
+      {/* ── SEGURANCA ─────────────────────────────────────────── */}
       <section className="bg-gray-50 py-14 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
-            <h2 className="text-2xl font-extrabold text-gray-800">Reserve com total segurança</h2>
-            <p className="text-gray-500 mt-1">Sua experiência é protegida do início ao fim</p>
+            <h2 className="text-2xl font-extrabold text-gray-800">Reserve com total seguranca</h2>
+            <p className="text-gray-500 mt-1">Sua experiencia e protegida do inicio ao fim</p>
           </div>
           <div className="grid grid-cols-1 gap-4">
             {[
-              { icon: <CreditCard size={26} className="text-primary-500"/>, title: 'Pagamento 100% seguro', desc: 'Transações protegidas via Mercado Pago' },
-              { icon: <Shield size={26} className="text-primary-500"/>, title: 'Reserva garantida', desc: 'Sua reserva é protegida pela plataforma' },
-              { icon: <MessageCircle size={26} className="text-primary-500"/>, title: 'Comunicação segura', desc: 'Converse com o anfitrião dentro do site' },
-              { icon: <CheckCircle size={26} className="text-primary-500"/>, title: 'Anfitriões verificados', desc: 'Perfis e espaços revisados pela equipe' },
+              { icon: <CreditCard size={26} className="text-primary-500"/>, title: 'Pagamento 100% seguro', desc: 'Transacoes protegidas via Mercado Pago' },
+              { icon: <Shield size={26} className="text-primary-500"/>, title: 'Reserva garantida', desc: 'Sua reserva e protegida pela plataforma' },
+              { icon: <MessageCircle size={26} className="text-primary-500"/>, title: 'Comunicacao segura', desc: 'Converse com o anfitriao dentro do site' },
+              { icon: <CheckCircle size={26} className="text-primary-500"/>, title: 'Anfitrioes verificados', desc: 'Perfis e espacos revisados pela equipe' },
             ].map((item, i) => (
               <div key={i} className="bg-white rounded-3xl p-5 flex items-center gap-4 shadow-sm border border-gray-100">
                 <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center shrink-0">
@@ -317,27 +321,27 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── CTA ANFITRIÃO ─────────────────────────────────────── */}
+      {/* ── CTA ANFITRIAO ─────────────────────────────────────── */}
       <section className="bg-gradient-to-br from-primary-600 to-blue-400 py-14 px-4">
         <div className="max-w-xl mx-auto text-white">
           <h2 className="text-3xl font-extrabold leading-tight mb-3">
             Tem uma piscina?<br/>Ganhe dinheiro com ela!
           </h2>
           <p className="text-white/80 mb-8 text-base leading-relaxed">
-            Cadastre seu espaço gratuitamente e comece a receber reservas hoje mesmo. Milhares de pessoas estão procurando piscinas na sua região.
+            Cadastre seu espaco gratuitamente e comece a receber reservas hoje mesmo. Milhares de pessoas estao procurando piscinas na sua regiao.
           </p>
           <Link
             to="/cadastro?role=host"
             className="inline-flex items-center gap-2 bg-white text-primary-600 font-bold px-7 py-3.5 rounded-2xl hover:bg-gray-50 transition-colors text-base shadow-lg"
           >
-            Anuncie grátis <ChevronRight size={20}/>
+            Anuncie gratis <ChevronRight size={20}/>
           </Link>
 
           <div className="mt-8 grid grid-cols-1 gap-3">
             {[
               { icon: <DollarSign size={22}/>, title: 'Ganhe dinheiro', desc: 'Transforme sua piscina em uma fonte de renda extra.' },
-              { icon: <Calendar size={22}/>, title: 'Você define o horário', desc: 'Controle total sobre disponibilidade e preços.' },
-              { icon: <Shield size={22}/>, title: 'Pagamento seguro', desc: 'Receba diretamente na sua conta com segurança.' },
+              { icon: <Calendar size={22}/>, title: 'Voce define o horario', desc: 'Controle total sobre disponibilidade e precos.' },
+              { icon: <Shield size={22}/>, title: 'Pagamento seguro', desc: 'Receba diretamente na sua conta com seguranca.' },
             ].map((item, i) => (
               <div key={i} className="flex items-center gap-4 bg-white/15 rounded-2xl px-4 py-3.5">
                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
@@ -357,16 +361,16 @@ export default function Home() {
       <section className="py-14 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
-            <span className="inline-block bg-primary-50 text-primary-600 text-xs font-bold px-4 py-1.5 rounded-full mb-3">Avaliações reais</span>
-            <h2 className="text-2xl font-extrabold text-gray-800">O que estão falando do PoolDay</h2>
-            <p className="text-gray-500 mt-1 text-sm">Pessoas reais alugando piscinas com segurança em todo o Brasil.</p>
+            <span className="inline-block bg-primary-50 text-primary-600 text-xs font-bold px-4 py-1.5 rounded-full mb-3">Avaliacoes reais</span>
+            <h2 className="text-2xl font-extrabold text-gray-800">O que estao falando do PoolDay</h2>
+            <p className="text-gray-500 mt-1 text-sm">Pessoas reais alugando piscinas com seguranca em todo o Brasil.</p>
           </div>
           <div className="space-y-4">
             {TESTIMONIALS.map((t, i) => (
               <div key={i} className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm">
                 <p className="text-gray-600 text-sm leading-relaxed mb-4">"{t.text}"</p>
                 <div className="flex items-center gap-3">
-                  <div className={`w-10 h-10 ${t.color} rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0`}>
+                  <div className={\`w-10 h-10 \${t.color} rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0\`}>
                     {t.initials}
                   </div>
                   <div>
@@ -385,7 +389,7 @@ export default function Home() {
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
             <h2 className="text-2xl font-extrabold text-gray-800">Perguntas Frequentes</h2>
-            <p className="text-gray-500 mt-1 text-sm">Tudo o que você precisa saber sobre reservas de piscinas no PoolDay.</p>
+            <p className="text-gray-500 mt-1 text-sm">Tudo o que voce precisa saber sobre reservas de piscinas no PoolDay.</p>
           </div>
           <div className="space-y-3">
             {FAQS.map((faq, i) => <FaqItem key={i} {...faq} />)}
