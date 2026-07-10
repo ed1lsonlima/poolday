@@ -55,7 +55,7 @@ function FaqItem({ q, a }) {
         className="w-full flex items-center justify-between px-5 py-4 text-left font-semibold text-gray-800 hover:bg-gray-50 transition-colors"
       >
         <span>{q}</span>
-        <ChevronDown size={18} className={\`text-gray-400 transition-transform shrink-0 ml-3 \${open ? 'rotate-180' : ''}\`} />
+        <ChevronDown size={18} className={`text-gray-400 transition-transform shrink-0 ml-3 ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && <div className="px-5 pb-4 text-gray-500 text-sm leading-relaxed border-t border-gray-100 pt-3">{a}</div>}
     </div>
@@ -73,7 +73,7 @@ export default function Home() {
     const params = new URLSearchParams()
     if (city.trim()) params.set('cidade', city.trim())
     if (SPACE_TYPES[typeIdx].id) params.set('tipo', SPACE_TYPES[typeIdx].id)
-    navigate(\`/explorar?\${params.toString()}\`)
+    navigate(`/explorar?${params.toString()}`)
   }
 
   function handleLocation() {
@@ -86,13 +86,10 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-white">
 
-      {/* ── HERO ─────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-500 to-blue-400 pt-14 pb-20 px-4">
-        {/* decorative glow */}
         <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-16 -left-16 w-64 h-64 bg-white/10 rounded-full blur-3xl pointer-events-none" />
 
-        {/* bolhas animadas */}
         <div className="hero-bubbles" aria-hidden="true">
           {[
             { size: 18, left: '6%',  duration: 13, delay: -2,  opacity: 0.35, drift: '10px' },
@@ -110,7 +107,7 @@ export default function Home() {
               className="bubble"
               style={{
                 width: b.size, height: b.size, left: b.left,
-                animationDuration: \`\${b.duration}s\`, animationDelay: \`\${b.delay}s\`,
+                animationDuration: `${b.duration}s`, animationDelay: `${b.delay}s`,
                 '--bubble-opacity': b.opacity, '--bubble-drift': b.drift,
               }}
             />
@@ -125,9 +122,7 @@ export default function Home() {
             Reserve por horas ou diaria, com seguranca e sem complicacao.
           </p>
 
-          {/* Search card */}
           <form onSubmit={handleSearch} className="bg-white/95 backdrop-blur rounded-3xl shadow-[0_20px_60px_-15px_rgba(11,63,114,0.45)] ring-1 ring-white/40 text-left">
-            {/* Cidade */}
             <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 rounded-t-3xl">
               <div className="w-10 h-10 bg-gradient-to-br from-primary-50 to-primary-100 rounded-xl flex items-center justify-center shrink-0">
                 <MapPin size={18} className="text-primary-500" />
@@ -144,7 +139,6 @@ export default function Home() {
               <Search size={18} className="text-gray-300 shrink-0" />
             </div>
 
-            {/* Tipo */}
             <div className="relative">
               <button
                 type="button"
@@ -158,7 +152,7 @@ export default function Home() {
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Tipo de espaco</p>
                   <p className="text-base text-gray-800 mt-0.5 font-medium">{SPACE_TYPES[typeIdx].label}</p>
                 </div>
-                <ChevronDown size={16} className={\`text-gray-400 transition-transform duration-200 shrink-0 \${typeOpen ? 'rotate-180' : ''}\`} />
+                <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 shrink-0 ${typeOpen ? 'rotate-180' : ''}`} />
               </button>
               {typeOpen && (
                 <>
@@ -169,7 +163,7 @@ export default function Home() {
                         key={t.id}
                         type="button"
                         onClick={() => { setTypeIdx(i); setTypeOpen(false) }}
-                        className={\`w-full flex items-center gap-3 text-left px-4 py-2.5 text-sm transition-colors rounded-xl mx-1.5 my-0.5 \${typeIdx === i ? 'bg-primary-50 text-primary-600 font-semibold' : 'text-gray-700 hover:bg-gray-50'}\`}
+                        className={`w-full flex items-center gap-3 text-left px-4 py-2.5 text-sm transition-colors rounded-xl mx-1.5 my-0.5 ${typeIdx === i ? 'bg-primary-50 text-primary-600 font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}
                         style={{ width: 'calc(100% - 0.75rem)' }}
                       >
                         <span className="text-base">{t.emoji}</span>
@@ -182,7 +176,6 @@ export default function Home() {
               )}
             </div>
 
-            {/* Botao */}
             <div className="px-4 py-4 rounded-b-3xl">
               <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-3.5 shadow-lg shadow-primary-500/30 hover:shadow-primary-600/40 transition-shadow">
                 <Search size={18} />
@@ -191,16 +184,14 @@ export default function Home() {
             </div>
           </form>
 
-          {/* Localizacao */}
           <button
             onClick={handleLocation}
             className="mt-4 flex items-center gap-2 mx-auto text-white/80 hover:text-white text-sm transition-colors bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full"
           >
             <MapPin size={15} />
-            <span>📍 Usar minha localizacao</span>
+            <span>Usar minha localizacao</span>
           </button>
 
-          {/* Trust badges */}
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-white/70 text-xs">
             <span className="flex items-center gap-1.5"><CreditCard size={13}/> Pagamento 100% seguro</span>
             <span className="flex items-center gap-1.5"><Shield size={13}/> Reserva garantida</span>
@@ -209,7 +200,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── CATEGORIAS ───────────────────────────────────────── */}
       <section className="max-w-2xl mx-auto px-4 py-12">
         <div className="text-center mb-8">
           <h2 className="text-2xl font-extrabold text-gray-800">Explore por categoria</h2>
@@ -219,7 +209,7 @@ export default function Home() {
           {CATEGORIES.map(cat => (
             <button
               key={cat.id}
-              onClick={() => navigate(\`/explorar?tipo=\${cat.id}\`)}
+              onClick={() => navigate(`/explorar?tipo=${cat.id}`)}
               className="group flex flex-col items-center justify-center gap-3 p-6 bg-white border-2 border-gray-100 rounded-3xl hover:border-primary-400 hover:bg-primary-50 hover:shadow-md transition-all duration-200"
             >
               <span className="text-4xl">{cat.emoji}</span>
@@ -229,7 +219,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── ESPACOS EM DESTAQUE ───────────────────────────────── */}
       <section className="bg-gray-50 py-12 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center justify-between mb-6">
@@ -242,10 +231,9 @@ export default function Home() {
             </Link>
           </div>
 
-          {/* Placeholder cards — preenchidos com dados reais quando houver */}
           <div className="space-y-4">
             {[
-              { name: 'Sua piscina aqui', city: 'Cadastre seu espaco', price: '—', rating: '—' },
+              { name: 'Sua piscina aqui', city: 'Cadastre seu espaco', price: '-', rating: '-' },
             ].map((_, i) => (
               <div key={i} className="bg-white rounded-3xl border-2 border-dashed border-gray-200 p-6 flex flex-col items-center text-center gap-3">
                 <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center">
@@ -268,7 +256,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── COMO FUNCIONA ─────────────────────────────────────── */}
       <section className="max-w-2xl mx-auto px-4 py-14">
         <div className="text-center mb-10">
           <h2 className="text-2xl font-extrabold text-gray-800">Como funciona</h2>
@@ -293,7 +280,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── SEGURANCA ─────────────────────────────────────────── */}
       <section className="bg-gray-50 py-14 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
@@ -321,7 +307,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── CTA ANFITRIAO ─────────────────────────────────────── */}
       <section className="bg-gradient-to-br from-primary-600 to-blue-400 py-14 px-4">
         <div className="max-w-xl mx-auto text-white">
           <h2 className="text-3xl font-extrabold leading-tight mb-3">
@@ -357,7 +342,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── DEPOIMENTOS ───────────────────────────────────────── */}
       <section className="py-14 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
@@ -370,7 +354,7 @@ export default function Home() {
               <div key={i} className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm">
                 <p className="text-gray-600 text-sm leading-relaxed mb-4">"{t.text}"</p>
                 <div className="flex items-center gap-3">
-                  <div className={\`w-10 h-10 \${t.color} rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0\`}>
+                  <div className={`w-10 h-10 ${t.color} rounded-full flex items-center justify-center text-white font-bold text-sm shrink-0`}>
                     {t.initials}
                   </div>
                   <div>
@@ -384,7 +368,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── FAQ ───────────────────────────────────────────────── */}
       <section className="bg-gray-50 py-14 px-4">
         <div className="max-w-2xl mx-auto">
           <div className="text-center mb-8">
