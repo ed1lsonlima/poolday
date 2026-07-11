@@ -25,7 +25,7 @@ import ScrollToTop from './components/common/ScrollToTop'
 
 function ProtectedRoute({ children, hostOnly = false }) {
   const { user, profile, loading } = useAuth()
-  if (loading) return (
+  if (loading || (user && !profile)) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="animate-spin w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full" />
     </div>
