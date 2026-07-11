@@ -1,11 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { User, CalendarDays, Heart, Edit2, MapPin, Star, X, Users } from 'lucide-react'
+import { User, CalendarDays, Heart, Edit2, MapPin, Star, X, Users, CheckCircle, MessageCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Link, useSearchParams } from 'react-router-dom'
 import { formatDateBR } from '../lib/formatDate'
 import PropertyCard from '../components/common/PropertyCard'
+
+// Monta um link de WhatsApp pro anfitriao com mensagem pronta.
+function waLink(phone, propName, date) {
+  const digits = String(phone || '').replace(/\D/g, '')
+  const withCountry = digits.startsWith('55') ? digits : '55' + digits
+  const msg = `Olá! Fiz uma reserva no PoolDay${propName ? ` para "${propName}"` : ''}${date ? ` no dia ${formatDateBR(date)}` : ''}. Gostaria de combinar os detalhes.`
+  return `https://wa.me/${withCountry}?text=${encodeURIComponent(msg)}`
+}
 
 export default function ClientProfile({ tab: initialTab = 'perfil' }) {
   const { user, profile, updateProfile } = useAuth()
@@ -43,6 +51,7 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
         setConfirming(false)
         clearInterval(interval)
         toast.success('Reserva confirmada!')
+        setDetail(newest)
         const sp = new URLSearchParams(searchParams)
         sp.delete('pagamento')
         setSearchParams(sp, { replace: true })
@@ -58,7 +67,7 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
   }, [user])
 
   async function fetchBookings() {
-    const { data } = await supabase.from('bookings').select('*, properties(name, images, city, neighborhood, address)').eq('client_id', user.id).order('created_at', { ascending: false })
+    const { data } = await supabase.from('bookings').select('*, properties(name, images, city, neighborhood, address), host:profiles!bookings_host_id_fkey(name, phone)').eq('client_id', user.id).order('created_at', { ascending: false })
     setBookings(data || [])
     return data || []
   }
@@ -285,15 +294,35 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
                   <span className="font-bold text-gray-800">R$ {Number(detail.total_amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </div>
               </div>
-              <div className="mt-4 rounded-xl p-3 text-xs bg-gray-50 text-gray-600 leading-relaxed">
-                {detail.status === 'confirmed'
-                  ? (detail.properties?.address
-                      ? <>📍 <b>Endereço:</b> {detail.properties.address}</>
-                      : 'Reserva confirmada! O anfitrião entrará em contato com os detalhes de acesso.')
-                  : detail.status === 'pending' ? '⏳ Aguardando a confirmação do pagamento. O endereço completo aparece aqui após a confirmação.'
-                  : detail.status === 'cancelled' ? 'Esta reserva foi cancelada.'
-                  : 'Reserva concluída. Obrigado por usar o PoolDay!'}
-              </div>
+              {detail.status === 'confirmed' ? (
+                <div className="mt-4 space-y-3">
+                  <div className="rounded-xl p-3.5 bg-green-50 border border-green-100">
+                    <p className="text-sm font-semibold text-green-700 mb-1.5 flex items-center gap-1.5"><CheckCircle size={15}/> Reserva confirmada! Próximos passos:</p>
+                    <ol className="text-xs text-green-700/90 space-y-1 list-decimal list-inside">
+                      <li>Combine o horário de chegada com o anfitrião pelo WhatsApp.</li>
+                      <li>No dia {formatDateBR(detail.date)}, é só chegar no endereço abaixo.</li>
+                      <li>Aproveite! Qualquer dúvida, fale direto com o anfitrião.</li>
+                    </ol>
+                  </div>
+                  {detail.properties?.address && (
+                    <div className="rounded-xl p-3 bg-gray-50 text-xs text-gray-600">📍 <b>Endereço:</b> {detail.properties.address}</div>
+                  )}
+                  {detail.host?.phone ? (
+                    <a href={waLink(detail.host.phone, detail.properties?.name, detail.date)} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-green-500 text-white font-semibold text-sm hover:bg-green-600 transition-colors">
+                      <MessageCircle size={16}/> Falar com {detail.host?.name || 'o anfitrião'} no WhatsApp
+                    </a>
+                  ) : (
+                    <p className="text-xs text-gray-400 text-center">O anfitrião entrará em contato com os detalhes de acesso.</p>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl p-3 text-xs bg-gray-50 text-gray-600 leading-relaxed">
+                  {detail.status === 'pending' ? '⏳ Aguardando a confirmação do pagamento. Assim que confirmar, o endereço e o contato do anfitrião aparecem aqui.'
+                    : detail.status === 'cancelled' ? 'Esta reserva foi cancelada.'
+                    : 'Reserva concluída. Obrigado por usar o PoolDay!'}
+                </div>
+              )}
               {detail.status === 'pending' && (
                 <button onClick={() => { const b = detail; setDetail(null); cancelBooking(b) }} className="w-full mt-4 text-sm font-semibold text-red-500 border border-red-200 rounded-xl py-2.5 hover:bg-red-50 transition-colors">
                   Cancelar reserva
