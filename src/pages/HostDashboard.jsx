@@ -6,7 +6,7 @@ import { Plus, LayoutDashboard, CreditCard, Star, Calendar, Eye, Edit, Trash2, C
 import toast from 'react-hot-toast'
 
 export default function HostDashboard() {
-  const { user, profile } = useAuth()
+  const { user, profile, fetchProfile } = useAuth()
   const [tab, setTab] = useState('dashboard')
   const [properties, setProperties] = useState([])
   const [bookings, setBookings] = useState([])
@@ -23,6 +23,7 @@ export default function HostDashboard() {
     if (searchParams.get('mp_connected')) {
       toast.success('Conta do Mercado Pago conectada com sucesso!')
       setTab('pagamentos')
+      if (user) fetchProfile?.(user.id)
     }
     if (searchParams.get('mp_error')) {
       toast.error('Nao foi possivel conectar o Mercado Pago. Tente novamente.')
@@ -46,6 +47,22 @@ export default function HostDashboard() {
       pending: bk.filter(b => b.status === 'pending').length,
       revenue: bk.filter(b => b.status === 'confirmed').reduce((s, b) => s + Number(b.host_amount || 0), 0),
     })
+  }
+
+  const [mpLoading, setMpLoading] = useState(false)
+
+  async function connectMP() {
+    setMpLoading(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) { toast.error('Sessão expirada. Faça login novamente.'); return }
+      const res = await fetch('/api/mp-connect', { headers: { Authorization: `Bearer ${session.access_token}` } })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+      else toast.error(data.error || 'Não foi possível iniciar a conexão.')
+    } catch {
+      toast.error('Erro de rede. Tente novamente.')
+    } finally { setMpLoading(false) }
   }
 
   async function toggleActive(id, current) {
@@ -90,7 +107,7 @@ export default function HostDashboard() {
             <p className="text-gray-500 text-sm">Gerencie seus espacos e reservas</p>
           </div>
           <Link to="/anfitriao/nova-piscina" className="btn-primary flex items-center gap-2 text-sm">
-            <Plus size={18} /> Nova Piscina
+            <Plus size={18} /> Novo Espaço
           </Link>
         </div>
 
@@ -123,11 +140,11 @@ export default function HostDashboard() {
 
             {/* Minhas piscinas */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-              <h2 className="font-bold text-gray-800 mb-4">Minhas Piscinas</h2>
+              <h2 className="font-bold text-gray-800 mb-4">Meus Espaços</h2>
               {loading ? <p className="text-gray-400 text-sm">Carregando...</p> : properties.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-gray-400 mb-3">Nenhum espaco cadastrado ainda.</p>
-                  <Link to="/anfitriao/nova-piscina" className="btn-primary text-sm">Cadastrar primeiro espaco</Link>
+                  <Link to="/anfitriao/nova-piscina" className="btn-primary text-sm">Cadastrar primeiro espaço</Link>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -188,7 +205,7 @@ export default function HostDashboard() {
               <h2 className="font-bold text-gray-800 mb-2 flex items-center gap-2">
                 <ShieldCheck size={20} className="text-primary-500" /> Conta Mercado Pago
               </h2>
-              {profile?.mp_user_id ? (
+              {profile?.mp_connected ? (
                 <div className="flex items-center gap-3 bg-green-50 border border-green-100 rounded-xl p-4">
                   <CheckCircle size={22} className="text-green-600 shrink-0" />
                   <div>
@@ -202,12 +219,13 @@ export default function HostDashboard() {
                     <p className="font-semibold text-yellow-700 text-sm">Conta nao conectada</p>
                     <p className="text-yellow-600 text-xs mt-0.5">Conecte sua conta Mercado Pago pra receber os pagamentos das suas reservas automaticamente.</p>
                   </div>
-                  <a
-                    href={`/api/mp-connect?host_id=${user?.id}`}
-                    className="btn-primary flex items-center justify-center gap-2 text-sm whitespace-nowrap"
+                  <button
+                    onClick={connectMP}
+                    disabled={mpLoading}
+                    className="btn-primary flex items-center justify-center gap-2 text-sm whitespace-nowrap disabled:opacity-60"
                   >
-                    <Link2 size={16} /> Conectar Mercado Pago
-                  </a>
+                    <Link2 size={16} /> {mpLoading ? 'Abrindo...' : 'Conectar Mercado Pago'}
+                  </button>
                 </div>
               )}
             </div>

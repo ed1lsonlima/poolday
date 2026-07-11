@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /anfitriao
+Disallow: /perfil
+Disallow: /reservas
+Disallow: /favoritos
+Disallow: /api/
+
+Sitemap: https://pooldaybr.com/sitemap.xml

@@ -19,6 +19,9 @@ import Termos from './pages/Termos'
 import Privacidade from './pages/Privacidade'
 import AcordoAnfitriao from './pages/AcordoAnfitriao'
 import Cancelamento from './pages/Cancelamento'
+import NotFound from './pages/NotFound'
+import ErrorBoundary from './components/common/ErrorBoundary'
+import ScrollToTop from './components/common/ScrollToTop'
 
 function ProtectedRoute({ children, hostOnly = false }) {
   const { user, profile, loading } = useAuth()
@@ -44,8 +47,10 @@ function Layout({ children, noFooter = false }) {
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <AuthProvider>
       <BrowserRouter>
+        <ScrollToTop />
         <Toaster position="top-center" toastOptions={{ duration: 3000, style: { borderRadius: '12px', fontFamily: 'Inter, sans-serif' } }} />
         <Routes>
           <Route path="/" element={<Layout><Home /></Layout>} />
@@ -67,9 +72,10 @@ export default function App() {
           <Route path="/anfitriao/nova-piscina" element={<ProtectedRoute hostOnly><Layout><NewProperty /></Layout></ProtectedRoute>} />
           <Route path="/anfitriao/:id/calendario" element={<ProtectedRoute hostOnly><Layout><AvailabilityCalendar /></Layout></ProtectedRoute>} />
           <Route path="/anfitriao/editar/:id" element={<ProtectedRoute hostOnly><Layout><NewProperty /></Layout></ProtectedRoute>} />
-          <Route path="*" element={<Navigate to="/" replace />} />
+          <Route path="*" element={<Layout><NotFound /></Layout>} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
+    </ErrorBoundary>
   )
 }
