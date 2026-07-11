@@ -6,6 +6,20 @@ import { Plus, LayoutDashboard, CreditCard, Star, Calendar, Eye, Edit, Trash2, C
 import toast from 'react-hot-toast'
 import { formatDateBR } from '../lib/formatDate'
 
+function ActionButton({ icon, label, onClick, variant = 'primary' }) {
+  const hover = variant === 'danger' ? 'hover:text-red-500 hover:bg-red-50'
+    : variant === 'warning' ? 'hover:text-yellow-500 hover:bg-yellow-50'
+    : 'hover:text-primary-500 hover:bg-primary-50'
+  return (
+    <button onClick={onClick} title={label} aria-label={label}
+      className={`group relative flex items-center gap-1 p-2 text-gray-400 ${hover} rounded-lg transition-colors`}>
+      {icon}
+      <span className="sm:hidden text-xs font-medium">{label}</span>
+      <span className="hidden sm:group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-gray-800 text-white text-[11px] rounded whitespace-nowrap z-20 pointer-events-none shadow-lg">{label}</span>
+    </button>
+  )
+}
+
 export default function HostDashboard() {
   const { user, profile, fetchProfile } = useAuth()
   const [tab, setTab] = useState('dashboard')
@@ -13,6 +27,7 @@ export default function HostDashboard() {
   const [bookings, setBookings] = useState([])
   const [stats, setStats] = useState({ total: 0, confirmed: 0, pending: 0, revenue: 0 })
   const [loading, setLoading] = useState(true)
+  const [deleting, setDeleting] = useState(null)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -70,14 +85,16 @@ export default function HostDashboard() {
   async function toggleActive(id, current) {
     await supabase.from('properties').update({ is_active: !current }).eq('id', id)
     fetchProperties()
-    toast.success(!current ? 'Espaco ativado!' : 'Espaco pausado!')
+    if (!current) toast.success('Espaço ativado! Já aparece nas buscas para os clientes.')
+    else toast('Espaço pausado. Ele fica oculto das buscas até você reativar.', { icon: '⏸️' })
   }
 
-  async function deleteProperty(id) {
-    if (!confirm('Tem certeza que deseja excluir este espaco?')) return
-    await supabase.from('properties').delete().eq('id', id)
+  async function confirmDelete() {
+    if (!deleting) return
+    await supabase.from('properties').delete().eq('id', deleting.id)
+    setDeleting(null)
     fetchProperties()
-    toast.success('Espaco excluido!')
+    toast.success('Espaço excluído.')
   }
 
   const statusConfig = {
@@ -151,23 +168,23 @@ export default function HostDashboard() {
               ) : (
                 <div className="space-y-3">
                   {properties.map(p => (
-                    <div key={p.id} className="flex items-center gap-4 p-3 rounded-xl border border-gray-100 hover:bg-gray-50">
-                      <img src={p.images?.[0] || 'https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?w=100'} alt={p.name} className="w-16 h-16 rounded-xl object-cover" />
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-800 truncate">{p.name}</h3>
-                        <p className="text-sm text-gray-500">{p.city} • R$ {Number(p.price_per_day || p.price_per_hour).toLocaleString('pt-BR')}/diaria</p>
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${p.is_active ? 'text-green-600 bg-green-50' : 'text-gray-500 bg-gray-100'}`}>
-                          {p.is_active ? 'Ativo' : 'Pausado'}
-                        </span>
+                    <div key={p.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-3 rounded-xl border border-gray-100 hover:bg-gray-50">
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <img src={p.images?.[0] || 'https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?w=100'} alt={p.name} className="w-16 h-16 rounded-xl object-cover shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-800 truncate">{p.name}</h3>
+                          <p className="text-sm text-gray-500">{p.city} • R$ {Number(p.price_per_day || p.price_per_hour).toLocaleString('pt-BR')}/diaria</p>
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${p.is_active ? 'text-green-600 bg-green-50' : 'text-gray-500 bg-gray-100'}`}>
+                            {p.is_active ? 'Ativo' : 'Pausado'}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <button onClick={() => navigate(`/espaco/${p.id}`)} className="p-2 text-gray-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"><Eye size={16}/></button>
-                        <button onClick={() => navigate(`/anfitriao/${p.id}/calendario`)} className="p-2 text-gray-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"><Calendar size={16}/></button>
-                        <button onClick={() => navigate(`/anfitriao/editar/${p.id}`)} className="p-2 text-gray-400 hover:text-primary-500 hover:bg-primary-50 rounded-lg transition-colors"><Edit size={16}/></button>
-                        <button onClick={() => toggleActive(p.id, p.is_active)} className="p-2 text-gray-400 hover:text-yellow-500 hover:bg-yellow-50 rounded-lg transition-colors">
-                          {p.is_active ? <XCircle size={16}/> : <CheckCircle size={16}/>}
-                        </button>
-                        <button onClick={() => deleteProperty(p.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"><Trash2 size={16}/></button>
+                      <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                        <ActionButton icon={<Eye size={16}/>} label="Ver" onClick={() => navigate(`/espaco/${p.id}`)} />
+                        <ActionButton icon={<Calendar size={16}/>} label="Disponibilidade" onClick={() => navigate(`/anfitriao/${p.id}/calendario`)} />
+                        <ActionButton icon={<Edit size={16}/>} label="Editar" onClick={() => navigate(`/anfitriao/editar/${p.id}`)} />
+                        <ActionButton icon={p.is_active ? <XCircle size={16}/> : <CheckCircle size={16}/>} label={p.is_active ? 'Pausar' : 'Ativar'} onClick={() => toggleActive(p.id, p.is_active)} variant="warning" />
+                        <ActionButton icon={<Trash2 size={16}/>} label="Excluir" onClick={() => setDeleting(p)} variant="danger" />
                       </div>
                     </div>
                   ))}
@@ -253,6 +270,26 @@ export default function HostDashboard() {
           </div>
         )}
       </div>
+
+      {/* Modal de confirmacao de exclusao (#5) */}
+      {deleting && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setDeleting(null)}>
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4">
+              <Trash2 size={22} className="text-red-500" />
+            </div>
+            <h3 className="font-bold text-gray-800 text-lg text-center mb-1">Excluir espaço?</h3>
+            <p className="text-gray-500 text-sm text-center mb-1">
+              Você está prestes a excluir <b className="text-gray-700">{deleting.name}</b>.
+            </p>
+            <p className="text-gray-400 text-xs text-center mb-5">Esta ação é permanente e não pode ser desfeita.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleting(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 font-semibold text-sm text-gray-600 hover:bg-gray-50 transition-colors">Cancelar</button>
+              <button onClick={confirmDelete} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-semibold text-sm hover:bg-red-600 transition-colors">Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -289,24 +289,12 @@ export default function PropertyDetail() {
                 <span className="text-2xl font-bold text-gray-800">R$ {totalAmount.toLocaleString('pt-BR')}</span>
                 <span className="text-gray-500">/diária</span>
               </div>
-              {property.price_per_hour && property.price_per_day && (
-                <p className="text-xs text-gray-400 mb-4">Também disponível por hora: R$ {Number(property.price_per_hour).toLocaleString('pt-BR')}/h — combine com o anfitrião</p>
-              )}
-              {(!property.price_per_hour || !property.price_per_day) && <div className="mb-4" />}
+              <div className="mb-4" />
 
               <div className="space-y-3 mb-4">
                 <div>
                   <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Escolha a data</label>
                   <input type="date" min={today} className="input-field" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Convidados</label>
-                  <div className="flex items-center gap-3 border border-gray-200 rounded-xl px-4 py-3">
-                    <button onClick={() => setGuests(g => Math.max(1, g - 1))} className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 text-lg font-medium">−</button>
-                    <span className="flex-1 text-center font-medium">{guests} pessoa{guests > 1 ? 's' : ''}</span>
-                    <button onClick={() => setGuests(g => Math.min(property.max_capacity, g + 1))} className="w-7 h-7 rounded-full border border-gray-300 flex items-center justify-center hover:bg-gray-50 text-lg font-medium">+</button>
-                  </div>
-                  <p className="text-xs text-gray-400 mt-1">Máx. {property.max_capacity} pessoas</p>
                 </div>
               </div>
 

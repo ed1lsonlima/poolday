@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { User, CalendarDays, Heart, Edit2, MapPin, Star, X } from 'lucide-react'
+import { User, CalendarDays, Heart, Edit2, MapPin, Star, X, Users } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
+import { formatDateBR } from '../lib/formatDate'
 import PropertyCard from '../components/common/PropertyCard'
 
 export default function ClientProfile({ tab: initialTab = 'perfil' }) {
@@ -17,13 +18,49 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
   const [reviewing, setReviewing] = useState(null) // booking sendo avaliado
   const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' })
   const [loading, setLoading] = useState(false)
+  const [detail, setDetail] = useState(null) // booking aberto no modal de detalhes
+  const [confirming, setConfirming] = useState(false) // aguardando confirmacao do pagamento
+  const [searchParams, setSearchParams] = useSearchParams()
 
   useEffect(() => { if (profile) setForm({ name: profile.name || '', phone: profile.phone || '', city: profile.city || '' }) }, [profile])
   useEffect(() => { if (user) { fetchBookings(); fetchFavorites(); fetchMyReviews() } }, [user])
 
+  // Bug A: ao voltar do Mercado Pago, faz polling do status ate o webhook confirmar.
+  useEffect(() => {
+    const pg = searchParams.get('pagamento')
+    if (!user || (pg !== 'sucesso' && pg !== 'pendente')) return
+    setTab('reservas')
+    setConfirming(true)
+    let tries = 0
+    let cancelled = false
+    let interval
+    const check = async () => {
+      if (cancelled) return
+      const list = await fetchBookings()
+      tries++
+      const newest = list?.[0]
+      if (newest?.status === 'confirmed') {
+        setConfirming(false)
+        clearInterval(interval)
+        toast.success('Reserva confirmada!')
+        const sp = new URLSearchParams(searchParams)
+        sp.delete('pagamento')
+        setSearchParams(sp, { replace: true })
+      } else if (tries >= 12) {
+        setConfirming(false)
+        clearInterval(interval)
+      }
+    }
+    check()
+    interval = setInterval(check, 3000)
+    return () => { cancelled = true; clearInterval(interval) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
+
   async function fetchBookings() {
-    const { data } = await supabase.from('bookings').select('*, properties(name, images, city)').eq('client_id', user.id).order('created_at', { ascending: false })
+    const { data } = await supabase.from('bookings').select('*, properties(name, images, city, neighborhood, address)').eq('client_id', user.id).order('created_at', { ascending: false })
     setBookings(data || [])
+    return data || []
   }
 
   async function fetchFavorites() {
@@ -106,6 +143,17 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
           </div>
         </div>
 
+        {/* Banner de confirmacao de pagamento (Bug A) */}
+        {confirming && (
+          <div className="mb-4 flex items-center gap-3 bg-blue-50 border border-blue-100 rounded-xl p-4">
+            <div className="animate-spin w-5 h-5 border-2 border-blue-500 border-t-transparent rounded-full shrink-0" />
+            <div>
+              <p className="font-semibold text-blue-700 text-sm">Confirmando seu pagamento...</p>
+              <p className="text-blue-600 text-xs mt-0.5">Assim que o Mercado Pago confirmar, sua reserva vira <b>Confirmada</b> aqui automaticamente. Pode levar alguns segundos.</p>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
         <div className="flex gap-2 mb-6">
           {tabs.map(t => (
@@ -162,12 +210,13 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
               <div className="space-y-3">
                 {bookings.map(b => (
                   <div key={b.id} className="p-3 rounded-xl border border-gray-100">
-                    <div className="flex gap-4">
+                    <div className="flex gap-4 cursor-pointer group" onClick={() => setDetail(b)}>
                       <img src={b.properties?.images?.[0] || 'https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?w=100'} alt="" className="w-16 h-16 rounded-xl object-cover shrink-0" />
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-gray-800 truncate">{b.properties?.name}</p>
+                        <p className="font-semibold text-gray-800 truncate group-hover:text-primary-500 transition-colors">{b.properties?.name}</p>
                         <div className="flex items-center gap-1 text-gray-400 text-xs mt-0.5"><MapPin size={11}/>{b.properties?.city}</div>
-                        <p className="text-xs text-gray-500 mt-1">{new Date(b.date + 'T00:00:00').toLocaleDateString('pt-BR')} • R$ {Number(b.total_amount).toLocaleString('pt-BR')}</p>
+                        <p className="text-xs text-gray-500 mt-1">{formatDateBR(b.date)} • R$ {Number(b.total_amount).toLocaleString('pt-BR')}</p>
+                        <p className="text-[11px] text-primary-400 mt-1 group-hover:underline">Ver detalhes</p>
                       </div>
                       <span className={`self-start text-xs font-semibold px-2 py-1 rounded-full whitespace-nowrap ${statusColors[b.status] || statusColors.pending}`}>
                         {statusLabels[b.status] || 'Pendente'}
@@ -205,6 +254,55 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
           )
         )}
       </div>
+
+      {/* Modal de detalhes da reserva (Bug B) */}
+      {detail && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setDetail(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="relative h-40 bg-gray-100">
+              <img src={detail.properties?.images?.[0] || 'https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?w=400'} alt="" className="w-full h-full object-cover" />
+              <button onClick={() => setDetail(null)} className="absolute top-3 right-3 bg-white/90 rounded-full p-1.5 shadow hover:bg-white"><X size={18} className="text-gray-600"/></button>
+              <span className={`absolute bottom-3 left-3 text-xs font-semibold px-2.5 py-1 rounded-full ${statusColors[detail.status] || statusColors.pending}`}>
+                {statusLabels[detail.status] || 'Pendente'}
+              </span>
+            </div>
+            <div className="p-6">
+              <h3 className="font-bold text-gray-800 text-lg mb-1">{detail.properties?.name}</h3>
+              <div className="flex items-center gap-1 text-gray-400 text-sm mb-4">
+                <MapPin size={13}/>{[detail.properties?.neighborhood, detail.properties?.city].filter(Boolean).join(', ') || 'Localização não informada'}
+              </div>
+              <div className="space-y-2.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500 flex items-center gap-1.5"><CalendarDays size={14}/> Data</span>
+                  <span className="font-medium text-gray-800">{formatDateBR(detail.date)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500 flex items-center gap-1.5"><Users size={14}/> Convidados</span>
+                  <span className="font-medium text-gray-800">{detail.guests} pessoa{detail.guests > 1 ? 's' : ''}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2.5">
+                  <span className="text-gray-500">Valor total</span>
+                  <span className="font-bold text-gray-800">R$ {Number(detail.total_amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                </div>
+              </div>
+              <div className="mt-4 rounded-xl p-3 text-xs bg-gray-50 text-gray-600 leading-relaxed">
+                {detail.status === 'confirmed'
+                  ? (detail.properties?.address
+                      ? <>📍 <b>Endereço:</b> {detail.properties.address}</>
+                      : 'Reserva confirmada! O anfitrião entrará em contato com os detalhes de acesso.')
+                  : detail.status === 'pending' ? '⏳ Aguardando a confirmação do pagamento. O endereço completo aparece aqui após a confirmação.'
+                  : detail.status === 'cancelled' ? 'Esta reserva foi cancelada.'
+                  : 'Reserva concluída. Obrigado por usar o PoolDay!'}
+              </div>
+              {detail.status === 'pending' && (
+                <button onClick={() => { const b = detail; setDetail(null); cancelBooking(b) }} className="w-full mt-4 text-sm font-semibold text-red-500 border border-red-200 rounded-xl py-2.5 hover:bg-red-50 transition-colors">
+                  Cancelar reserva
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de avaliação */}
       {reviewing && (
