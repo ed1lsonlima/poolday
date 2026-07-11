@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { Plus, LayoutDashboard, CreditCard, Star, Calendar, Eye, Edit, Trash2, CheckCircle, XCircle, Clock, Link2, ShieldCheck } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { formatDateBR } from '../lib/formatDate'
 
 export default function HostDashboard() {
   const { user, profile, fetchProfile } = useAuth()
@@ -185,7 +186,7 @@ export default function HostDashboard() {
                       <div key={b.id} className="flex items-center gap-4 p-3 rounded-xl border border-gray-100">
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-800 truncate">{b.properties?.name}</p>
-                          <p className="text-sm text-gray-500">{b.client?.name} • {new Date(b.date).toLocaleDateString('pt-BR')}</p>
+                          <p className="text-sm text-gray-500">{b.client?.name} • {formatDateBR(b.date)}</p>
                           <p className="text-sm font-medium text-gray-700">R$ {Number(b.total_amount).toLocaleString('pt-BR', {minimumFractionDigits:2})}</p>
                         </div>
                         <span className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full ${st.color}`}>
