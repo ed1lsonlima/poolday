@@ -38,7 +38,8 @@ export default function HostDashboard() {
   }
 
   async function fetchBookings() {
-    const { data } = await supabase.from('bookings').select(`*, properties(name, images), profiles(name, email)`).eq('host_id', user.id).order('created_at', { ascending: false })
+    const { data, error } = await supabase.from('bookings').select(`*, properties(name, images), client:profiles!bookings_client_id_fkey(name, email)`).eq('host_id', user.id).order('created_at', { ascending: false })
+    if (error) console.error('fetchBookings error:', error)
     const bk = data || []
     setBookings(bk)
     setStats({
@@ -184,7 +185,7 @@ export default function HostDashboard() {
                       <div key={b.id} className="flex items-center gap-4 p-3 rounded-xl border border-gray-100">
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-800 truncate">{b.properties?.name}</p>
-                          <p className="text-sm text-gray-500">{b.profiles?.name} • {new Date(b.date).toLocaleDateString('pt-BR')}</p>
+                          <p className="text-sm text-gray-500">{b.client?.name} • {new Date(b.date).toLocaleDateString('pt-BR')}</p>
                           <p className="text-sm font-medium text-gray-700">R$ {Number(b.total_amount).toLocaleString('pt-BR', {minimumFractionDigits:2})}</p>
                         </div>
                         <span className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full ${st.color}`}>

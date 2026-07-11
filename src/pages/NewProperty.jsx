@@ -64,9 +64,31 @@ export default function NewProperty() {
     setAmenities(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])
   }
 
+  function addCustomAmenity() {
+    const val = newAmenity.trim()
+    if (!val) return
+    // Evita duplicatas (case-insensitive)
+    const exists = amenities.some(a => a.toLowerCase() === val.toLowerCase())
+      || AMENITIES.some(a => a.toLowerCase() === val.toLowerCase())
+    if (exists) {
+      toast.error('Essa comodidade já foi adicionada.')
+      setNewAmenity('')
+      return
+    }
+    setAmenities(prev => [...prev, val])
+    setNewAmenity('')
+  }
+
+  function removeAmenity(a) {
+    setAmenities(prev => prev.filter(x => x !== a))
+  }
+
   function toggleDay(d) {
     setAvailableDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d])
   }
+
+  // Comodidades que o usuario digitou (nao estao na lista fixa)
+  const customAmenities = amenities.filter(a => !AMENITIES.includes(a))
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -94,7 +116,7 @@ export default function NewProperty() {
         <button onClick={() => navigate('/anfitriao')} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-5">
           <ChevronLeft size={20}/> Voltar
         </button>
-        <h1 className="text-2xl font-bold text-gray-800 mb-6">{isEditing ? 'Editar Espaço' : 'Nova Piscina'}</h1>
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">{isEditing ? 'Editar Espaço' : 'Novo Espaço'}</h1>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Tipo */}
@@ -177,10 +199,34 @@ export default function NewProperty() {
                 </button>
               ))}
             </div>
+
+            {/* Comodidades personalizadas adicionadas pelo usuario */}
+            {customAmenities.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {customAmenities.map(a => (
+                  <span key={a} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm bg-primary-500 text-white">
+                    {a}
+                    <button type="button" onClick={() => removeAmenity(a)} className="hover:bg-white/20 rounded-full p-0.5 transition-colors" aria-label={`Remover ${a}`}>
+                      <X size={14}/>
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
             <div className="flex gap-2">
-              <input className="input-field flex-1 text-sm py-2" placeholder="Outra comodidade..." value={newAmenity} onChange={e => setNewAmenity(e.target.value)} />
-              <button type="button" onClick={() => { if(newAmenity.trim()) { setAmenities(p => [...p, newAmenity.trim()]); setNewAmenity('') }}} className="bg-primary-500 text-white px-3 rounded-xl hover:bg-primary-600"><Plus size={16}/></button>
+              <input
+                className="input-field flex-1 text-sm py-2"
+                placeholder="Outra comodidade... (ex: Piscina infantil)"
+                value={newAmenity}
+                onChange={e => setNewAmenity(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomAmenity() } }}
+              />
+              <button type="button" onClick={addCustomAmenity} className="bg-primary-500 text-white px-3 rounded-xl hover:bg-primary-600 flex items-center justify-center">
+                <Plus size={16}/>
+              </button>
             </div>
+            <p className="text-xs text-gray-400 mt-2">Digite e aperte Enter ou clique no + para adicionar.</p>
           </div>
 
           {/* Disponibilidade */}
@@ -214,7 +260,7 @@ export default function NewProperty() {
           </div>
 
           <button type="submit" disabled={loading} className="btn-primary w-full py-4 text-base">
-            {loading ? 'Salvando...' : (isEditing ? 'Salvar alterações' : 'Cadastrar piscina')}
+            {loading ? 'Salvando...' : (isEditing ? 'Salvar alterações' : 'Cadastrar espaço')}
           </button>
         </form>
       </div>
