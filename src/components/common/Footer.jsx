@@ -25,8 +25,10 @@ export default function Footer() {
           <div>
             <h4 className="font-semibold text-white mb-3">Explorar</h4>
             <ul className="space-y-2 text-sm">
-              <li><Link to="/explorar" className="hover:text-white transition-colors">Piscinas</Link></li>
-              <li><Link to="/explorar" className="hover:text-white transition-colors">Como funciona</Link></li>
+              <li><Link to="/explorar" className="hover:text-white transition-colors">Todos os espaços</Link></li>
+              <li><Link to="/explorar?tipo=pool" className="hover:text-white transition-colors">Piscinas</Link></li>
+              <li><Link to="/explorar?tipo=chacara" className="hover:text-white transition-colors">Chácaras</Link></li>
+              <li><Link to="/explorar?tipo=gourmet" className="hover:text-white transition-colors">Espaços Gourmet</Link></li>
             </ul>
           </div>
 
@@ -34,6 +36,7 @@ export default function Footer() {
             <h4 className="font-semibold text-white mb-3">Anfitrião</h4>
             <ul className="space-y-2 text-sm">
               <li><Link to="/cadastro?role=host" className="hover:text-white transition-colors">Anuncie seu espaço</Link></li>
+              <li><Link to="/acordo-anfitriao" className="hover:text-white transition-colors">Como ser anfitrião</Link></li>
             </ul>
           </div>
 
