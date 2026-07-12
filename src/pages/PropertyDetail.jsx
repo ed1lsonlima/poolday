@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
-import { MapPin, Users, Clock, Shield, Star, ChevronLeft, ChevronRight, Heart, Share2, CheckCircle } from 'lucide-react'
+import { MapPin, Users, Clock, Shield, Star, ChevronLeft, ChevronRight, Heart, Share2, CheckCircle, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import BookingCalendar from '../components/common/BookingCalendar'
 
@@ -22,10 +22,17 @@ export default function PropertyDetail() {
   const [bookingLoading, setBookingLoading] = useState(false)
   const [isFav, setIsFav] = useState(false)
   const [unavailableDates, setUnavailableDates] = useState(new Set())
+  const [lightbox, setLightbox] = useState(false)
 
   useEffect(() => { fetchProperty() }, [id])
   useEffect(() => { if (user && property) checkFavorite() }, [user, property])
   useEffect(() => { if (property) fetchUnavailable() }, [property])
+  useEffect(() => {
+    if (!lightbox) return
+    const onKey = e => { if (e.key === 'Escape') setLightbox(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [lightbox])
 
   async function fetchProperty() {
     const { data } = await supabase.from('properties').select('*').eq('id', id).single()
@@ -151,7 +158,7 @@ export default function PropertyDetail() {
     <div className="min-h-screen bg-white pb-24 lg:pb-0">
       {/* Galeria */}
       <div className="relative h-72 md:h-96 bg-gray-100 overflow-hidden">
-        <img src={images[imgIndex]} alt={property.name} className="w-full h-full object-cover" />
+        <img src={images[imgIndex]} alt={property.name} onClick={() => setLightbox(true)} className="w-full h-full object-cover cursor-zoom-in" />
         {images.length > 1 && (
           <>
             <button onClick={() => setImgIndex(i => (i - 1 + images.length) % images.length)} className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow hover:bg-white">
@@ -357,6 +364,26 @@ export default function PropertyDetail() {
           {bookingLoading ? 'Aguarde...' : 'Reservar'}
         </button>
       </div>
+      {/* Lightbox */}
+      {lightbox && (
+        <div className="fixed inset-0 z-[60] bg-black/95 flex items-center justify-center" onClick={() => setLightbox(false)}>
+          <button onClick={() => setLightbox(false)} className="absolute top-4 right-4 text-white/80 hover:text-white p-2 z-10" aria-label="Fechar">
+            <X size={28} />
+          </button>
+          <img src={images[imgIndex]} alt={property.name} className="max-h-[90vh] max-w-[95vw] object-contain" onClick={e => e.stopPropagation()} />
+          {images.length > 1 && (
+            <>
+              <button onClick={e => { e.stopPropagation(); setImgIndex(i => (i - 1 + images.length) % images.length) }} className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white rounded-full p-3">
+                <ChevronLeft size={24}/>
+              </button>
+              <button onClick={e => { e.stopPropagation(); setImgIndex(i => (i + 1) % images.length) }} className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/10 hover:bg-white/20 text-white rounded-full p-3">
+                <ChevronRight size={24}/>
+              </button>
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/70 text-sm">{imgIndex + 1} / {images.length}</div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }

@@ -12,6 +12,7 @@ const TYPES = [
 ]
 const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Churrasco','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Área gourmet','Som ambiente','Projetor','Câmeras de segurança']
 const DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
+const BR_STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 
 export default function NewProperty() {
   const { user } = useAuth()
@@ -93,6 +94,10 @@ export default function NewProperty() {
 
   async function handleSubmit(e) {
     e.preventDefault()
+    if (/@|instagram|whatsapp|facebook|tiktok|t\.me|wa\.me|https?:\/\/|www\.|\.com|\(\d{2}\)\s*\d|\d{8,}/i.test(form.name)) {
+      toast.error('O nome do espaço não pode conter @, redes sociais, links ou telefone.')
+      return
+    }
     if (images.length === 0) { toast.error('Adicione pelo menos 1 foto!'); return }
     if (Number(form.price_per_day) < 30) { toast.error('Preço mínimo é R$ 30!'); return }
     setLoading(true)
@@ -139,6 +144,7 @@ export default function NewProperty() {
             <div>
               <label className="text-sm font-medium text-gray-600 mb-1 block">Nome do espaço *</label>
               <input className="input-field" placeholder="Ex: Chácara Recanto Verde" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
+              <p className="text-xs text-gray-400 mt-1">Use só o nome do espaço. Não coloque @ do Instagram, telefone, link ou endereço aqui.</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -147,7 +153,9 @@ export default function NewProperty() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-600 mb-1 block">Estado *</label>
-                <input className="input-field" placeholder="Ex: AL" value={form.state} onChange={e => setForm({...form, state: e.target.value})} required />
+                <select className="input-field" value={form.state} onChange={e => setForm({...form, state: e.target.value})} required>
+                  {BR_STATES.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                </select>
               </div>
             </div>
             <div>

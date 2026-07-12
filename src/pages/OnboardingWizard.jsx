@@ -13,6 +13,7 @@ const TYPES = [
 const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Churrasco','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Área gourmet','Som ambiente','Projetor','Câmeras de segurança']
 const DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 
+const BR_STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 const STEPS = ['Tipo e local', 'Informações', 'Fotos', 'Comodidades', 'Revisão']
 
 export default function OnboardingWizard() {
@@ -36,6 +37,7 @@ export default function OnboardingWizard() {
   function validateStep() {
     if (step === 0 && (!form.city || !form.state)) { toast.error('Preencha cidade e estado'); return false }
     if (step === 1 && (!form.name || !form.price_per_day || !form.max_capacity)) { toast.error('Preencha nome, preço e capacidade'); return false }
+    if (step === 1 && /@|instagram|whatsapp|facebook|tiktok|t\.me|wa\.me|https?:\/\/|www\.|\.com|\(\d{2}\)\s*\d|\d{8,}/i.test(form.name)) { toast.error('O nome do espaço não pode conter @, redes sociais, links ou telefone.'); return false }
     if (step === 1 && Number(form.price_per_day) < 30) { toast.error('Preço mínimo é R$ 30'); return false }
     if (step === 2 && images.length === 0) { toast.error('Adicione pelo menos 1 foto'); return false }
     return true
@@ -117,7 +119,9 @@ export default function OnboardingWizard() {
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-600 mb-1 block">Estado *</label>
-                <input className="input-field" placeholder="Ex: AL" value={form.state} onChange={e => update('state', e.target.value)} />
+                <select className="input-field" value={form.state} onChange={e => update('state', e.target.value)}>
+                  {BR_STATES.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                </select>
               </div>
             </div>
             <div>
@@ -132,6 +136,7 @@ export default function OnboardingWizard() {
             <div>
               <label className="text-sm font-medium text-gray-600 mb-1 block">Nome do espaço *</label>
               <input className="input-field" placeholder="Ex: Chácara Recanto Verde" value={form.name} onChange={e => update('name', e.target.value)} />
+              <p className="text-xs text-gray-400 mt-1">Use só o nome do espaço. Não coloque @, telefone, link ou endereço aqui.</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
