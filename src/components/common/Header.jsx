@@ -83,7 +83,7 @@ export default function Header() {
                   {profile?.role === 'host' && (
                     <MenuItem icon={<LayoutDashboard size={18}/>} label="Painel do Anfitrião" to="/anfitriao" onClick={() => setMenuOpen(false)} />
                   )}
-                  <MenuItem icon={<Settings size={18}/>} label="Configurações" to="/perfil" onClick={() => setMenuOpen(false)} />
+                  <MenuItem icon={<Settings size={18}/>} label="Configurações" to="/configuracoes" onClick={() => setMenuOpen(false)} />
                   <div className="border-t mt-2 pt-2">
                     <button onClick={handleSignOut} className="flex items-center gap-3 w-full px-4 py-3 text-red-500 hover:bg-red-50 rounded-xl transition-colors">
                       <LogOut size={18}/>

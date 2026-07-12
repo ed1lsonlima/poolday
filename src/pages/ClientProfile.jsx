@@ -77,6 +77,13 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
     setFavorites((data || []).map(f => f.properties).filter(Boolean))
   }
 
+  async function removeFavorite(propertyId) {
+    setFavorites(favs => favs.filter(f => f.id !== propertyId))
+    const { error } = await supabase.from('favorites').delete().eq('user_id', user.id).eq('property_id', propertyId)
+    if (error) { toast.error('Erro ao remover.'); fetchFavorites() }
+    else toast.success('Removido dos favoritos.')
+  }
+
   async function fetchMyReviews() {
     const { data } = await supabase.from('reviews').select('booking_id').eq('reviewer_id', user.id)
     setMyReviews((data || []).map(r => r.booking_id))
@@ -250,17 +257,28 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
 
         {/* Favoritos */}
         {tab === 'favoritos' && (
-          favorites.length === 0 ? (
-            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center py-10">
-              <Heart size={40} className="text-gray-200 mx-auto mb-3" />
-              <p className="text-gray-400 mb-3">Nenhum favorito ainda.</p>
-              <Link to="/explorar" className="btn-primary text-sm">Explorar espaços</Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              {favorites.map(p => <PropertyCard key={p.id} property={p} />)}
-            </div>
-          )
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+            <h2 className="font-bold text-gray-800 mb-4">Meus Favoritos {favorites.length > 0 && <span className="text-gray-400 font-normal text-sm">({favorites.length})</span>}</h2>
+            {favorites.length === 0 ? (
+              <div className="text-center py-10">
+                <Heart size={40} className="text-gray-200 mx-auto mb-3" />
+                <p className="text-gray-400 mb-3">Nenhum favorito ainda.</p>
+                <Link to="/explorar" className="btn-primary text-sm">Explorar espaços</Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                {favorites.map(p => (
+                  <div key={p.id} className="relative">
+                    <PropertyCard property={p} />
+                    <button onClick={() => removeFavorite(p.id)} title="Remover dos favoritos" aria-label="Remover dos favoritos"
+                      className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm rounded-full p-2 shadow hover:bg-white z-10 transition-colors">
+                      <Heart size={16} className="text-red-500 fill-red-500" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         )}
       </div>
 

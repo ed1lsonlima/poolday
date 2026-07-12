@@ -11,6 +11,7 @@ import PropertyDetail from './pages/PropertyDetail'
 import HostDashboard from './pages/HostDashboard'
 import NewProperty from './pages/NewProperty'
 import ClientProfile from './pages/ClientProfile'
+import Configuracoes from './pages/Configuracoes'
 import HostWelcome from './pages/HostWelcome'
 import OnboardingWizard from './pages/OnboardingWizard'
 import HostProfile from './pages/HostProfile'
@@ -64,6 +65,7 @@ export default function App() {
           <Route path="/acordo-anfitriao" element={<AcordoAnfitriao />} />
           <Route path="/cancelamento" element={<Cancelamento />} />
           <Route path="/perfil" element={<ProtectedRoute><Layout><ClientProfile /></Layout></ProtectedRoute>} />
+          <Route path="/configuracoes" element={<ProtectedRoute><Layout><Configuracoes /></Layout></ProtectedRoute>} />
           <Route path="/reservas" element={<ProtectedRoute><Layout><ClientProfile tab="reservas" /></Layout></ProtectedRoute>} />
           <Route path="/favoritos" element={<ProtectedRoute><Layout><ClientProfile tab="favoritos" /></Layout></ProtectedRoute>} />
           <Route path="/anfitriao" element={<ProtectedRoute hostOnly><Layout><HostDashboard /></Layout></ProtectedRoute>} />
