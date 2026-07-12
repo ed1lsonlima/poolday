@@ -1,10 +1,12 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   Search, MapPin, Waves, Shield, Star, ChevronRight,
   CreditCard, MessageCircle, CheckCircle, DollarSign,
   Calendar, ChevronDown, Users
 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
+import PropertyCard from '../components/common/PropertyCard'
 
 const CATEGORIES = [
   { id: 'pool',      label: 'Piscina',             emoji: '🏊' },
@@ -66,7 +68,15 @@ export default function Home() {
   const [city, setCity]       = useState('')
   const [typeIdx, setTypeIdx] = useState(0)
   const [typeOpen, setTypeOpen] = useState(false)
+  const [featured, setFeatured] = useState([])
+  const [loadingFeatured, setLoadingFeatured] = useState(true)
   const navigate = useNavigate()
+
+  useEffect(() => {
+    supabase.from('properties').select('*').eq('is_active', true)
+      .order('created_at', { ascending: false }).limit(4)
+      .then(({ data }) => { setFeatured(data || []); setLoadingFeatured(false) })
+  }, [])
 
   function handleSearch(e) {
     e.preventDefault()
@@ -228,7 +238,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-extrabold text-gray-800">Espaços em destaque</h2>
-              <p className="text-gray-500 text-sm mt-0.5">Os mais bem avaliados da plataforma</p>
+              <p className="text-gray-500 text-sm mt-0.5">Confira alguns dos espaços disponíveis</p>
             </div>
             <Link to="/explorar" className="text-primary-500 text-sm font-semibold hover:underline flex items-center gap-1">
               Ver todos <ChevronRight size={16}/>
@@ -236,10 +246,12 @@ export default function Home() {
           </div>
 
           <div className="space-y-4">
-            {[
-              { name: 'Sua piscina aqui', city: 'Cadastre seu espaço', price: '-', rating: '-' },
-            ].map((_, i) => (
-              <div key={i} className="bg-white rounded-3xl border-2 border-dashed border-gray-200 p-6 flex flex-col items-center text-center gap-3">
+            {loadingFeatured ? (
+              <div className="text-center py-8">
+                <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full mx-auto" />
+              </div>
+            ) : featured.length === 0 ? (
+              <div className="bg-white rounded-3xl border-2 border-dashed border-gray-200 p-6 flex flex-col items-center text-center gap-3">
                 <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center">
                   <Waves size={28} className="text-primary-400" />
                 </div>
@@ -249,7 +261,11 @@ export default function Home() {
                   Cadastrar meu espaço
                 </Link>
               </div>
-            ))}
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {featured.map(p => <PropertyCard key={p.id} property={p} />)}
+              </div>
+            )}
           </div>
 
           <div className="mt-6 text-center">

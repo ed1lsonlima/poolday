@@ -314,6 +314,16 @@ export default function PropertyDetail() {
                 </div>
               </div>
 
+              {(property.hora_inicio != null && property.hora_fim != null) && (
+                <div className="flex items-start gap-2 text-xs text-gray-500 mb-4 bg-gray-50 rounded-xl p-3">
+                  <Clock size={14} className="text-primary-500 shrink-0 mt-0.5"/>
+                  <span>
+                    Funciona das <b className="text-gray-700">{String(property.hora_inicio).padStart(2,'0')}h às {String(property.hora_fim).padStart(2,'0')}h</b>
+                    {property.min_duration > 1 && <> · mínimo de <b className="text-gray-700">{property.min_duration}h</b></>}. O horário exato é combinado com o anfitrião.
+                  </span>
+                </div>
+              )}
+
               <button onClick={handleBooking} disabled={bookingLoading || !selectedDate} className="btn-primary w-full text-center mb-3 disabled:opacity-60">
                 {bookingLoading ? 'Processando...' : 'Reservar agora'}
               </button>

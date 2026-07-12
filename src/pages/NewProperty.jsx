@@ -28,6 +28,7 @@ export default function NewProperty() {
     type: 'pool', name: '', description: '', rules: '', checkin_instructions: '',
     city: '', neighborhood: '', address: '', state: 'AL', cep: '',
     price_per_day: '', max_capacity: '', min_duration: 1,
+    hora_inicio: 8, hora_fim: 22,
   })
 
   useEffect(() => { if (isEditing) loadProperty() }, [id])
@@ -35,7 +36,7 @@ export default function NewProperty() {
   async function loadProperty() {
     const { data } = await supabase.from('properties').select('*').eq('id', id).single()
     if (data) {
-      setForm({ type: data.type, name: data.name, description: data.description || '', rules: data.rules || '', checkin_instructions: data.checkin_instructions || '', city: data.city, neighborhood: data.neighborhood || '', address: data.address || '', state: data.state || 'AL', cep: data.cep || '', price_per_day: data.price_per_day || data.price_per_hour, max_capacity: data.max_capacity, min_duration: data.min_duration || 1 })
+      setForm({ type: data.type, name: data.name, description: data.description || '', rules: data.rules || '', checkin_instructions: data.checkin_instructions || '', city: data.city, neighborhood: data.neighborhood || '', address: data.address || '', state: data.state || 'AL', cep: data.cep || '', price_per_day: data.price_per_day || data.price_per_hour, max_capacity: data.max_capacity, min_duration: data.min_duration || 1, hora_inicio: data.hora_inicio ?? 8, hora_fim: data.hora_fim ?? 22 })
       setImages(data.images || [])
       setAmenities(data.amenities || [])
       setAvailableDays(data.available_days || [0,1,2,3,4,5,6])
@@ -96,7 +97,7 @@ export default function NewProperty() {
     if (Number(form.price_per_day) < 30) { toast.error('Preço mínimo é R$ 30!'); return }
     setLoading(true)
     try {
-      const payload = { ...form, images, amenities, available_days: availableDays, host_id: user.id, is_active: true, price_per_hour: form.price_per_day, max_capacity: Number(form.max_capacity), min_duration: Number(form.min_duration), price_per_day: Number(form.price_per_day) }
+      const payload = { ...form, images, amenities, available_days: availableDays, host_id: user.id, is_active: true, price_per_hour: form.price_per_day, max_capacity: Number(form.max_capacity), min_duration: Number(form.min_duration), price_per_day: Number(form.price_per_day), hora_inicio: Number(form.hora_inicio), hora_fim: Number(form.hora_fim) }
       if (isEditing) {
         await supabase.from('properties').update(payload).eq('id', id)
         toast.success('Espaço atualizado!')
@@ -232,6 +233,7 @@ export default function NewProperty() {
           {/* Disponibilidade */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
             <h2 className="font-bold text-gray-800 mb-3">Disponibilidade</h2>
+            <label className="text-sm font-medium text-gray-600 mb-2 block">Dias que você atende</label>
             <div className="flex gap-2 flex-wrap">
               {DAYS.map((d, i) => (
                 <button key={i} type="button" onClick={() => toggleDay(i)}
@@ -240,6 +242,26 @@ export default function NewProperty() {
                 </button>
               ))}
             </div>
+
+            <div className="mt-5 pt-5 border-t border-gray-100">
+              <label className="text-sm font-medium text-gray-600 mb-2 block">Horário de funcionamento</label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-gray-500">das</span>
+                <select value={form.hora_inicio} onChange={e => setForm({...form, hora_inicio: e.target.value})} className="input-field w-auto py-2">
+                  {Array.from({length: 24}, (_, h) => <option key={h} value={h}>{String(h).padStart(2,'0')}h</option>)}
+                </select>
+                <span className="text-sm text-gray-500">às</span>
+                <select value={form.hora_fim} onChange={e => setForm({...form, hora_fim: e.target.value})} className="input-field w-auto py-2">
+                  {Array.from({length: 24}, (_, h) => <option key={h} value={h}>{String(h).padStart(2,'0')}h</option>)}
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <label className="text-sm font-medium text-gray-600 mb-1 block">Duração mínima da reserva (horas)</label>
+              <input type="number" min="1" max="24" value={form.min_duration} onChange={e => setForm({...form, min_duration: e.target.value})} className="input-field w-28 py-2" />
+            </div>
+            <p className="text-xs text-gray-400 mt-3">Essas informações aparecem pro cliente na página do espaço. A reserva continua sendo por diária — o horário é combinado com você.</p>
           </div>
 
           {/* Descrição */}
