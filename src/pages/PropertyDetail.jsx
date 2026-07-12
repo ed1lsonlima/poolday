@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { MapPin, Users, Clock, Shield, Star, ChevronLeft, ChevronRight, Heart, Share2, CheckCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
+import BookingCalendar from '../components/common/BookingCalendar'
 
 const amenityIcons = { 'Piscina': '🏊', 'Wi-Fi': '📶', 'Estacionamento': '🚗', 'Churrasco': '🍖', 'Spa': '🛁', 'Toalhas': '🛁', 'Drinks': '🥤', 'Vista mar': '🌊', 'Jardim': '🌿', 'Deck': '🪵' }
 
@@ -20,9 +21,11 @@ export default function PropertyDetail() {
   const [guests, setGuests] = useState(1)
   const [bookingLoading, setBookingLoading] = useState(false)
   const [isFav, setIsFav] = useState(false)
+  const [unavailableDates, setUnavailableDates] = useState(new Set())
 
   useEffect(() => { fetchProperty() }, [id])
   useEffect(() => { if (user && property) checkFavorite() }, [user, property])
+  useEffect(() => { if (property) fetchUnavailable() }, [property])
 
   async function fetchProperty() {
     const { data } = await supabase.from('properties').select('*').eq('id', id).single()
@@ -41,6 +44,14 @@ export default function PropertyDetail() {
   async function checkFavorite() {
     const { data } = await supabase.from('favorites').select('id').eq('user_id', user.id).eq('property_id', property.id).maybeSingle()
     setIsFav(!!data)
+  }
+
+  async function fetchUnavailable() {
+    // RPC (SECURITY DEFINER) que devolve SO as datas indisponiveis do espaco
+    // (bloqueadas + reservadas), sem expor quem reservou. Funciona pra qualquer visitante.
+    const { data, error } = await supabase.rpc('get_unavailable_dates', { p_property_id: property.id })
+    if (error) { console.error('get_unavailable_dates error:', error); return }
+    setUnavailableDates(new Set((data || []).map(r => r.unavailable_date)))
   }
 
   async function toggleFavorite() {
@@ -293,8 +304,13 @@ export default function PropertyDetail() {
 
               <div className="space-y-3 mb-4">
                 <div>
-                  <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Escolha a data</label>
-                  <input type="date" min={today} className="input-field" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
+                  <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">Escolha a data</label>
+                  <BookingCalendar
+                    value={selectedDate}
+                    onChange={setSelectedDate}
+                    availableWeekdays={property.available_days}
+                    unavailableDates={unavailableDates}
+                  />
                 </div>
               </div>
 
