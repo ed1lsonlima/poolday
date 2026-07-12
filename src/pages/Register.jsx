@@ -15,7 +15,7 @@ export default function Register() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (form.password !== form.confirm) return toast.error('As senhas nao coincidem!')
+    if (form.password !== form.confirm) return toast.error('As senhas não coincidem!')
     if (form.password.length < 6) return toast.error('Senha deve ter pelo menos 6 caracteres!')
     setLoading(true)
     try {
@@ -41,7 +41,7 @@ export default function Register() {
             <span className="font-bold text-xl text-gray-800">PoolDay</span>
           </div>
           <h1 className="text-2xl font-bold text-gray-800">Criar conta</h1>
-          <p className="text-gray-500 text-sm mt-1">Cadastre-se para comecar</p>
+          <p className="text-gray-500 text-sm mt-1">Cadastre-se para começar</p>
         </div>
 
         <button onClick={handleGoogle} className="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-xl py-3 mb-6 hover:bg-gray-50 transition-colors">
@@ -60,7 +60,7 @@ export default function Register() {
             Cliente
           </button>
           <button onClick={() => setRole('host')} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${role === 'host' ? 'bg-primary-500 text-white' : 'text-gray-500 hover:text-gray-700'}`}>
-            Anfitriao
+            Anfitrião
           </button>
         </div>
 
@@ -79,7 +79,7 @@ export default function Register() {
           </div>
           <div className="relative">
             <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input className="input-field pl-11 pr-11" type={showPass ? 'text' : 'password'} placeholder="Senha (minimo 6 caracteres)" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required />
+            <input className="input-field pl-11 pr-11" type={showPass ? 'text' : 'password'} placeholder="Senha (mínimo 6 caracteres)" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required />
             <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
               {showPass ? <EyeOff size={18}/> : <Eye size={18}/>}
             </button>
@@ -94,7 +94,7 @@ export default function Register() {
         </form>
 
         <p className="text-center text-sm text-gray-500 mt-6">
-          Ja tem conta?{' '}
+          Já tem conta?{' '}
           <Link to="/entrar" className="text-primary-500 font-semibold hover:underline">Entrar</Link>
         </p>
       </div>

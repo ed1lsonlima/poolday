@@ -42,7 +42,7 @@ export default function HostDashboard() {
       if (user) fetchProfile?.(user.id)
     }
     if (searchParams.get('mp_error')) {
-      toast.error('Nao foi possivel conectar o Mercado Pago. Tente novamente.')
+      toast.error('Não foi possível conectar o Mercado Pago. Tente novamente.')
       setTab('pagamentos')
     }
   }, [searchParams])
@@ -101,7 +101,7 @@ export default function HostDashboard() {
     pending: { label: 'Pendente', color: 'text-yellow-600 bg-yellow-50', icon: <Clock size={14}/> },
     confirmed: { label: 'Confirmada', color: 'text-green-600 bg-green-50', icon: <CheckCircle size={14}/> },
     cancelled: { label: 'Cancelada', color: 'text-red-600 bg-red-50', icon: <XCircle size={14}/> },
-    completed: { label: 'Concluida', color: 'text-gray-600 bg-gray-100', icon: <CheckCircle size={14}/> },
+    completed: { label: 'Concluída', color: 'text-gray-600 bg-gray-100', icon: <CheckCircle size={14}/> },
   }
 
   if (!profile || profile.role !== 'host') {
@@ -109,9 +109,9 @@ export default function HostDashboard() {
       <div className="min-h-screen flex items-center justify-center text-center p-8">
         <div>
           <p className="text-5xl mb-4">🔒</p>
-          <h2 className="text-xl font-bold mb-2">Area exclusiva para anfitrioes</h2>
-          <p className="text-gray-500 mb-4">Crie uma conta como anfitriao para acessar.</p>
-          <Link to="/cadastro?role=host" className="btn-primary">Criar conta de anfitriao</Link>
+          <h2 className="text-xl font-bold mb-2">Área exclusiva para anfitriões</h2>
+          <p className="text-gray-500 mb-4">Crie uma conta como anfitrião para acessar.</p>
+          <Link to="/cadastro?role=host" className="btn-primary">Criar conta de anfitrião</Link>
         </div>
       </div>
     )
@@ -122,8 +122,8 @@ export default function HostDashboard() {
       <div className="max-w-6xl mx-auto px-4 py-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">Dashboard do Anfitriao</h1>
-            <p className="text-gray-500 text-sm">Gerencie seus espacos e reservas</p>
+            <h1 className="text-2xl font-bold text-gray-800">Dashboard do Anfitrião</h1>
+            <p className="text-gray-500 text-sm">Gerencie seus espaços e reservas</p>
           </div>
           <Link to="/anfitriao/nova-piscina" className="btn-primary flex items-center gap-2 text-sm">
             <Plus size={18} /> Novo Espaço
@@ -162,7 +162,7 @@ export default function HostDashboard() {
               <h2 className="font-bold text-gray-800 mb-4">Meus Espaços</h2>
               {loading ? <p className="text-gray-400 text-sm">Carregando...</p> : properties.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-gray-400 mb-3">Nenhum espaco cadastrado ainda.</p>
+                  <p className="text-gray-400 mb-3">Nenhum espaço cadastrado ainda.</p>
                   <Link to="/anfitriao/nova-piscina" className="btn-primary text-sm">Cadastrar primeiro espaço</Link>
                 </div>
               ) : (
@@ -173,7 +173,7 @@ export default function HostDashboard() {
                         <img src={p.images?.[0] || 'https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?w=100'} alt={p.name} className="w-16 h-16 rounded-xl object-cover shrink-0" />
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-gray-800 truncate">{p.name}</h3>
-                          <p className="text-sm text-gray-500">{p.city} • R$ {Number(p.price_per_day || p.price_per_hour).toLocaleString('pt-BR')}/diaria</p>
+                          <p className="text-sm text-gray-500">{p.city} • R$ {Number(p.price_per_day || p.price_per_hour).toLocaleString('pt-BR')}/diária</p>
                           <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${p.is_active ? 'text-green-600 bg-green-50' : 'text-gray-500 bg-gray-100'}`}>
                             {p.is_active ? 'Ativo' : 'Pausado'}
                           </span>
@@ -229,13 +229,13 @@ export default function HostDashboard() {
                   <CheckCircle size={22} className="text-green-600 shrink-0" />
                   <div>
                     <p className="font-semibold text-green-700 text-sm">Conta conectada</p>
-                    <p className="text-green-600 text-xs mt-0.5">Voce ja pode receber pagamentos diretamente na sua conta Mercado Pago.</p>
+                    <p className="text-green-600 text-xs mt-0.5">Você já pode receber pagamentos diretamente na sua conta Mercado Pago.</p>
                   </div>
                 </div>
               ) : (
                 <div className="flex flex-col sm:flex-row sm:items-center gap-4 bg-yellow-50 border border-yellow-100 rounded-xl p-4">
                   <div className="flex-1">
-                    <p className="font-semibold text-yellow-700 text-sm">Conta nao conectada</p>
+                    <p className="font-semibold text-yellow-700 text-sm">Conta não conectada</p>
                     <p className="text-yellow-600 text-xs mt-0.5">Conecte sua conta Mercado Pago pra receber os pagamentos das suas reservas automaticamente.</p>
                   </div>
                   <button
@@ -251,7 +251,7 @@ export default function HostDashboard() {
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h2 className="font-bold text-gray-800 mb-2">Pagamentos via Mercado Pago</h2>
-              <p className="text-gray-500 text-sm mb-6">Os repasses sao processados automaticamente. 15% de taxa de servico e descontada de cada reserva.</p>
+              <p className="text-gray-500 text-sm mb-6">Os repasses são processados automaticamente. 15% de taxa de serviço é descontada de cada reserva.</p>
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="bg-green-50 rounded-xl p-5">
                   <p className="text-xs text-green-600 font-semibold uppercase">Total Recebido</p>
