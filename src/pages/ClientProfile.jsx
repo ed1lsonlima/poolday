@@ -32,6 +32,8 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
 
   useEffect(() => { if (profile) setForm({ name: profile.name || '', phone: profile.phone || '', city: profile.city || '' }) }, [profile])
   useEffect(() => { if (user) { fetchBookings(); fetchFavorites(); fetchMyReviews() } }, [user])
+  // Sincroniza a aba quando a rota muda (a mesma instancia e reaproveitada entre /perfil, /reservas e /favoritos).
+  useEffect(() => { setTab(initialTab) }, [initialTab])
 
   // Bug A: ao voltar do Mercado Pago, faz polling do status ate o webhook confirmar.
   useEffect(() => {
@@ -184,21 +186,17 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
             <div className="flex items-center justify-between mb-5">
               <h2 className="font-bold text-gray-800">Informações pessoais</h2>
-              <button onClick={() => setEditing(!editing)} className="flex items-center gap-1.5 text-primary-500 text-sm font-semibold hover:underline"><Edit2 size={14}/>{editing ? 'Cancelar' : 'Editar'}</button>
+              <Link to="/configuracoes" className="flex items-center gap-1.5 text-primary-500 text-sm font-semibold hover:underline"><Edit2 size={14}/> Editar</Link>
             </div>
             <div className="space-y-4">
               {[
-                { label: 'Nome', key: 'name', placeholder: 'Seu nome' },
-                { label: 'Telefone', key: 'phone', placeholder: '(11) 99999-9999' },
-                { label: 'Cidade', key: 'city', placeholder: 'Sua cidade' },
+                { label: 'Nome', key: 'name' },
+                { label: 'Telefone', key: 'phone' },
+                { label: 'Cidade', key: 'city' },
               ].map(f => (
                 <div key={f.key}>
                   <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">{f.label}</label>
-                  {editing ? (
-                    <input className="input-field" placeholder={f.placeholder} value={form[f.key]} onChange={e => setForm({...form, [f.key]: e.target.value})} />
-                  ) : (
-                    <p className="text-gray-700 py-2 border-b border-gray-100">{form[f.key] || <span className="text-gray-400 italic">Não informado</span>}</p>
-                  )}
+                  <p className="text-gray-700 py-2 border-b border-gray-100">{form[f.key] || <span className="text-gray-400 italic">Não informado</span>}</p>
                 </div>
               ))}
               <div>
@@ -206,9 +204,6 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
                 <p className="text-gray-500 py-2 border-b border-gray-100">{user?.email}</p>
               </div>
             </div>
-            {editing && (
-              <button onClick={handleSave} disabled={loading} className="btn-primary w-full mt-5">{loading ? 'Salvando...' : 'Salvar alterações'}</button>
-            )}
           </div>
         )}
 
