@@ -7,8 +7,8 @@ export default function HostWelcome() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="card p-8 w-full max-w-md text-center">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">O que voce quer fazer no PoolDay?</h1>
-        <p className="text-gray-500 text-sm mb-8">Voce pode fazer os dois depois, mas vamos comecar por um.</p>
+        <h1 className="text-2xl font-bold text-gray-800 mb-2">O que você quer fazer no PoolDay?</h1>
+        <p className="text-gray-500 text-sm mb-8">Você pode fazer os dois depois, mas vamos começar por um.</p>
 
         <div className="space-y-3">
           <button
@@ -17,8 +17,8 @@ export default function HostWelcome() {
           >
             <Search size={20} className="text-gray-500 shrink-0" />
             <div>
-              <p className="font-semibold text-gray-800 text-sm">Quero alugar um espaco</p>
-              <p className="text-xs text-gray-400">Buscar piscinas e chacaras por hora ou diaria</p>
+              <p className="font-semibold text-gray-800 text-sm">Quero alugar um espaço</p>
+              <p className="text-xs text-gray-400">Buscar piscinas e chácaras por hora ou diária</p>
             </div>
           </button>
 
@@ -28,8 +28,8 @@ export default function HostWelcome() {
           >
             <Home size={20} className="text-primary-600 shrink-0" />
             <div>
-              <p className="font-semibold text-primary-700 text-sm">Quero anunciar meu espaco</p>
-              <p className="text-xs text-primary-500">Cadastrar sua piscina ou chacara em poucos passos</p>
+              <p className="font-semibold text-primary-700 text-sm">Quero anunciar meu espaço</p>
+              <p className="text-xs text-primary-500">Cadastrar sua piscina ou chácara em poucos passos</p>
             </div>
           </button>
         </div>

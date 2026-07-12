@@ -61,13 +61,13 @@ export default function HostProfile() {
               </div>
               <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 mt-1.5">
                 {host.city && <span className="flex items-center gap-1"><MapPin size={14} />{host.city}</span>}
-                <span className="flex items-center gap-1"><Calendar size={14} />Anfitriao desde {memberSince}</span>
+                <span className="flex items-center gap-1"><Calendar size={14} />Anfitrião desde {memberSince}</span>
               </div>
               {reviews.length > 0 && (
                 <div className="flex items-center gap-1.5 mt-2">
                   <Star size={16} className="text-orange-500 fill-orange-500" />
                   <span className="font-semibold text-gray-800">{avgRating.toFixed(1)}</span>
-                  <span className="text-gray-500 text-sm">({reviews.length} avaliacoes)</span>
+                  <span className="text-gray-500 text-sm">({reviews.length} avaliações)</span>
                 </div>
               )}
             </div>
@@ -76,9 +76,9 @@ export default function HostProfile() {
         </div>
 
         <div className="mb-8">
-          <h2 className="font-bold text-gray-800 mb-4">Espacos de {host.name.split(' ')[0]}</h2>
+          <h2 className="font-bold text-gray-800 mb-4">Espaços de {host.name.split(' ')[0]}</h2>
           {properties.length === 0 ? (
-            <p className="text-gray-500 text-sm">Nenhum espaco ativo no momento.</p>
+            <p className="text-gray-500 text-sm">Nenhum espaço ativo no momento.</p>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {properties.map(p => <PropertyCard key={p.id} property={p} />)}
@@ -87,15 +87,15 @@ export default function HostProfile() {
         </div>
 
         <div>
-          <h2 className="font-bold text-gray-800 mb-4">Avaliacoes</h2>
+          <h2 className="font-bold text-gray-800 mb-4">Avaliações</h2>
           {reviews.length === 0 ? (
-            <p className="text-gray-500 text-sm">Nenhuma avaliacao ainda.</p>
+            <p className="text-gray-500 text-sm">Nenhuma avaliação ainda.</p>
           ) : (
             <div className="space-y-4">
               {reviews.slice(0, 10).map((r, i) => (
                 <div key={i} className="card p-5">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="font-semibold text-gray-800 text-sm">{r.profiles?.name || 'Hospede'}</span>
+                    <span className="font-semibold text-gray-800 text-sm">{r.profiles?.name || 'Hóspede'}</span>
                     <div className="flex items-center gap-1">
                       <Star size={14} className="text-orange-500 fill-orange-500" />
                       <span className="text-sm font-medium">{r.rating}</span>

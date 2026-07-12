@@ -6,14 +6,14 @@ import { Upload, X, Plus, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const TYPES = [
-  { id: 'pool', label: 'Piscina' }, { id: 'chacara', label: 'Chacara' },
-  { id: 'gourmet', label: 'Espaco Gourmet' }, { id: 'court', label: 'Quadra' },
-  { id: 'soccer', label: 'Campo de Futebol' }, { id: 'futevolei', label: 'Quadra de Futevolei' },
+  { id: 'pool', label: 'Piscina' }, { id: 'chacara', label: 'Chácara' },
+  { id: 'gourmet', label: 'Espaço Gourmet' }, { id: 'court', label: 'Quadra' },
+  { id: 'soccer', label: 'Campo de Futebol' }, { id: 'futevolei', label: 'Quadra de Futevôlei' },
 ]
-const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Churrasco','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Area gourmet','Som ambiente','Projetor','Cameras de seguranca']
-const DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sab']
+const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Churrasco','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Área gourmet','Som ambiente','Projetor','Câmeras de segurança']
+const DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 
-const STEPS = ['Tipo e local', 'Informacoes', 'Fotos', 'Comodidades', 'Revisao']
+const STEPS = ['Tipo e local', 'Informações', 'Fotos', 'Comodidades', 'Revisão']
 
 export default function OnboardingWizard() {
   const { user } = useAuth()
@@ -35,8 +35,8 @@ export default function OnboardingWizard() {
 
   function validateStep() {
     if (step === 0 && (!form.city || !form.state)) { toast.error('Preencha cidade e estado'); return false }
-    if (step === 1 && (!form.name || !form.price_per_day || !form.max_capacity)) { toast.error('Preencha nome, preco e capacidade'); return false }
-    if (step === 1 && Number(form.price_per_day) < 30) { toast.error('Preco minimo e R$ 30'); return false }
+    if (step === 1 && (!form.name || !form.price_per_day || !form.max_capacity)) { toast.error('Preencha nome, preço e capacidade'); return false }
+    if (step === 1 && Number(form.price_per_day) < 30) { toast.error('Preço mínimo é R$ 30'); return false }
     if (step === 2 && images.length === 0) { toast.error('Adicione pelo menos 1 foto'); return false }
     return true
   }
@@ -46,7 +46,7 @@ export default function OnboardingWizard() {
 
   async function uploadImage(file) {
     if (!file) return
-    if (images.length >= 10) { toast.error('Maximo 10 fotos!'); return }
+    if (images.length >= 10) { toast.error('Máximo 10 fotos!'); return }
     if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { toast.error('Use JPG, PNG ou WebP!'); return }
     setUploading(true)
     try {
@@ -75,7 +75,7 @@ export default function OnboardingWizard() {
     try {
       const payload = { ...form, images, amenities, available_days: availableDays, host_id: user.id, is_active: true, price_per_hour: form.price_per_day, max_capacity: Number(form.max_capacity), min_duration: Number(form.min_duration), price_per_day: Number(form.price_per_day) }
       await supabase.from('properties').insert(payload)
-      toast.success('Espaco publicado!')
+      toast.success('Espaço publicado!')
       navigate('/anfitriao')
     } catch (err) {
       toast.error('Erro ao publicar. Tente novamente.')
@@ -100,7 +100,7 @@ export default function OnboardingWizard() {
         {step === 0 && (
           <div className="card p-5 space-y-4">
             <div>
-              <h2 className="font-bold text-gray-800 mb-3 text-sm">Tipo de espaco *</h2>
+              <h2 className="font-bold text-gray-800 mb-3 text-sm">Tipo de espaço *</h2>
               <div className="grid grid-cols-2 gap-2">
                 {TYPES.map(t => (
                   <button key={t.id} type="button" onClick={() => update('type', t.id)}
@@ -130,26 +130,26 @@ export default function OnboardingWizard() {
         {step === 1 && (
           <div className="card p-5 space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-600 mb-1 block">Nome do espaco *</label>
-              <input className="input-field" placeholder="Ex: Chacara Recanto Verde" value={form.name} onChange={e => update('name', e.target.value)} />
+              <label className="text-sm font-medium text-gray-600 mb-1 block">Nome do espaço *</label>
+              <input className="input-field" placeholder="Ex: Chácara Recanto Verde" value={form.name} onChange={e => update('name', e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-sm font-medium text-gray-600 mb-1 block">Preco por diaria (R$) *</label>
-                <input className="input-field" type="number" min="30" placeholder="Min. R$ 30" value={form.price_per_day} onChange={e => update('price_per_day', e.target.value)} />
+                <label className="text-sm font-medium text-gray-600 mb-1 block">Preço por diária (R$) *</label>
+                <input className="input-field" type="number" min="30" placeholder="Mín. R$ 30" value={form.price_per_day} onChange={e => update('price_per_day', e.target.value)} />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600 mb-1 block">Capacidade max. *</label>
+                <label className="text-sm font-medium text-gray-600 mb-1 block">Capacidade máx. *</label>
                 <input className="input-field" type="number" min="1" placeholder="Ex: 20" value={form.max_capacity} onChange={e => update('max_capacity', e.target.value)} />
               </div>
             </div>
-            <p className="text-xs text-gray-400">O preco por hora podera ser ajustado depois no painel do anfitriao.</p>
+            <p className="text-xs text-gray-400">O preço por hora poderá ser ajustado depois no painel do anfitrião.</p>
           </div>
         )}
 
         {step === 2 && (
           <div className="card p-5">
-            <p className="text-xs text-gray-400 mb-3">Minimo 1, maximo 10 fotos. A primeira foto e a capa do anuncio.</p>
+            <p className="text-xs text-gray-400 mb-3">Mínimo 1, máximo 10 fotos. A primeira foto é a capa do anúncio.</p>
             <div className="grid grid-cols-3 gap-2">
               {images.map((img, i) => (
                 <div key={i} className="relative aspect-square rounded-xl overflow-hidden">
@@ -205,15 +205,15 @@ export default function OnboardingWizard() {
           <div className="space-y-4">
             <div className="card p-5 space-y-4">
               <div>
-                <label className="text-sm font-medium text-gray-600 mb-1 block">Descricao do espaco</label>
-                <textarea className="input-field resize-none" rows={3} placeholder="Descreva seu espaco..." value={form.description} onChange={e => update('description', e.target.value)} />
+                <label className="text-sm font-medium text-gray-600 mb-1 block">Descrição do espaço</label>
+                <textarea className="input-field resize-none" rows={3} placeholder="Descreva seu espaço..." value={form.description} onChange={e => update('description', e.target.value)} />
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-600 mb-1 block">Regras da casa</label>
-                <textarea className="input-field resize-none" rows={2} placeholder="Ex: Proibido fumar, sem barulho apos 22h..." value={form.rules} onChange={e => update('rules', e.target.value)} />
+                <textarea className="input-field resize-none" rows={2} placeholder="Ex: Proibido fumar, sem barulho após 22h..." value={form.rules} onChange={e => update('rules', e.target.value)} />
               </div>
               <div>
-                <label className="text-sm font-medium text-gray-600 mb-1 block">Instrucoes de check-in</label>
+                <label className="text-sm font-medium text-gray-600 mb-1 block">Instruções de check-in</label>
                 <textarea className="input-field resize-none" rows={2} placeholder="Ex: Ao chegar, ligar para o interfone 101..." value={form.checkin_instructions} onChange={e => update('checkin_instructions', e.target.value)} />
               </div>
             </div>
@@ -224,7 +224,7 @@ export default function OnboardingWizard() {
                 <li><span className="text-gray-400">Tipo:</span> {TYPES.find(t => t.id === form.type)?.label}</li>
                 <li><span className="text-gray-400">Local:</span> {form.city}{form.state ? `, ${form.state}` : ''}</li>
                 <li><span className="text-gray-400">Nome:</span> {form.name || '-'}</li>
-                <li><span className="text-gray-400">Diaria:</span> {form.price_per_day ? `R$ ${form.price_per_day}` : '-'}</li>
+                <li><span className="text-gray-400">Diária:</span> {form.price_per_day ? `R$ ${form.price_per_day}` : '-'}</li>
                 <li><span className="text-gray-400">Capacidade:</span> {form.max_capacity || '-'} pessoas</li>
                 <li><span className="text-gray-400">Fotos:</span> {images.length}</li>
                 <li><span className="text-gray-400">Comodidades:</span> {amenities.length}</li>
@@ -240,11 +240,11 @@ export default function OnboardingWizard() {
 
           {step < STEPS.length - 1 ? (
             <button type="button" onClick={goNext} className="btn-primary flex items-center gap-2 py-3 px-6">
-              Proximo <ChevronRight size={16}/>
+              Próximo <ChevronRight size={16}/>
             </button>
           ) : (
             <button type="button" onClick={handlePublish} disabled={loading} className="btn-primary flex items-center gap-2 py-3 px-6">
-              {loading ? 'Publicando...' : <>Publicar espaco <Check size={16}/></>}
+              {loading ? 'Publicando...' : <>Publicar espaço <Check size={16}/></>}
             </button>
           )}
         </div>
