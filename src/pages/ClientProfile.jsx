@@ -15,6 +15,14 @@ function waLink(phone, propName, date) {
   return `https://wa.me/${withCountry}?text=${encodeURIComponent(msg)}`
 }
 
+// Formata o telefone pra exibicao: (82) 99999-9999
+function formatPhone(phone) {
+  const d = String(phone || '').replace(/\D/g, '').replace(/^55/, '')
+  if (d.length === 11) return `(${d.slice(0,2)}) ${d.slice(2,7)}-${d.slice(7)}`
+  if (d.length === 10) return `(${d.slice(0,2)}) ${d.slice(2,6)}-${d.slice(6)}`
+  return phone
+}
+
 export default function ClientProfile({ tab: initialTab = 'perfil' }) {
   const { user, profile, updateProfile } = useAuth()
   const [tab, setTab] = useState(initialTab)
@@ -312,21 +320,27 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
                   <div className="rounded-xl p-3.5 bg-green-50 border border-green-100">
                     <p className="text-sm font-semibold text-green-700 mb-1.5 flex items-center gap-1.5"><CheckCircle size={15}/> Reserva confirmada! Próximos passos:</p>
                     <ol className="text-xs text-green-700/90 space-y-1 list-decimal list-inside">
-                      <li>Combine o horário de chegada com o anfitrião pelo WhatsApp.</li>
-                      <li>No dia {formatDateBR(detail.date)}, é só chegar no endereço abaixo.</li>
-                      <li>Aproveite! Qualquer dúvida, fale direto com o anfitrião.</li>
+                      {detail.host?.phone && <li>Fale com {detail.host?.name || 'o anfitrião'} no WhatsApp (botão abaixo) pra combinar o horário de chegada.</li>}
+                      <li>No dia {formatDateBR(detail.date)}, é só chegar {detail.properties?.address ? 'no endereço abaixo' : 'no local combinado'}.</li>
+                      <li>Aproveite! Qualquer dúvida, fale com o anfitrião.</li>
                     </ol>
                   </div>
                   {detail.properties?.address && (
                     <div className="rounded-xl p-3 bg-gray-50 text-xs text-gray-600">📍 <b>Endereço:</b> {detail.properties.address}</div>
                   )}
                   {detail.host?.phone ? (
-                    <a href={waLink(detail.host.phone, detail.properties?.name, detail.date)} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-green-500 text-white font-semibold text-sm hover:bg-green-600 transition-colors">
-                      <MessageCircle size={16}/> Falar com {detail.host?.name || 'o anfitrião'} no WhatsApp
-                    </a>
+                    <div className="rounded-xl border border-green-200 bg-white p-3.5">
+                      <p className="text-xs text-gray-500 mb-2">Contato do anfitrião{detail.host?.name ? ` (${detail.host.name})` : ''}:</p>
+                      <a href={waLink(detail.host.phone, detail.properties?.name, detail.date)} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 w-full py-3 rounded-xl bg-green-500 text-white font-semibold text-sm hover:bg-green-600 transition-colors">
+                        <MessageCircle size={18}/> Falar no WhatsApp
+                      </a>
+                      <p className="text-center text-xs text-gray-400 mt-2">{formatPhone(detail.host.phone)} · abre com uma mensagem pronta</p>
+                    </div>
                   ) : (
-                    <p className="text-xs text-gray-400 text-center">O anfitrião entrará em contato com os detalhes de acesso.</p>
+                    <div className="rounded-xl p-3 bg-yellow-50 border border-yellow-100 text-xs text-yellow-700 leading-relaxed">
+                      O anfitrião ainda não cadastrou um WhatsApp de contato. Ele pode falar com você pelos dados da sua conta.
+                    </div>
                   )}
                 </div>
               ) : (

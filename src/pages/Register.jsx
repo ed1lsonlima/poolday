@@ -17,10 +17,15 @@ export default function Register() {
     e.preventDefault()
     if (form.password !== form.confirm) return toast.error('As senhas não coincidem!')
     if (form.password.length < 6) return toast.error('Senha deve ter pelo menos 6 caracteres!')
+    if (role === 'host' && !form.phone.trim()) return toast.error('Como anfitrião, informe um telefone/WhatsApp — é por ele que os clientes vão falar com você.')
     setLoading(true)
     try {
-      await signUp({ ...form, role })
-      toast.success('Conta criada! Verifique seu email.')
+      const result = await signUp({ ...form, role })
+      if (result?.session) {
+        toast.success('Conta criada com sucesso!')
+      } else {
+        toast.success('Conta criada! Confirme pelo link enviado ao seu email.')
+      }
       navigate(role === 'host' ? '/anfitriao/boas-vindas' : '/')
     } catch (err) {
       toast.error(err.message || 'Erro ao criar conta')
@@ -75,7 +80,7 @@ export default function Register() {
           </div>
           <div className="relative">
             <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input className="input-field pl-11" placeholder="Telefone" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} />
+            <input className="input-field pl-11" placeholder={role === 'host' ? 'WhatsApp (obrigatório)' : 'Telefone (opcional)'} value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} required={role === 'host'} />
           </div>
           <div className="relative">
             <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
