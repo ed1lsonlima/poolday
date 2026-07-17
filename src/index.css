@@ -6,14 +6,16 @@
 @layer base {
   * { box-sizing: border-box; }
   body { font-family: 'Inter', system-ui, sans-serif; }
+  /* Rolagem suave em toda a navegação por âncora */
+  html { scroll-behavior: smooth; }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-primary-500 hover:bg-primary-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-primary-500 hover:bg-primary-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100;
   }
   .btn-secondary {
-    @apply border-2 border-primary-500 text-primary-500 hover:bg-primary-50 font-semibold py-3 px-6 rounded-xl transition-all duration-200;
+    @apply border-2 border-primary-500 text-primary-500 hover:bg-primary-50 font-semibold py-3 px-6 rounded-xl transition-all duration-200 active:scale-[0.97];
   }
   .input-field {
     @apply w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-400 focus:border-transparent transition-all;
@@ -23,7 +25,15 @@
   }
 }
 
-/* ── Bolhas animadas do hero ─────────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   BOLHAS DO HERO
+   Duas camadas:
+   1. .bubble        → sobem do fundo até o topo (movimento principal)
+   2. .bubble-float  → espalhadas por todo o hero (topo, meio e base),
+                       quase transparentes, vagando sem rumo
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Camada 1: bolhas que sobem ─────────────────────────── */
 @keyframes bubble-rise {
   0% {
     transform: translate3d(0, 0, 0) scale(0.85);
@@ -39,6 +49,38 @@
     transform: translate3d(var(--bubble-drift, 15px), -420px, 0) scale(1.05);
     opacity: 0;
   }
+}
+
+/* ── Camada 2: bolhas que vagam sem rumo ────────────────── */
+/* Volta ao ponto inicial no fim do ciclo pra o loop ser imperceptível.
+   Cada bolha recebe --dx/--dy diferentes, então nenhuma faz o mesmo
+   caminho — a sensação é de deriva aleatória, não de animação repetida. */
+@keyframes bubble-wander {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  20% {
+    transform: translate3d(var(--dx, 14px), calc(var(--dy, -20px) * 0.55), 0) scale(1.05);
+  }
+  40% {
+    transform: translate3d(calc(var(--dx, 14px) * -0.6), var(--dy, -20px), 0) scale(0.96);
+  }
+  60% {
+    transform: translate3d(calc(var(--dx, 14px) * 0.85), calc(var(--dy, -20px) * 0.35), 0) scale(1.03);
+  }
+  80% {
+    transform: translate3d(calc(var(--dx, 14px) * -0.3), calc(var(--dy, -20px) * 0.7), 0) scale(0.99);
+  }
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/* Respiração de brilho — dessincronizada do movimento, o que reforça
+   a sensação de aleatoriedade sem custar mais elementos na tela. */
+@keyframes bubble-shimmer {
+  0%, 100% { opacity: var(--bubble-opacity, 0.12); }
+  50%      { opacity: calc(var(--bubble-opacity, 0.12) * 1.9); }
 }
 
 .hero-bubbles {
@@ -57,14 +99,94 @@
   will-change: transform, opacity;
 }
 
+.bubble-float {
+  position: absolute;
+  border-radius: 50%;
+  /* Vidro: brilho no canto superior esquerdo + aro tênue = leitura de bolha */
+  background: radial-gradient(circle at 30% 27%,
+    rgba(255, 255, 255, 0.5),
+    rgba(255, 255, 255, 0.1) 55%,
+    rgba(255, 255, 255, 0.02) 78%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.09);
+  animation:
+    bubble-wander ease-in-out infinite,
+    bubble-shimmer ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .bubble {
+  .bubble,
+  .bubble-float {
     animation: none;
-    opacity: 0.12;
+    opacity: 0.1;
   }
 }
 
-/* ── Dropdown do card de busca ───────────────────────────── */
+/* ══════════════════════════════════════════════════════════
+   REVELAÇÃO AO ROLAR
+   ══════════════════════════════════════════════════════════ */
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   ACORDEÃO (FAQ) — abre/fecha com altura animada
+   ══════════════════════════════════════════════════════════ */
+.accordion-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.accordion-body.is-open {
+  grid-template-rows: 1fr;
+}
+.accordion-body > div {
+  overflow: hidden;
+}
+@media (prefers-reduced-motion: reduce) {
+  .accordion-body { transition: none; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   SKELETON (carregamento) — melhor que spinner: já mostra o formato
+   ══════════════════════════════════════════════════════════ */
+@keyframes skeleton-shimmer {
+  100% { transform: translateX(100%); }
+}
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: #eef2f7;
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.6) 50%,
+    rgba(255, 255, 255, 0) 100%);
+  animation: skeleton-shimmer 1.4s infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after { animation: none; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   DROPDOWN DO CARD DE BUSCA
+   ══════════════════════════════════════════════════════════ */
 @keyframes dropdown-in {
   from {
     opacity: 0;
@@ -79,4 +201,16 @@
 .dropdown-panel {
   animation: dropdown-in 0.16s ease-out;
   transform-origin: top;
+}
+
+/* Painel que sobe da base no celular */
+@keyframes sheet-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.sheet-panel {
+  animation: sheet-in 0.2s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .dropdown-panel, .sheet-panel { animation: none; }
 }

@@ -13,6 +13,8 @@ const TYPES = [
 const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Churrasco','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Área gourmet','Som ambiente','Projetor','Câmeras de segurança']
 const DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 const BR_STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
+// Detecta contato externo (anti-fuga da plataforma): @, redes sociais, links, telefone
+const CONTACT_RE = /@|instagram|whatsapp|facebook|tiktok|t\.me|wa\.me|https?:\/\/|www\.|\.com|\(\d{2}\)\s*\d|\d{8,}/i
 
 export default function NewProperty() {
   const { user } = useAuth()
@@ -94,8 +96,16 @@ export default function NewProperty() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (/@|instagram|whatsapp|facebook|tiktok|t\.me|wa\.me|https?:\/\/|www\.|\.com|\(\d{2}\)\s*\d|\d{8,}/i.test(form.name)) {
+    if (CONTACT_RE.test(form.name)) {
       toast.error('O nome do espaço não pode conter @, redes sociais, links ou telefone.')
+      return
+    }
+    if (CONTACT_RE.test(form.description || '')) {
+      toast.error('A descrição não pode conter @, redes sociais, links ou telefone. Você combina com o cliente pelo WhatsApp depois que ele reserva.')
+      return
+    }
+    if (CONTACT_RE.test(form.rules || '')) {
+      toast.error('As regras não podem conter @, redes sociais, links ou telefone.')
       return
     }
     if (images.length === 0) { toast.error('Adicione pelo menos 1 foto!'); return }
@@ -278,6 +288,7 @@ export default function NewProperty() {
             <div>
               <label className="text-sm font-medium text-gray-600 mb-1 block">Descrição do espaço</label>
               <textarea className="input-field resize-none" rows={4} placeholder="Descreva seu espaço..." value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
+              <p className="text-xs text-gray-400 mt-1">Não coloque contato aqui (Instagram, telefone, link). Você combina tudo com o cliente pelo WhatsApp depois que ele reserva.</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-600 mb-1 block">Regras da casa</label>
@@ -286,6 +297,7 @@ export default function NewProperty() {
             <div>
               <label className="text-sm font-medium text-gray-600 mb-1 block">Instruções de check-in</label>
               <textarea className="input-field resize-none" rows={3} placeholder="Ex: Ao chegar, ligar para o interfone 101..." value={form.checkin_instructions} onChange={e => setForm({...form, checkin_instructions: e.target.value})} />
+              <p className="text-xs text-gray-400 mt-1">Isso só aparece pro cliente <b>depois</b> que ele reserva — aqui pode colocar endereço, referência e como chegar.</p>
             </div>
           </div>
 
