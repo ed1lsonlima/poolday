@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { useEffect } from 'react'
 import { Toaster } from 'react-hot-toast'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import Header from './components/common/Header'
@@ -47,6 +48,14 @@ function Layout({ children, noFooter = false }) {
 }
 
 export default function App() {
+  // Sinaliza ao CSS que o JS está vivo e vai cuidar da animação de revelar.
+  // Enquanto esta classe não existir, todo bloco .reveal fica VISÍVEL
+  // (ver index.css). Assim, se o JS falhar, o conteúdo nunca some —
+  // só deixa de animar. Rodar cedo, aqui no topo, minimiza qualquer flash.
+  useEffect(() => {
+    document.documentElement.classList.add('js-reveal')
+  }, [])
+
   return (
     <ErrorBoundary>
     <AuthProvider>

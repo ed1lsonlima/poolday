@@ -124,20 +124,42 @@
 
 /* ══════════════════════════════════════════════════════════
    REVELAÇÃO AO ROLAR
+
+   REDE DE SEGURANÇA (importante):
+   O conteúdo NÃO pode depender de JavaScript pra aparecer. Se o
+   IntersectionObserver não rodar (JS desativado, erro de script,
+   navegador antigo, crawler), a página inteira da segunda dobra pra
+   baixo ficaria invisível — falha "fechada", o pior tipo.
+
+   Por isso: só escondemos o conteúdo QUANDO o próprio JS confirma que
+   vai cuidar de revelá-lo, adicionando a classe `js-reveal` no <html>
+   (feito em main.jsx, de forma síncrona, antes da página pintar).
+   Sem essa classe, `.reveal` fica visível por padrão.
    ══════════════════════════════════════════════════════════ */
 .reveal {
+  /* padrão: visível. Nada some se o JS falhar. */
+  opacity: 1;
+  transform: none;
+}
+/* Só quando o JS assumiu o controle é que o estado inicial vira "escondido" */
+.js-reveal .reveal {
   opacity: 0;
   transform: translateY(18px);
   transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
               transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
   will-change: opacity, transform;
 }
-.reveal.is-visible {
+.js-reveal .reveal.is-visible {
   opacity: 1;
   transform: none;
 }
 @media (prefers-reduced-motion: reduce) {
-  .reveal { opacity: 1; transform: none; transition: none; }
+  .reveal,
+  .js-reveal .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
 
 /* ══════════════════════════════════════════════════════════
