@@ -6,4 +6,5 @@ Disallow: /reservas
 Disallow: /favoritos
 Disallow: /api/
 
-Sitemap: https://pooldaybr.com/sitemap.xml
+# Trocar para https://pooldaybr.com/sitemap.xml quando o domínio voltar
+Sitemap: https://poolday-self.vercel.app/sitemap.xml

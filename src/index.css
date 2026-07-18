@@ -185,6 +185,20 @@
 }
 
 /* ══════════════════════════════════════════════════════════
+   SCROLL HORIZONTAL SEM BARRA
+   Usado nos chips de tipo do Explore. A classe já era usada no JSX,
+   mas nunca existiu — Tailwind não tem `scrollbar-hide` nativo e o
+   projeto não usa plugin. Resultado: barra feia no Windows/Chrome.
+   ══════════════════════════════════════════════════════════ */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Edge / IE */
+  scrollbar-width: none;     /* Firefox */
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;             /* Chrome / Safari */
+}
+
+/* ══════════════════════════════════════════════════════════
    DROPDOWN DO CARD DE BUSCA
    ══════════════════════════════════════════════════════════ */
 @keyframes dropdown-in {
