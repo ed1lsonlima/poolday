@@ -16,6 +16,14 @@ const BR_STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','
 // Detecta contato externo (anti-fuga da plataforma): @, redes sociais, links, telefone
 const CONTACT_RE = /@|instagram|whatsapp|facebook|tiktok|t\.me|wa\.me|https?:\/\/|www\.|\.com|\(\d{2}\)\s*\d|\d{8,}/i
 
+// Taxa que o PoolDay retém sobre cada reserva. Um só lugar pra mexer no dia
+// que mudar (ex: promo de lançamento a 12%). Reflete no cálculo do líquido.
+const TAXA_POOLDAY = 0.15
+
+function formatBRL(valor) {
+  return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 export default function NewProperty() {
   const { user } = useAuth()
   const { id } = useParams()
@@ -176,12 +184,38 @@ export default function NewProperty() {
               <div>
                 <label className="text-sm font-medium text-gray-600 mb-1 block">Preço por diária (R$) *</label>
                 <input className="input-field" type="number" min="30" placeholder="Mín. R$ 30" value={form.price_per_day} onChange={e => setForm({...form, price_per_day: e.target.value})} required />
+                <p className="text-xs text-gray-400 mt-1">É o valor que o cliente vê e paga.</p>
               </div>
               <div>
                 <label className="text-sm font-medium text-gray-600 mb-1 block">Capacidade máx. *</label>
                 <input className="input-field" type="number" min="1" placeholder="Ex: 20" value={form.max_capacity} onChange={e => setForm({...form, max_capacity: e.target.value})} required />
               </div>
             </div>
+
+            {/* Demonstrativo de quanto o anfitrião recebe (taxa transparente).
+                Só aparece quando há um preço válido digitado. */}
+            {Number(form.price_per_day) >= 30 && (() => {
+              const preco = Number(form.price_per_day)
+              const taxa = preco * TAXA_POOLDAY
+              const liquido = preco - taxa
+              return (
+                <div className="bg-primary-50 border border-primary-100 rounded-xl p-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-600">Cliente paga</span>
+                    <span className="font-medium text-gray-800">R$ {formatBRL(preco)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm mt-1.5">
+                    <span className="text-gray-600">Taxa PoolDay ({Math.round(TAXA_POOLDAY * 100)}%)</span>
+                    <span className="font-medium text-gray-500">− R$ {formatBRL(taxa)}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-primary-100">
+                    <span className="font-semibold text-gray-700">Você recebe</span>
+                    <span className="font-bold text-primary-600 text-lg">R$ {formatBRL(liquido)}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">Quer receber um valor exato? Ajuste o preço até o “Você recebe” bater. O cliente paga pelo site e o pagamento é garantido.</p>
+                </div>
+              )
+            })()}
           </div>
 
           {/* Fotos */}
