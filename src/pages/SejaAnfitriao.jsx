@@ -366,23 +366,11 @@ export default function SejaAnfitriao() {
    ───────────────────────────────────────────────────────────── */
 import { forwardRef } from 'react'
 
-const PASSOS = [
-  {
-    n: 1, emoji: '📝', titulo: 'Crie sua conta grátis',
-    texto: 'Leva menos de 2 minutos. É de graça e não tem pegadinha.',
-  },
-  {
-    n: 2, emoji: '📸', titulo: 'Coloque boas fotos do seu espaço',
-    texto: 'Espaços com fotos caprichadas alugam muito mais. Capriche que o retorno vem.',
-  },
-  {
-    n: 3, emoji: '💰', titulo: 'Defina o seu preço',
-    texto: 'Você escolhe quanto quer receber por diária — e é isso que cai pra você, 100%.',
-  },
-  {
-    n: 4, emoji: '🎉', titulo: 'Pronto! Comece a receber reservas',
-    texto: 'Seu espaço parado agora trabalha por você todo fim de semana.',
-  },
+const TUTORIAL = [
+  { n: 1, img: '/tutorial/passo1.png', legenda: 'Na tela inicial, toque no menu no canto superior direito.' },
+  { n: 2, img: '/tutorial/passo2.png', legenda: 'Toque em “Painel do Anfitrião”.' },
+  { n: 3, img: '/tutorial/passo3.png', legenda: 'Na aba Pagamentos, conecte seu Mercado Pago (aparece o selo verde “Conta conectada”). Depois toque em “+ Novo Espaço”.' },
+  { n: 4, img: '/tutorial/passo4.png', legenda: 'Escolha o tipo de espaço e capriche: fotos boas, vídeo do YouTube (se tiver), seu preço, comodidades (piscina, churrasqueira, área gourmet, câmeras…), disponibilidade, descrição e regras. Depois é só tocar em Cadastrar. Pronto — seu espaço no ar! 🎉' },
 ]
 
 const PassoAPasso = forwardRef(function PassoAPasso({ nome }, ref) {
@@ -395,7 +383,7 @@ const PassoAPasso = forwardRef(function PassoAPasso({ nome }, ref) {
         {nome ? `Boa, ${nome.split(' ')[0]}!` : 'Boa!'} Agora falta pouco 🚀
       </h2>
       <p className="mt-2 text-gray-500 max-w-md mx-auto">
-        Seu espaço está a 4 passos de começar a te render dinheiro. Olha como é simples:
+        Seu espaço está a 4 passos de começar a te render dinheiro. É só seguir as telas:
       </p>
 
       {YOUTUBE_ID && (
@@ -410,18 +398,20 @@ const PassoAPasso = forwardRef(function PassoAPasso({ nome }, ref) {
         </div>
       )}
 
-      <div className="mt-8 space-y-3 text-left">
-        {PASSOS.map((p) => (
-          <div key={p.n} className="card p-4 flex items-start gap-4 shadow-sm">
-            <div className="shrink-0 w-11 h-11 rounded-xl bg-primary-50 flex items-center justify-center text-2xl">
-              {p.emoji}
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-8">
+        {TUTORIAL.map((p) => (
+          <div key={p.n} className="flex flex-col items-center">
+            <div className="rounded-[2rem] bg-gray-900 p-1.5 shadow-xl w-[190px]">
+              <img
+                src={p.img}
+                alt={`Passo ${p.n}`}
+                loading="lazy"
+                className="w-full rounded-[1.7rem] block"
+              />
             </div>
-            <div>
-              <p className="font-bold text-gray-800">
-                <span className="text-primary-500">{p.n}.</span> {p.titulo}
-              </p>
-              <p className="text-sm text-gray-500 mt-0.5">{p.texto}</p>
-            </div>
+            <p className="mt-3 text-sm text-gray-600 text-center max-w-[250px] leading-snug">
+              <b className="text-primary-600">{p.n}.</b> {p.legenda}
+            </p>
           </div>
         ))}
       </div>
