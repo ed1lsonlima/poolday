@@ -8,6 +8,13 @@ import BookingCalendar from '../components/common/BookingCalendar'
 
 const amenityIcons = { 'Piscina': '🏊', 'Wi-Fi': '📶', 'Estacionamento': '🚗', 'Churrasco': '🍖', 'Spa': '🛁', 'Toalhas': '🛁', 'Drinks': '🥤', 'Vista mar': '🌊', 'Jardim': '🌿', 'Deck': '🪵' }
 
+// Converte um link do YouTube em URL de embed; retorna null se não for YouTube.
+function youtubeEmbed(url) {
+  if (!url) return null
+  const m = url.match(/(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([\w-]{11})/)
+  return m ? `https://www.youtube.com/embed/${m[1]}` : null
+}
+
 export default function PropertyDetail() {
   const { id } = useParams()
   const { user, profile } = useAuth()
@@ -230,6 +237,27 @@ export default function PropertyDetail() {
               <div className="border-t pt-5 mb-5">
                 <h2 className="font-bold text-gray-800 mb-2">Sobre o espaço</h2>
                 <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-line">{property.description}</p>
+              </div>
+            )}
+
+            {property.video_url && (
+              <div className="border-t pt-5 mb-5">
+                <h2 className="font-bold text-gray-800 mb-3">Vídeo do espaço</h2>
+                {youtubeEmbed(property.video_url) ? (
+                  <div className="relative w-full rounded-2xl overflow-hidden" style={{ aspectRatio: '16 / 9' }}>
+                    <iframe
+                      src={youtubeEmbed(property.video_url)}
+                      title="Vídeo do espaço"
+                      className="absolute inset-0 w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                ) : (
+                  <a href={property.video_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-primary-50 text-primary-700 font-semibold text-sm px-4 py-2.5 rounded-xl hover:bg-primary-100 transition-colors">
+                    ▶ Assistir vídeo do espaço
+                  </a>
+                )}
               </div>
             )}
 

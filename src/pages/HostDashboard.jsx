@@ -92,9 +92,26 @@ export default function HostDashboard() {
 
   async function confirmDelete() {
     if (!deleting) return
-    await supabase.from('properties').delete().eq('id', deleting.id)
+    const id = deleting.id
     setDeleting(null)
-    fetchProperties()
+    const { error, count } = await supabase
+      .from('properties')
+      .delete({ count: 'exact' })
+      .eq('id', id)
+    if (error) {
+      console.error('delete property error:', error)
+      if (error.code === '23503') {
+        toast.error('Este espaço tem reservas ou avaliações vinculadas, por isso não pode ser excluído. Pause o espaço para ocultá-lo das buscas.')
+      } else {
+        toast.error('Não foi possível excluir: ' + (error.message || 'erro desconhecido'))
+      }
+      return
+    }
+    if (!count) {
+      toast.error('Não foi possível excluir (permissão negada no banco). Rode a migração fix-excluir-espaco.sql no Supabase.')
+      return
+    }
+    setProperties(prev => prev.filter(p => p.id !== id))
     toast.success('Espaço excluído.')
   }
 
