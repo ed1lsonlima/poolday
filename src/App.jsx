@@ -22,6 +22,7 @@ import Privacidade from './pages/Privacidade'
 import AcordoAnfitriao from './pages/AcordoAnfitriao'
 import Cancelamento from './pages/Cancelamento'
 import NotFound from './pages/NotFound'
+import SejaAnfitriao from './pages/SejaAnfitriao'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import ScrollToTop from './components/common/ScrollToTop'
 
@@ -68,6 +69,8 @@ export default function App() {
           <Route path="/espaco/:id" element={<Layout noFooter><PropertyDetail /></Layout>} />
           <Route path="/anfitriao/:id/perfil" element={<Layout><HostProfile /></Layout>} />
           <Route path="/cadastro" element={<Register />} />
+          {/* Landing do Google Ads pra captar anfitriao (standalone, sem Header/Footer) */}
+          <Route path="/seja-anfitriao" element={<SejaAnfitriao />} />
           <Route path="/entrar" element={<Login />} />
           <Route path="/termos" element={<Termos />} />
           <Route path="/privacidade" element={<Privacidade />} />
