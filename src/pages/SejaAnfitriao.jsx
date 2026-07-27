@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
+import { Waves } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 
@@ -108,8 +109,9 @@ export default function SejaAnfitriao() {
       {/* ── Barra superior enxuta (sem menu = menos distração) ── */}
       <header className="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
-          <Link to="/" className="text-xl font-extrabold text-primary-500 tracking-tight">
-            Pool<span className="text-orange-500">Day</span>
+          <Link to="/" className="flex items-center gap-2">
+            <Waves className="text-primary-500" size={26} />
+            <span className="text-xl font-bold text-gray-800 tracking-tight">PoolDay</span>
           </Link>
           <button
             onClick={() => scrollTo(formRef)}
@@ -159,6 +161,9 @@ export default function SejaAnfitriao() {
           <path fill="currentColor" d="M0,32 C240,64 480,0 720,16 C960,32 1200,64 1440,32 L1440,60 L0,60 Z" />
         </svg>
       </section>
+
+      {/* ══ FAIXA: BRASIL INTEIRO / MOVIMENTO ══ */}
+      <FaixaBrasil />
 
       {/* ══ SIMULADOR ══ */}
       <section id="simulador" className="max-w-3xl mx-auto px-5 py-14 md:py-20">
@@ -269,6 +274,9 @@ export default function SejaAnfitriao() {
         </div>
       </section>
 
+      {/* ══ TELAS POR DENTRO (iPhones) ══ */}
+      <TelasPorDentro onCta={() => scrollTo(formRef)} />
+
       {/* ══ FORMULÁRIO ══ */}
       <section ref={formRef} className="max-w-xl mx-auto px-5 py-14 md:py-20">
         {!enviado ? (
@@ -341,8 +349,9 @@ export default function SejaAnfitriao() {
 
       {/* ══ RODAPÉ ══ */}
       <footer className="border-t border-gray-100 py-8 text-center text-sm text-gray-400">
-        <Link to="/" className="font-bold text-primary-500">
-          Pool<span className="text-orange-500">Day</span>
+        <Link to="/" className="inline-flex items-center gap-2">
+          <Waves className="text-primary-500" size={20} />
+          <span className="font-bold text-gray-700">PoolDay</span>
         </Link>
         <p className="mt-2">Seu espaço de lazer, gerando renda.</p>
       </footer>
@@ -448,6 +457,146 @@ function Beneficio({ emoji, titulo, texto }) {
     </div>
   )
 }
+
+/* ─────────────────────────────────────────────────────────────
+   FAIXA "BRASIL INTEIRO" — prova social sem números inventados.
+   (Quando você tiver métricas reais, dá pra trocar as frases por
+    contadores de verdade — é só pedir pro Cláudio.)
+   ───────────────────────────────────────────────────────────── */
+function FaixaBrasil() {
+  const cidades = ['Maceió', 'Recife', 'Salvador', 'São Paulo', 'Fortaleza', 'Rio de Janeiro', 'Brasília', 'Curitiba']
+  return (
+    <section className="bg-white border-y border-gray-100 py-8">
+      <div className="max-w-5xl mx-auto px-5 text-center">
+        <p className="text-2xl md:text-3xl font-extrabold">
+          🇧🇷 O PoolDay é no <span className="text-primary-500">Brasil inteiro</span>
+        </p>
+        <p className="mt-2 text-gray-500 max-w-xl mx-auto">
+          Todo dia mais gente entra na plataforma procurando um espaço pra alugar —
+          do Nordeste ao Sul. Coloque o seu no mapa e comece a aparecer pra esses clientes.
+        </p>
+        <div className="mt-5 flex flex-wrap justify-center gap-2">
+          {cidades.map((c) => (
+            <span key={c} className="inline-flex items-center gap-1 bg-primary-50 text-primary-600 text-sm font-medium px-3 py-1.5 rounded-full">
+              📍 {c}
+            </span>
+          ))}
+          <span className="inline-flex items-center bg-orange-50 text-orange-600 text-sm font-semibold px-3 py-1.5 rounded-full">
+            e a sua cidade também
+          </span>
+        </div>
+      </div>
+    </section>
+  )
+}
+
+/* ─────────────────────────────────────────────────────────────
+   TELAS POR DENTRO — três iPhones com recriações das telas do site.
+   ───────────────────────────────────────────────────────────── */
+function Phone({ children }) {
+  return (
+    <div className="relative mx-auto" style={{ width: 210 }}>
+      <div className="relative rounded-[2.2rem] bg-gray-900 p-2 shadow-2xl" style={{ height: 430 }}>
+        {/* notch */}
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 w-20 h-5 bg-gray-900 rounded-b-2xl z-10" />
+        <div className="w-full h-full rounded-[1.7rem] overflow-hidden bg-white relative">
+          {children}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function TelasPorDentro({ onCta }) {
+  return (
+    <section className="bg-gradient-to-b from-primary-50/40 to-white py-14 md:py-20">
+      <div className="max-w-5xl mx-auto px-5">
+        <div className="text-center mb-10">
+          <h2 className="text-2xl md:text-3xl font-extrabold">
+            Veja como é <span className="text-primary-500">por dentro</span>
+          </h2>
+          <p className="mt-2 text-gray-500 max-w-xl mx-auto">
+            Uma plataforma bonita e simples — do jeito que seus clientes vão ver o seu espaço.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap justify-center items-end gap-6 md:gap-8">
+          {/* Tela 1 — Home */}
+          <Phone>
+            <div className="h-[46%] bg-gradient-to-b from-primary-500 to-primary-700 relative overflow-hidden">
+              <div className="absolute inset-0 opacity-30">
+                <span className="absolute rounded-full bg-white/40" style={{ width: 40, height: 40, left: 20, top: 30 }} />
+                <span className="absolute rounded-full bg-white/30" style={{ width: 26, height: 26, right: 24, top: 60 }} />
+                <span className="absolute rounded-full bg-white/25" style={{ width: 60, height: 60, left: 70, top: 80 }} />
+              </div>
+              <div className="relative pt-7 px-4 text-white">
+                <div className="flex items-center gap-1 text-sm font-bold"><Waves size={16} /> PoolDay</div>
+                <p className="mt-6 text-[15px] font-extrabold leading-tight">Alugue piscinas e espaços por hora</p>
+              </div>
+            </div>
+            <div className="p-3">
+              <div className="bg-white rounded-xl shadow -mt-6 relative p-2.5 border border-gray-100">
+                <div className="h-2 w-16 bg-gray-200 rounded mb-2" />
+                <div className="h-7 bg-primary-500 rounded-lg text-white text-[11px] font-semibold flex items-center justify-center">Buscar espaço</div>
+              </div>
+              <div className="mt-3 flex gap-2">
+                <div className="flex-1 h-14 rounded-lg bg-gradient-to-br from-orange-200 to-orange-400" />
+                <div className="flex-1 h-14 rounded-lg bg-gradient-to-br from-primary-200 to-primary-400" />
+              </div>
+            </div>
+          </Phone>
+
+          {/* Tela 2 — Espaço/Explorar (destaque central, um pouco maior) */}
+          <div className="order-first md:order-none -mb-2 md:mb-0 md:scale-110 md:mx-2">
+            <Phone>
+              <div className="h-[42%] bg-gradient-to-br from-primary-300 to-primary-500 relative">
+                <span className="absolute top-2 right-2 bg-white/90 text-primary-600 text-[10px] font-bold px-2 py-0.5 rounded-full">R$ 350/diária</span>
+                <span className="absolute bottom-2 left-2 text-white text-[10px] font-medium">☀️ Piscina + área gourmet</span>
+              </div>
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <div className="h-3 w-24 bg-gray-300 rounded" />
+                  <span className="text-[10px] font-bold text-orange-500">★ 4,9</span>
+                </div>
+                <div className="mt-1 h-2 w-16 bg-gray-200 rounded" />
+                <div className="mt-3 grid grid-cols-3 gap-1.5">
+                  {['👥 20','🕐 8h','🅿️ Sim'].map((t) => (
+                    <div key={t} className="text-[9px] text-gray-500 bg-gray-50 rounded py-1 text-center">{t}</div>
+                  ))}
+                </div>
+                <div className="mt-3 h-8 bg-orange-500 rounded-lg text-white text-[11px] font-semibold flex items-center justify-center">Reservar agora</div>
+              </div>
+            </Phone>
+          </div>
+
+          {/* Tela 3 — Reserva confirmada */}
+          <Phone>
+            <div className="h-full flex flex-col items-center justify-center px-5 text-center">
+              <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center text-3xl mb-3">✅</div>
+              <p className="font-extrabold text-gray-800">Reserva confirmada!</p>
+              <p className="text-[11px] text-gray-500 mt-1">Pagamento via Pix aprovado. O valor cai direto pra você.</p>
+              <div className="mt-4 w-full bg-gray-50 rounded-xl p-3 text-left">
+                <div className="flex justify-between text-[11px] mb-1.5"><span className="text-gray-400">Espaço</span><span className="font-semibold text-gray-700">Piscina do Sítio</span></div>
+                <div className="flex justify-between text-[11px] mb-1.5"><span className="text-gray-400">Data</span><span className="font-semibold text-gray-700">Sáb, 09/08</span></div>
+                <div className="flex justify-between text-[11px]"><span className="text-gray-400">Você recebe</span><span className="font-extrabold text-green-600">R$ 350</span></div>
+              </div>
+            </div>
+          </Phone>
+        </div>
+
+        <div className="text-center mt-12">
+          <button
+            onClick={onCta}
+            className="bg-primary-500 hover:bg-primary-600 text-white font-bold text-lg py-4 px-8 rounded-2xl transition-all active:scale-[0.97]"
+          >
+            Quero meu espaço aparecendo assim
+          </button>
+        </div>
+      </div>
+    </section>
+  )
+}
+
 
 /* ── Bolhas decorativas do hero (leves, sem custo de lib) ── */
 function FloatingBubbles() {
