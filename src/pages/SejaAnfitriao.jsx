@@ -29,9 +29,9 @@ const WHATSAPP = '5582996987838'
 // Peça ao Cláudio pra plugar, ou cole aqui. Enquanto vazio, não faz nada
 // (nenhum erro). Formato do id: 'AW-XXXXXXXXX'
 const GOOGLE_ADS = {
-  id: '',                 // ex: 'AW-1234567890'
-  label_formulario: '',   // conversão principal: enviou o formulário
-  label_criar_conta: '',  // conversão secundária: clicou em criar conta
+  id: 'AW-354460391',                       // tag do Google Ads (01/08/2026)
+  label_formulario: 'vANTCNyItdocEOfFgqkB', // conversão principal: enviou o formulário
+  label_criar_conta: '',                    // (opcional) criar depois no painel, se quiser medir
 }
 function dispararConversao(label) {
   try {
