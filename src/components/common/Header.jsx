@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { formatDateBR } from '../../lib/formatDate'
-import { Menu, X, Waves, User, CalendarDays, Heart, Settings, LogOut, LayoutDashboard, Bell } from 'lucide-react'
+import { Menu, X, Waves, User, CalendarDays, Heart, Settings, LogOut, LayoutDashboard, Bell, House } from 'lucide-react'
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -12,6 +12,8 @@ export default function Header() {
   const [unseen, setUnseen] = useState(0)
   const { user, profile, signOut } = useAuth()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
+  const showHomeButton = pathname !== '/'
 
   useEffect(() => {
     if (profile?.role !== 'host' || !user) { setNotifs([]); setUnseen(0); return }
@@ -53,10 +55,23 @@ export default function Header() {
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2">
-          <Waves className="text-primary-500" size={28} />
-          <span className="font-bold text-xl text-gray-800">PoolDay</span>
-        </Link>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link to="/" className="flex items-center gap-2" aria-label="PoolDay — página inicial">
+            <Waves className="text-primary-500" size={28} />
+            <span className="font-bold text-xl text-gray-800">PoolDay</span>
+          </Link>
+          {showHomeButton && (
+            <Link
+              to="/"
+              className="inline-flex items-center gap-1.5 rounded-full border border-primary-100 bg-primary-50 px-2.5 py-1.5 text-xs font-semibold text-primary-600 transition-colors hover:border-primary-200 hover:bg-primary-100"
+              aria-label="Voltar para a página inicial"
+              title="Voltar para a página inicial"
+            >
+              <House size={14} />
+              <span className="hidden sm:inline">Início</span>
+            </Link>
+          )}
+        </div>
 
         <nav className="hidden md:flex items-center gap-6">
           <Link to="/explorar" className="text-gray-600 hover:text-primary-500 font-medium transition-colors">Explorar</Link>
