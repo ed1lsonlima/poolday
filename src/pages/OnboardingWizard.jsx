@@ -10,7 +10,7 @@ const TYPES = [
   { id: 'gourmet', label: 'Espaço Gourmet' }, { id: 'court', label: 'Quadra' },
   { id: 'soccer', label: 'Campo de Futebol' }, { id: 'futevolei', label: 'Quadra de Futevôlei' },
 ]
-const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Churrasco','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Área gourmet','Som ambiente','Projetor','Câmeras de segurança']
+const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Área gourmet','Som ambiente','Projetor','Câmeras de segurança']
 const DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 
 const BR_STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
@@ -67,6 +67,25 @@ export default function OnboardingWizard() {
 
   function toggleAmenity(a) {
     setAmenities(prev => prev.includes(a) ? prev.filter(x => x !== a) : [...prev, a])
+  }
+
+  function addCustomAmenity() {
+    const val = newAmenity.trim()
+    if (!val) return
+    if (val.localeCompare('Churrasco', 'pt-BR', { sensitivity: 'base' }) === 0) {
+      toast.error('Use a opção "Churrasqueira".')
+      setNewAmenity('')
+      return
+    }
+    const exists = amenities.some(a => a.localeCompare(val, 'pt-BR', { sensitivity: 'base' }) === 0)
+      || AMENITIES.some(a => a.localeCompare(val, 'pt-BR', { sensitivity: 'base' }) === 0)
+    if (exists) {
+      toast.error('Essa comodidade já foi adicionada.')
+      setNewAmenity('')
+      return
+    }
+    setAmenities(prev => [...prev, val])
+    setNewAmenity('')
   }
 
   function toggleDay(d) {
@@ -191,8 +210,8 @@ export default function OnboardingWizard() {
                 ))}
               </div>
               <div className="flex gap-2">
-                <input className="input-field flex-1 text-sm py-2" placeholder="Outra comodidade..." value={newAmenity} onChange={e => setNewAmenity(e.target.value)} />
-                <button type="button" onClick={() => { if(newAmenity.trim()) { setAmenities(p => [...p, newAmenity.trim()]); setNewAmenity('') }}} className="bg-primary-500 text-white px-3 rounded-xl hover:bg-primary-600"><Plus size={16}/></button>
+                <input className="input-field flex-1 text-sm py-2" placeholder="Outra comodidade..." value={newAmenity} onChange={e => setNewAmenity(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addCustomAmenity() } }} />
+                <button type="button" onClick={addCustomAmenity} className="bg-primary-500 text-white px-3 rounded-xl hover:bg-primary-600"><Plus size={16}/></button>
               </div>
             </div>
             <div className="card p-5">
