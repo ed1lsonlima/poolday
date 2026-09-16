@@ -10,7 +10,7 @@ const TYPES = [
   { id: 'gourmet', label: 'Espaço Gourmet' }, { id: 'court', label: 'Quadra' },
   { id: 'soccer', label: 'Campo de Futebol' }, { id: 'futevolei', label: 'Quadra de Futevôlei' },
 ]
-const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Churrasco','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Área gourmet','Som ambiente','Projetor','Câmeras de segurança']
+const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Área gourmet','Som ambiente','Projetor','Câmeras de segurança']
 const DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 const BR_STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 // Detecta contato externo (anti-fuga da plataforma): @, redes sociais, links, telefone
@@ -49,7 +49,7 @@ export default function NewProperty() {
     if (data) {
       setForm({ type: data.type, name: data.name, description: data.description || '', rules: data.rules || '', checkin_instructions: data.checkin_instructions || '', city: data.city, neighborhood: data.neighborhood || '', address: data.address || '', state: data.state || 'AL', cep: data.cep || '', price_per_day: data.price_per_day || data.price_per_hour, max_capacity: data.max_capacity, min_duration: data.min_duration || 1, hora_inicio: data.hora_inicio ?? 8, hora_fim: data.hora_fim ?? 22, video_url: data.video_url || '' })
       setImages(data.images || [])
-      setAmenities(data.amenities || [])
+      setAmenities((data.amenities || []).filter(a => a.localeCompare('Churrasco', 'pt-BR', { sensitivity: 'base' }) !== 0))
       setAvailableDays(data.available_days || [0,1,2,3,4,5,6])
     }
   }
@@ -79,6 +79,11 @@ export default function NewProperty() {
   function addCustomAmenity() {
     const val = newAmenity.trim()
     if (!val) return
+    if (val.localeCompare('Churrasco', 'pt-BR', { sensitivity: 'base' }) === 0) {
+      toast.error('Use a opção "Churrasqueira".')
+      setNewAmenity('')
+      return
+    }
     // Evita duplicatas (case-insensitive)
     const exists = amenities.some(a => a.toLowerCase() === val.toLowerCase())
       || AMENITIES.some(a => a.toLowerCase() === val.toLowerCase())
