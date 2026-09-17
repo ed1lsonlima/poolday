@@ -76,14 +76,28 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
   }, [user])
 
   async function fetchBookings() {
-    const { data } = await supabase.from('bookings').select('*, properties(name, images, city, neighborhood, address), host:profiles!bookings_host_id_fkey(name)').eq('client_id', user.id).order('created_at', { ascending: false })
-    setBookings(data || [])
-    return data || []
+    const { data } = await supabase.from('bookings').select('*, host:profiles!bookings_host_id_fkey(name)').eq('client_id', user.id).order('created_at', { ascending: false })
+    const rows = data || []
+    const propertyIds = [...new Set(rows.map(booking => booking.property_id).filter(Boolean))]
+    const confirmedIds = [...new Set(rows.filter(booking => ['confirmed', 'completed'].includes(booking.status)).map(booking => booking.property_id))]
+    const [{ data: listings }, { data: privateProperties }] = await Promise.all([
+      propertyIds.length ? supabase.from('property_listings').select('id,name,images,city,neighborhood').in('id', propertyIds) : Promise.resolve({ data: [] }),
+      confirmedIds.length ? supabase.from('property_access_details').select('*').in('property_id', confirmedIds) : Promise.resolve({ data: [] }),
+    ])
+    const publicById = new Map((listings || []).map(property => [property.id, property]))
+    const privateById = new Map((privateProperties || []).map(property => [property.property_id, { ...property, id: property.property_id }]))
+    const hydrated = rows.map(booking => ({ ...booking, properties: privateById.get(booking.property_id) || publicById.get(booking.property_id) || null }))
+    setBookings(hydrated)
+    return hydrated
   }
 
   async function fetchFavorites() {
-    const { data } = await supabase.from('favorites').select('id, properties(*)').eq('user_id', user.id).order('created_at', { ascending: false })
-    setFavorites((data || []).map(f => f.properties).filter(Boolean))
+    const { data } = await supabase.from('favorites').select('id,property_id').eq('user_id', user.id).order('created_at', { ascending: false })
+    const propertyIds = (data || []).map(favorite => favorite.property_id)
+    if (!propertyIds.length) { setFavorites([]); return }
+    const { data: listings } = await supabase.from('property_listings').select('*').in('id', propertyIds)
+    const order = new Map(propertyIds.map((propertyId, index) => [propertyId, index]))
+    setFavorites((listings || []).sort((a, b) => order.get(a.id) - order.get(b.id)))
   }
 
   async function removeFavorite(propertyId) {
@@ -343,7 +357,12 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
                     </ol>
                   </div>
                   {detail.properties?.address && (
-                    <div className="rounded-xl p-3 bg-gray-50 text-xs text-gray-600">📍 <b>Endereço:</b> {detail.properties.address}</div>
+                    <div className="rounded-xl p-3 bg-gray-50 text-xs text-gray-600 space-y-2">
+                      <p>📍 <b>Endereço:</b> {detail.properties.address}</p>
+                      {detail.properties.landmark && <p><b>Ponto de referência:</b> {detail.properties.landmark}</p>}
+                      {detail.properties.checkin_instructions && <p><b>Como chegar e entrar:</b> {detail.properties.checkin_instructions}</p>}
+                      {detail.properties.map_url && <a href={detail.properties.map_url} target="_blank" rel="noopener noreferrer" className="inline-flex font-semibold text-primary-600 hover:underline">Abrir localização exata no mapa →</a>}
+                    </div>
                   )}
                   <div className="rounded-xl border border-green-200 bg-white p-3.5">
                     <p className="text-xs text-gray-500 mb-2">Contato oficial do PoolDay:</p>
