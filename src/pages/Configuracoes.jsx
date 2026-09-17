@@ -19,7 +19,7 @@ function Field({ label, icon, value, onChange, placeholder, autoComplete }) {
 
 export default function Configuracoes() {
   const { user, profile, updateProfile, signOut, isAdmin } = useAuth()
-  const [form, setForm] = useState({ name: '', phone: '', city: '', state: null, municipality_code: null, bio: '' })
+  const [form, setForm] = useState({ name: '', phone: '', city: '', state: null, municipality_code: null })
   const [preferences, setPreferences] = useState(DEFAULT_PREFERENCES)
   const [saving, setSaving] = useState(false)
   const [sendingPassword, setSendingPassword] = useState(false)
@@ -33,7 +33,6 @@ export default function Configuracoes() {
       city: profile.city || '',
       state: profile.state || null,
       municipality_code: profile.municipality_code || null,
-      bio: profile.bio || '',
     })
     setPreferences({ ...DEFAULT_PREFERENCES, ...profile.notification_preferences })
   }, [profile])
@@ -82,11 +81,6 @@ export default function Configuracoes() {
             <Field label="Nome" icon={<User size={15} />} value={form.name} onChange={name => setForm(previous => ({ ...previous, name }))} placeholder="Seu nome" autoComplete="name" />
             <Field label="WhatsApp" icon={<Phone size={15} />} value={form.phone} onChange={phone => setForm(previous => ({ ...previous, phone }))} placeholder="(82) 99999-9999" autoComplete="tel" />
             <div className="sm:col-span-2"><CityField value={form} onChange={location => setForm(previous => ({ ...previous, ...location }))} /></div>
-            <div className="sm:col-span-2">
-              <label className="text-xs font-bold text-gray-500 uppercase mb-1.5 block">Sobre você <span className="font-normal normal-case text-gray-400">(opcional)</span></label>
-              <textarea className="input-field min-h-24 resize-y" maxLength={240} value={form.bio} onChange={event => setForm(previous => ({ ...previous, bio: event.target.value }))} placeholder="Conte um pouco sobre você ou seu espaço." />
-              <p className="text-right text-[11px] text-gray-400 mt-1">{form.bio.length}/240</p>
-            </div>
             <div className="sm:col-span-2 rounded-xl bg-gray-50 px-4 py-3 flex items-center gap-3 min-w-0">
               <Mail size={17} className="text-gray-400 shrink-0" /><div className="min-w-0"><p className="text-[11px] font-bold uppercase text-gray-400">E-mail da conta</p><p className="text-sm text-gray-700 truncate">{user?.email}</p></div><span className="ml-auto text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">Verificado</span>
             </div>
