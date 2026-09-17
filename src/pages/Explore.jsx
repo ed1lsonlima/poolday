@@ -70,7 +70,7 @@ export default function Explore() {
     setLoadError(false)
 
     async function fetchProperties() {
-      let query = supabase.from('properties').select('*').eq('is_active', true)
+      let query = supabase.from('property_listings').select('*')
 
       const cidade = params.get('cidade')
       const tipo = params.get('tipo')
