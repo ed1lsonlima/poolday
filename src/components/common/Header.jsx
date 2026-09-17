@@ -123,14 +123,14 @@ export default function Header() {
             </div>
           )}
           {user ? (
-            <button onClick={() => setMenuOpen(!menuOpen)} className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-2 hover:shadow-md transition-all">
+            <button aria-label="Abrir menu da conta" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)} className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-2 hover:shadow-md transition-all">
               <Menu size={18} className="text-gray-600" />
               <div className="w-8 h-8 bg-primary-500 rounded-full flex items-center justify-center text-white text-sm font-semibold">
                 {profile?.name?.charAt(0)?.toUpperCase() || 'U'}
               </div>
             </button>
           ) : (
-            <button onClick={() => setMenuOpen(!menuOpen)} className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-2 hover:shadow-md transition-all">
+            <button aria-label="Abrir menu" aria-expanded={menuOpen} onClick={() => setMenuOpen(!menuOpen)} className="flex items-center gap-2 border border-gray-200 rounded-full px-3 py-2 hover:shadow-md transition-all">
               <Menu size={18} className="text-gray-600" />
               <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
                 <User size={16} className="text-gray-500" />
@@ -148,7 +148,7 @@ export default function Header() {
                 <Waves className="text-primary-500" size={22} />
                 <span className="font-bold text-gray-800">PoolDay</span>
               </div>
-              <button onClick={() => setMenuOpen(false)}>
+              <button aria-label="Fechar menu" onClick={() => setMenuOpen(false)}>
                 <X size={22} className="text-gray-500" />
               </button>
             </div>
@@ -210,3 +210,4 @@ function MenuItem({ icon, label, to, onClick }) {
     </Link>
   )
 }
+
