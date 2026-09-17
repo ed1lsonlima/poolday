@@ -30,7 +30,7 @@ export default function OnboardingWizard() {
   const [form, setForm] = useState({
     type: 'pool', name: '', description: '', rules: '', checkin_instructions: '',
     city: '', neighborhood: '', address: '', state: 'AL', cep: '',
-    price_per_day: '', max_capacity: '', min_duration: 1,
+    price_per_day: '', max_capacity: '', hora_inicio: 8, hora_fim: 22,
   })
 
   function update(field, value) { setForm(prev => ({ ...prev, [field]: value })) }
@@ -40,6 +40,7 @@ export default function OnboardingWizard() {
     if (step === 1 && (!form.name || !form.price_per_day || !form.max_capacity)) { toast.error('Preencha nome, preço e capacidade'); return false }
     if (step === 1 && CONTACT_RE.test(form.name)) { toast.error('O nome do espaço não pode conter @, redes sociais, links ou telefone.'); return false }
     if (step === 1 && Number(form.price_per_day) < 30) { toast.error('Preço mínimo é R$ 30'); return false }
+    if (step === 3 && Number(form.hora_inicio) >= Number(form.hora_fim)) { toast.error('O horário de término precisa ser depois do início.'); return false }
     if (step === 2 && images.length === 0) { toast.error('Adicione pelo menos 1 foto'); return false }
     return true
   }
@@ -97,8 +98,9 @@ export default function OnboardingWizard() {
     if (CONTACT_RE.test(form.rules || '')) { toast.error('As regras não podem conter @, redes sociais, links ou telefone.'); return }
     setLoading(true)
     try {
-      const payload = { ...form, images, amenities, available_days: availableDays, host_id: user.id, is_active: true, price_per_hour: form.price_per_day, max_capacity: Number(form.max_capacity), min_duration: Number(form.min_duration), price_per_day: Number(form.price_per_day) }
-      await supabase.from('properties').insert(payload)
+      const payload = { ...form, images, amenities, available_days: availableDays, host_id: user.id, is_active: true, price_per_hour: null, max_capacity: Number(form.max_capacity), price_per_day: Number(form.price_per_day), hora_inicio: Number(form.hora_inicio), hora_fim: Number(form.hora_fim) }
+      const { error } = await supabase.from('properties').insert(payload)
+      if (error) throw error
       toast.success('Espaço publicado!')
       navigate('/anfitriao')
     } catch (err) {
@@ -170,7 +172,7 @@ export default function OnboardingWizard() {
                 <input className="input-field" type="number" min="1" placeholder="Ex: 20" value={form.max_capacity} onChange={e => update('max_capacity', e.target.value)} />
               </div>
             </div>
-            <p className="text-xs text-gray-400">O preço por hora poderá ser ajustado depois no painel do anfitrião.</p>
+            <p className="text-xs text-gray-400">O cliente paga esse valor pela diária inteira.</p>
           </div>
         )}
 
@@ -224,6 +226,20 @@ export default function OnboardingWizard() {
                   </button>
                 ))}
               </div>
+              <div className="mt-5 pt-5 border-t border-gray-100">
+                <label className="text-sm font-medium text-gray-600 mb-2 block">Horário incluído na diária</label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-sm text-gray-500">das</span>
+                  <select value={form.hora_inicio} onChange={e => update('hora_inicio', e.target.value)} className="input-field w-auto py-2">
+                    {Array.from({length: 24}, (_, h) => <option key={h} value={h}>{String(h).padStart(2,'0')}h</option>)}
+                  </select>
+                  <span className="text-sm text-gray-500">às</span>
+                  <select value={form.hora_fim} onChange={e => update('hora_fim', e.target.value)} className="input-field w-auto py-2">
+                    {Array.from({length: 24}, (_, h) => <option key={h} value={h}>{String(h).padStart(2,'0')}h</option>)}
+                  </select>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">O cliente reserva a diária inteira dentro desse período.</p>
+              </div>
             </div>
           </div>
         )}
@@ -253,6 +269,7 @@ export default function OnboardingWizard() {
                 <li><span className="text-gray-400">Tipo:</span> {TYPES.find(t => t.id === form.type)?.label}</li>
                 <li><span className="text-gray-400">Local:</span> {form.city}{form.state ? `, ${form.state}` : ''}</li>
                 <li><span className="text-gray-400">Nome:</span> {form.name || '-'}</li>
+                <li><span className="text-gray-400">Horário da diária:</span> {String(form.hora_inicio).padStart(2,'0')}h às {String(form.hora_fim).padStart(2,'0')}h</li>
                 <li><span className="text-gray-400">Diária:</span> {form.price_per_day ? `R$ ${form.price_per_day}` : '-'}</li>
                 <li><span className="text-gray-400">Capacidade:</span> {form.max_capacity || '-'} pessoas</li>
                 <li><span className="text-gray-400">Fotos:</span> {images.length}</li>
@@ -281,3 +298,4 @@ export default function OnboardingWizard() {
     </div>
   )
 }
+
