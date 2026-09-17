@@ -27,7 +27,7 @@ export default function HostProfile() {
     if (!hostData) { navigate('/'); return }
     setHost(hostData)
 
-    const { data: props } = await supabase.from('properties').select('*').eq('host_id', id).eq('is_active', true).order('created_at', { ascending: false })
+    const { data: props } = await supabase.from('property_listings').select('*').eq('host_id', id).order('created_at', { ascending: false })
     if (request !== requestId.current) return
     setProperties(props || [])
 
@@ -82,7 +82,6 @@ export default function HostProfile() {
               )}
             </div>
           </div>
-          {host.bio && <p className="text-gray-600 text-sm leading-relaxed mt-5 pt-5 border-t border-gray-100">{host.bio}</p>}
         </div>
 
         <div className="mb-8">
