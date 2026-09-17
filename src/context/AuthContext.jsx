@@ -145,7 +145,7 @@ export function AuthProvider({ children }) {
   async function updateProfile(updates) {
     const userId = currentUserId.current
     if (!userId) throw new Error('Entre na sua conta novamente.')
-    const allowed = ['name', 'phone', 'city', 'state', 'municipality_code', 'avatar_url', 'bio']
+    const allowed = ['name', 'phone', 'city', 'state', 'municipality_code', 'avatar_url', 'bio', 'notification_preferences']
     const fields = Object.fromEntries(Object.entries(updates).filter(([key]) => allowed.includes(key)))
     const { data, error } = await supabase.from('profiles').update(fields).eq('id', userId).select().single()
     if (error) throw error

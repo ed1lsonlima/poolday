@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { formatDateBR } from '../../lib/formatDate'
-import { Menu, X, Waves, User, CalendarDays, Heart, Settings, LogOut, LayoutDashboard, Bell, House } from 'lucide-react'
+import { Menu, X, Waves, User, CalendarDays, Heart, Settings, LogOut, LayoutDashboard, Bell, BellOff, House } from 'lucide-react'
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -14,34 +14,35 @@ export default function Header() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const showHomeButton = pathname !== '/'
+  const notificationsEnabled = profile?.notification_preferences?.in_app_bookings !== false
 
   useEffect(() => {
-    if (profile?.role !== 'host' || !user) { setNotifs([]); setUnseen(0); return }
+    if (profile?.role !== 'host' || !user || !notificationsEnabled) { setNotifs([]); setUnseen(0); return }
     fetchNotifs()
     const interval = setInterval(fetchNotifs, 60000)
     return () => clearInterval(interval)
-  }, [profile?.role, user?.id])
+  }, [profile?.role, user?.id, notificationsEnabled])
 
   async function fetchNotifs() {
     const { data } = await supabase
       .from('bookings')
-      .select('id, date, total_amount, properties(name), client:profiles!bookings_client_id_fkey(name)')
+      .select('id, date, total_amount, seen_by_host, created_at, properties(name), client:profiles!bookings_client_id_fkey(name)')
       .eq('host_id', user.id)
       .eq('status', 'confirmed')
-      .eq('seen_by_host', false)
       .order('created_at', { ascending: false })
       .limit(10)
     setNotifs(data || [])
-    setUnseen((data || []).length)
+    setUnseen((data || []).filter(item => !item.seen_by_host).length)
   }
 
   async function toggleNotifs() {
     const willOpen = !notifOpen
     setNotifOpen(willOpen)
     setMenuOpen(false)
-    if (willOpen && unseen > 0) {
-      const ids = notifs.map(n => n.id)
+    if (willOpen && notificationsEnabled && unseen > 0) {
+      const ids = notifs.filter(item => !item.seen_by_host).map(item => item.id)
       await supabase.from('bookings').update({ seen_by_host: true }).in('id', ids)
+      setNotifs(current => current.map(item => ({ ...item, seen_by_host: true })))
       setUnseen(0)
     }
   }
@@ -83,26 +84,30 @@ export default function Header() {
         <div className="flex items-center gap-3">
           {user && profile?.role === 'host' && (
             <div className="relative">
-              <button onClick={toggleNotifs} className="relative flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 hover:shadow-md transition-all" aria-label="Notificações">
-                <Bell size={18} className="text-gray-600" />
+              <button onClick={toggleNotifs} className="relative flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 hover:shadow-md transition-all" aria-label="Notificações" aria-expanded={notifOpen}>
+                {notificationsEnabled ? <Bell size={18} className="text-gray-600" /> : <BellOff size={18} className="text-gray-400" />}
                 {unseen > 0 && (
                   <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">{unseen}</span>
                 )}
               </button>
               {notifOpen && (
-                <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)}>
-                  <div className="absolute right-4 top-16 w-80 max-w-[calc(100vw-2rem)] bg-white shadow-2xl rounded-2xl border border-gray-100 overflow-hidden" onClick={e => e.stopPropagation()}>
-                    <div className="p-4 border-b flex items-center gap-2">
-                      <Bell size={16} className="text-primary-500" />
-                      <span className="font-semibold text-gray-800">Notificações</span>
+                <div className="fixed inset-0 z-[60] bg-slate-900/10 sm:bg-transparent" onClick={() => setNotifOpen(false)}>
+                  <div className="absolute right-2 sm:right-4 top-[4.5rem] w-[22rem] max-w-[calc(100vw-1rem)] bg-white shadow-2xl rounded-2xl border border-gray-100 overflow-hidden" onClick={e => e.stopPropagation()}>
+                    <div className="p-4 border-b flex items-center gap-3">
+                      <span className="w-9 h-9 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center"><Bell size={17} /></span>
+                      <div className="flex-1"><span className="font-bold text-gray-800 block">Notificações</span><span className="text-[11px] text-gray-400">Reservas confirmadas recentemente</span></div>
+                      {unseen > 0 && <span className="text-[10px] font-bold bg-red-50 text-red-600 px-2 py-1 rounded-full">{unseen} nova{unseen > 1 ? 's' : ''}</span>}
                     </div>
                     <div className="max-h-96 overflow-y-auto">
-                      {notifs.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-8">Nenhuma reserva nova por aqui.</p>
+                      {!notificationsEnabled ? (
+                        <div className="text-center px-6 py-8"><BellOff size={30} className="text-gray-200 mx-auto mb-2" /><p className="font-semibold text-gray-600 text-sm">Avisos pausados</p><p className="text-xs text-gray-400 mt-1">Você pode reativá-los nas configurações.</p></div>
+                      ) : notifs.length === 0 ? (
+                        <div className="text-center px-6 py-8"><Bell size={30} className="text-gray-200 mx-auto mb-2" /><p className="font-semibold text-gray-600 text-sm">Tudo tranquilo por aqui</p><p className="text-xs text-gray-400 mt-1">Novas reservas confirmadas aparecerão neste espaço.</p></div>
                       ) : (
                         notifs.map(n => (
                           <Link key={n.id} to="/anfitriao" onClick={() => setNotifOpen(false)}
-                            className="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 border-b border-gray-50 transition-colors">
+                            className={`relative flex items-start gap-3 px-4 py-3.5 hover:bg-gray-50 border-b border-gray-50 transition-colors ${!n.seen_by_host ? 'bg-primary-50/50' : ''}`}>
+                            {!n.seen_by_host && <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary-500" />}
                             <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                               <CalendarDays size={16} className="text-green-600" />
                             </div>
@@ -114,9 +119,10 @@ export default function Header() {
                         ))
                       )}
                     </div>
-                    <Link to="/anfitriao" onClick={() => setNotifOpen(false)} className="block text-center text-sm font-semibold text-primary-600 py-3 hover:bg-gray-50 border-t">
-                      Ver painel do anfitrião
-                    </Link>
+                    <div className="grid grid-cols-2 border-t">
+                      <Link to="/configuracoes" onClick={() => setNotifOpen(false)} className="text-center text-xs font-semibold text-gray-500 py-3 hover:bg-gray-50 border-r">Gerenciar avisos</Link>
+                      <Link to="/anfitriao" onClick={() => setNotifOpen(false)} className="text-center text-xs font-semibold text-primary-600 py-3 hover:bg-gray-50">Abrir painel</Link>
+                    </div>
                   </div>
                 </div>
               )}

@@ -48,7 +48,7 @@ const YOUTUBE_ID = ''
 const BRL = (n) =>
   n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 
-const TIPOS = ['Piscina', 'Chácara', 'Área de lazer / gourmet', 'Sítio', 'Salão de festas', 'Outro']
+const TIPOS = ['Piscina', 'Chácara', 'Área de lazer', 'Sítio', 'Salão de festas', 'Outro']
 
 export default function SejaAnfitriao() {
   // ── Simulador ──────────────────────────────────────────────

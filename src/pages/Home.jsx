@@ -13,10 +13,8 @@ import { withReviewAuthors } from '../lib/publicProfiles'
 const CATEGORIES = [
   { id: 'pool',      label: 'Piscina',             emoji: '🏊' },
   { id: 'chacara',   label: 'Chácara',             emoji: '🌿' },
-  { id: 'gourmet',   label: 'Espaço Gourmet',      emoji: '🍖' },
   { id: 'court',     label: 'Quadra',              emoji: '🏀' },
   { id: 'soccer',    label: 'Campo de Futebol',    emoji: '⚽' },
-  { id: 'futevolei', label: 'Quadra de Futevôlei', emoji: '🏐' },
 ]
 
 const FAQS = [
@@ -35,10 +33,8 @@ const SPACE_TYPES = [
   { id: '',           label: 'Todos os espaços',     emoji: '🌐' },
   { id: 'pool',       label: 'Piscina',              emoji: '🏊' },
   { id: 'chacara',    label: 'Chácara',              emoji: '🌿' },
-  { id: 'gourmet',    label: 'Espaço Gourmet',       emoji: '🍖' },
   { id: 'court',      label: 'Quadra',               emoji: '🏀' },
   { id: 'soccer',     label: 'Campo de Futebol',     emoji: '⚽' },
-  { id: 'futevolei',  label: 'Quadra de Futevôlei',  emoji: '🏐' },
 ]
 
 /* ── Bolhas que sobem do fundo ───────────────────────────── */
@@ -294,17 +290,9 @@ export default function Home() {
                 <ChevronDown size={16} className={`text-gray-400 transition-transform duration-200 shrink-0 ${typeOpen ? 'rotate-180' : ''}`} />
               </button>
               {typeOpen && (
-                <>
-                  <div className="fixed inset-0 z-40 bg-primary-900/20 backdrop-blur-[2px] sm:bg-transparent sm:backdrop-blur-0" onClick={() => setTypeOpen(false)} />
-                  {/* Celular: painel sobe da base. Desktop: abre ancorado no campo. */}
-                  <div
-                    role="listbox"
-                    className="sheet-panel fixed left-4 right-4 bottom-4 bg-white border border-gray-200 shadow-2xl z-50 rounded-3xl py-2 max-w-xl mx-auto
-                               sm:dropdown-panel sm:absolute sm:left-0 sm:right-0 sm:bottom-auto sm:top-full sm:mt-2 sm:rounded-2xl sm:max-w-none"
-                  >
-                    <div className="px-4 py-2 border-b border-gray-100 mb-1">
-                      <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Selecione o tipo de espaço</p>
-                    </div>
+                <div role="listbox" className="dropdown-panel relative z-10 bg-white border-y border-gray-100 px-3 py-3">
+                  <p className="px-2 pb-2 text-xs font-bold text-gray-400 uppercase tracking-wide">Selecione o tipo de espaço</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {SPACE_TYPES.map((t, i) => (
                       <button
                         key={t.id}
@@ -312,7 +300,7 @@ export default function Home() {
                         role="option"
                         aria-selected={typeIdx === i}
                         onClick={() => { setTypeIdx(i); setTypeOpen(false) }}
-                        className={`w-full flex items-center gap-3 text-left px-4 py-3 text-sm transition-colors ${typeIdx === i ? 'bg-primary-50 text-primary-600 font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}
+                        className={`w-full flex items-center gap-3 text-left px-3 py-3 rounded-xl text-sm transition-colors ${typeIdx === i ? 'bg-primary-50 text-primary-600 font-semibold ring-1 ring-primary-100' : 'text-gray-700 bg-gray-50 hover:bg-gray-100'}`}
                       >
                         <span className="text-lg">{t.emoji}</span>
                         <span className="flex-1">{t.label}</span>
@@ -320,7 +308,7 @@ export default function Home() {
                       </button>
                     ))}
                   </div>
-                </>
+                </div>
               )}
             </div>
 
