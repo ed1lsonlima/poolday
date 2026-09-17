@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { Upload, X, Plus, ChevronLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CityField from '../components/common/CityField'
+import { buildPublicPropertyTitle, containsExternalContact, isTrustedMapLink } from '../lib/propertySafety'
 
 const TYPES = [
   { id: 'pool', label: 'Piscina' }, { id: 'chacara', label: 'Chácara' },
@@ -12,9 +13,6 @@ const TYPES = [
 ]
 const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Área gourmet','Som ambiente','Projetor','Câmeras de segurança']
 const DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
-// Detecta contato externo (anti-fuga da plataforma): @, redes sociais, links, telefone
-const CONTACT_RE = /@|instagram|whatsapp|facebook|tiktok|t\.me|wa\.me|https?:\/\/|www\.|\.com|\(\d{2}\)\s*\d|\d{8,}/i
-
 // Taxa que o PoolDay retém sobre cada reserva. Um só lugar pra mexer no dia
 // que mudar (ex: promo de lançamento a 12%). Reflete no cálculo do líquido.
 const TAXA_POOLDAY = 0.15
@@ -35,10 +33,10 @@ export default function NewProperty() {
   const [availableDays, setAvailableDays] = useState([1,2,3,4,5,6,0])
   const [newAmenity, setNewAmenity] = useState('')
   const [form, setForm] = useState({
-    type: 'pool', name: '', description: '', rules: '', checkin_instructions: '',
-    city: '', neighborhood: '', address: '', state: 'AL', cep: '',
+    type: 'pool', description: '', rules: '', checkin_instructions: '',
+    city: '', neighborhood: '', address: '', landmark: '', map_url: '', state: 'AL', cep: '',
     price_per_day: '', max_capacity: '',
-    hora_inicio: 8, hora_fim: 22, video_url: '',
+    hora_inicio: 8, hora_fim: 22,
   })
 
   useEffect(() => { if (isEditing) loadProperty() }, [id])
@@ -46,7 +44,7 @@ export default function NewProperty() {
   async function loadProperty() {
     const { data } = await supabase.from('properties').select('*').eq('id', id).single()
     if (data) {
-      setForm({ type: data.type, name: data.name, description: data.description || '', rules: data.rules || '', checkin_instructions: data.checkin_instructions || '', city: data.city, neighborhood: data.neighborhood || '', address: data.address || '', state: data.state || 'AL', cep: data.cep || '', price_per_day: data.price_per_day || data.price_per_hour, max_capacity: data.max_capacity, hora_inicio: data.hora_inicio ?? 8, hora_fim: data.hora_fim ?? 22, video_url: data.video_url || '' })
+      setForm({ type: data.type, description: data.description || '', rules: data.rules || '', checkin_instructions: data.checkin_instructions || '', city: data.city, neighborhood: data.neighborhood || '', address: data.address || '', landmark: data.landmark || '', map_url: data.map_url || '', state: data.state || 'AL', cep: data.cep || '', price_per_day: data.price_per_day || data.price_per_hour, max_capacity: data.max_capacity, hora_inicio: data.hora_inicio ?? 8, hora_fim: data.hora_fim ?? 22 })
       setImages(data.images || [])
       setAmenities((data.amenities || []).filter(a => a.localeCompare('Churrasco', 'pt-BR', { sensitivity: 'base' }) !== 0))
       setAvailableDays(data.available_days || [0,1,2,3,4,5,6])
@@ -66,7 +64,7 @@ export default function NewProperty() {
       const { data: { publicUrl } } = supabase.storage.from('property-images').getPublicUrl(path)
       setImages(prev => [...prev, publicUrl])
       toast.success('Foto adicionada!')
-    } catch (err) {
+    } catch {
       toast.error('Erro ao enviar foto')
     } finally { setUploading(false) }
   }
@@ -81,6 +79,10 @@ export default function NewProperty() {
     if (val.localeCompare('Churrasco', 'pt-BR', { sensitivity: 'base' }) === 0) {
       toast.error('Use a opção "Churrasqueira".')
       setNewAmenity('')
+      return
+    }
+    if (containsExternalContact(val)) {
+      toast.error('Não coloque contato ou link nas comodidades.')
       return
     }
     // Evita duplicatas (case-insensitive)
@@ -108,31 +110,25 @@ export default function NewProperty() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (CONTACT_RE.test(form.name)) {
-      toast.error('O nome do espaço não pode conter @, redes sociais, links ou telefone.')
-      return
-    }
-    if (CONTACT_RE.test(form.description || '')) {
+    if (containsExternalContact(form.description || '')) {
       toast.error('A descrição não pode conter @, redes sociais, links ou telefone. Você combina com o cliente pelo WhatsApp depois que ele reserva.')
       return
     }
-    if (CONTACT_RE.test(form.rules || '')) {
+    if (containsExternalContact(form.rules || '')) {
       toast.error('As regras não podem conter @, redes sociais, links ou telefone.')
       return
     }
-    const vurl = form.video_url?.trim()
-    if (vurl && !/^https?:\/\/(www\.)?(youtube\.com|youtu\.be)\//i.test(vurl)) {
-      toast.error('Por enquanto só aceitamos link do YouTube.')
-      return
-    }
+    if (amenities.some(containsExternalContact)) { toast.error('As comodidades não podem conter contato ou link.'); return }
     if (images.length === 0) { toast.error('Adicione pelo menos 1 foto!'); return }
     if (!form.city || !form.state) { toast.error('Selecione cidade e estado.'); return }
+    if (!form.address.trim() || !form.landmark.trim() || form.checkin_instructions.trim().length < 15) { toast.error('Preencha endereço, ponto de referência e instruções de chegada.'); return }
+    if (!isTrustedMapLink(form.map_url?.trim())) { toast.error('Use um link válido do Google Maps ou Waze.'); return }
     if (Number(form.price_per_day) < 30) { toast.error('Preço mínimo é R$ 30!'); return }
     if (Number(form.hora_inicio) >= Number(form.hora_fim)) { toast.error('O horário de término precisa ser depois do início.'); return }
     setLoading(true)
     try {
       const { municipality_code: _municipalityCode, ...propertyForm } = form
-      const payload = { ...propertyForm, images, amenities, available_days: availableDays, host_id: user.id, is_active: false, price_per_hour: null, max_capacity: Number(form.max_capacity), price_per_day: Number(form.price_per_day), hora_inicio: Number(form.hora_inicio), hora_fim: Number(form.hora_fim), video_url: form.video_url?.trim() || null }
+      const payload = { ...propertyForm, name: buildPublicPropertyTitle({ ...form, amenities }), images, amenities, available_days: availableDays, host_id: user.id, is_active: false, price_per_hour: null, max_capacity: Number(form.max_capacity), price_per_day: Number(form.price_per_day), hora_inicio: Number(form.hora_inicio), hora_fim: Number(form.hora_fim), video_url: null, map_url: form.map_url?.trim() || null }
       if (isEditing) {
         const { data, error } = await supabase.from('properties').update(payload).eq('id', id).eq('host_id', user.id).select('id').single()
         if (error) throw error
@@ -144,7 +140,7 @@ export default function NewProperty() {
         toast.success('Espaço enviado para análise!')
       }
       navigate('/anfitriao')
-    } catch (err) {
+    } catch {
       toast.error('Erro ao salvar. Tente novamente.')
     } finally { setLoading(false) }
   }
@@ -174,15 +170,14 @@ export default function NewProperty() {
           {/* Informações básicas */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 space-y-4">
             <h2 className="font-bold text-gray-800">Informações básicas</h2>
-            <div>
-              <label className="text-sm font-medium text-gray-600 mb-1 block">Nome do espaço *</label>
-              <input className="input-field" placeholder="Ex: Chácara Recanto Verde" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
-              <p className="text-xs text-gray-400 mt-1">Use só o nome do espaço. Não coloque @ do Instagram, telefone, link ou endereço aqui.</p>
-            </div>
             <CityField value={form} onChange={location => setForm(prev => ({ ...prev, ...location }))} required={!isEditing || !form.city} label="Cidade e estado do espaço" description="Cidade padronizada pelo IBGE para que seu espaço seja encontrado nas buscas." />
             <div>
               <label className="text-sm font-medium text-gray-600 mb-1 block">Bairro</label>
               <input className="input-field" placeholder="Ex: Centro" value={form.neighborhood} onChange={e => setForm({...form, neighborhood: e.target.value})} />
+            </div>
+            <div className="rounded-xl border border-primary-100 bg-primary-50 p-4">
+              <p className="text-xs font-bold uppercase text-primary-600">Título criado pelo PoolDay</p>
+              <p className="font-bold text-gray-900 mt-1">{buildPublicPropertyTitle({ ...form, amenities })}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -225,6 +220,7 @@ export default function NewProperty() {
           {/* Fotos */}
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
             <h2 className="font-bold text-gray-800 mb-1">Fotos *</h2>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 my-3 text-xs text-amber-900"><b>Importante:</b> não envie foto ou vídeo com nome comercial, telefone, WhatsApp, @, QR Code, link ou marca-d’água.</div>
             <p className="text-xs text-gray-400 mb-3">Mínimo 1, máximo 10 fotos. Primeira foto é a capa.</p>
             <div className="grid grid-cols-3 gap-2 mb-3">
               {images.map((img, i) => (
@@ -243,19 +239,6 @@ export default function NewProperty() {
                 </label>
               )}
             </div>
-          </div>
-
-          {/* Vídeo (opcional) */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
-            <h2 className="font-bold text-gray-800 mb-1">Vídeo do espaço (opcional)</h2>
-            <p className="text-xs text-gray-400 mb-3">Cole o link de um vídeo do YouTube. Um tour em vídeo aumenta muito o interesse do cliente.</p>
-            <input
-              className="input-field"
-              type="url"
-              placeholder="Ex: https://youtube.com/watch?v=..."
-              value={form.video_url}
-              onChange={e => setForm({...form, video_url: e.target.value})}
-            />
           </div>
 
           {/* Comodidades */}
@@ -342,9 +325,14 @@ export default function NewProperty() {
               <textarea className="input-field resize-none" rows={3} placeholder="Ex: Proibido fumar, sem barulho após 22h..." value={form.rules} onChange={e => setForm({...form, rules: e.target.value})} />
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-600 mb-1 block">Instruções de check-in</label>
-              <textarea className="input-field resize-none" rows={3} placeholder="Ex: Ao chegar, ligar para o interfone 101..." value={form.checkin_instructions} onChange={e => setForm({...form, checkin_instructions: e.target.value})} />
-              <p className="text-xs text-gray-400 mt-1">Isso só aparece pro cliente <b>depois</b> que ele reserva — aqui pode colocar endereço, referência e como chegar.</p>
+              <h3 className="font-bold text-gray-800 mb-1">Como chegar</h3>
+              <p className="text-xs text-gray-500 mb-3">Esses dados ficam privados e só são liberados depois do pagamento confirmado.</p>
+              <div className="space-y-3">
+                <input className="input-field" placeholder="Endereço completo *" value={form.address} onChange={e => setForm({...form, address: e.target.value})} />
+                <input className="input-field" placeholder="Ponto de referência *" value={form.landmark} onChange={e => setForm({...form, landmark: e.target.value})} />
+                <input className="input-field" placeholder="Link do Google Maps ou Waze" value={form.map_url} onChange={e => setForm({...form, map_url: e.target.value})} />
+                <textarea className="input-field resize-none" rows={3} placeholder="Explique a estrada de acesso, entrada correta, portão e quem recebe o cliente. *" value={form.checkin_instructions} onChange={e => setForm({...form, checkin_instructions: e.target.value})} />
+              </div>
             </div>
           </div>
 
