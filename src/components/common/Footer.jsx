@@ -28,7 +28,6 @@ export default function Footer() {
               <li><Link to="/explorar" className="hover:text-white transition-colors">Todos os espaços</Link></li>
               <li><Link to="/explorar?tipo=pool" className="hover:text-white transition-colors">Piscinas</Link></li>
               <li><Link to="/explorar?tipo=chacara" className="hover:text-white transition-colors">Chácaras</Link></li>
-              <li><Link to="/explorar?tipo=gourmet" className="hover:text-white transition-colors">Espaços Gourmet</Link></li>
             </ul>
           </div>
 

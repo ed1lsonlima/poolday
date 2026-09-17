@@ -10,10 +10,8 @@ const types = [
   { id: '', label: 'Todos os espaços', icon: '🌐' },
   { id: 'pool', label: 'Piscina', icon: '🏊' },
   { id: 'chacara', label: 'Chácara', icon: '🌿' },
-  { id: 'gourmet', label: 'Espaço Gourmet', icon: '🍖' },
   { id: 'court', label: 'Quadra', icon: '🏀' },
   { id: 'soccer', label: 'Campo de Futebol', icon: '⚽' },
-  { id: 'futevolei', label: 'Quadra de Futevôlei', icon: '🏐' },
 ]
 
 function effectivePrice(p) {

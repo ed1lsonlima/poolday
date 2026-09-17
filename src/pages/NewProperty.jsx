@@ -8,8 +8,7 @@ import CityField from '../components/common/CityField'
 
 const TYPES = [
   { id: 'pool', label: 'Piscina' }, { id: 'chacara', label: 'Chácara' },
-  { id: 'gourmet', label: 'Espaço Gourmet' }, { id: 'court', label: 'Quadra' },
-  { id: 'soccer', label: 'Campo de Futebol' }, { id: 'futevolei', label: 'Quadra de Futevôlei' },
+  { id: 'court', label: 'Quadra' }, { id: 'soccer', label: 'Campo de Futebol' },
 ]
 const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Área gourmet','Som ambiente','Projetor','Câmeras de segurança']
 const DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']

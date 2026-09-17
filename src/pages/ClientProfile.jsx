@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { User, CalendarDays, Heart, Edit2, MapPin, Star, X, CheckCircle, MessageCircle } from 'lucide-react'
+import { ArrowRight, CalendarDays, CheckCircle, Edit2, Heart, HelpCircle, LayoutDashboard, Mail, MapPin, MessageCircle, Phone, Settings, ShieldCheck, Sparkles, Star, User, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Link, useSearchParams } from 'react-router-dom'
 import { formatDateBR } from '../lib/formatDate'
@@ -24,10 +24,9 @@ function formatPhone(phone) {
 }
 
 export default function ClientProfile({ tab: initialTab = 'perfil' }) {
-  const { user, profile, updateProfile } = useAuth()
+  const { user, profile } = useAuth()
   const [tab, setTab] = useState(initialTab)
-  const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState({ name: '', phone: '', city: '' })
+  const [form, setForm] = useState({ name: '', phone: '', city: '', state: '' })
   const [bookings, setBookings] = useState([])
   const [favorites, setFavorites] = useState([])
   const [myReviews, setMyReviews] = useState([])
@@ -38,8 +37,8 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
   const [confirming, setConfirming] = useState(false) // aguardando confirmacao do pagamento
   const [searchParams, setSearchParams] = useSearchParams()
 
-  useEffect(() => { if (profile) setForm({ name: profile.name || '', phone: profile.phone || '', city: profile.city || '' }) }, [profile])
-  useEffect(() => { if (user) { fetchBookings(); fetchFavorites(); fetchMyReviews() } }, [user])
+  useEffect(() => { if (profile) setForm({ name: profile.name || '', phone: profile.phone || '', city: profile.city || '', state: profile.state || '' }) }, [profile])
+  useEffect(() => { if (user) { fetchBookings(); fetchFavorites(); fetchMyReviews() } }, [user?.id])
   // Sincroniza a aba quando a rota muda (a mesma instancia e reaproveitada entre /perfil, /reservas e /favoritos).
   useEffect(() => { setTab(initialTab) }, [initialTab])
 
@@ -99,16 +98,6 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
     setMyReviews((data || []).map(r => r.booking_id))
   }
 
-  async function handleSave() {
-    setLoading(true)
-    try {
-      await updateProfile(form)
-      toast.success('Perfil atualizado!')
-      setEditing(false)
-    } catch { toast.error('Erro ao salvar') }
-    finally { setLoading(false) }
-  }
-
   async function cancelBooking(b) {
     if (!confirm('Cancelar esta reserva?')) return
     const { error } = await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', b.id).eq('client_id', user.id)
@@ -148,26 +137,37 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
     { id: 'reservas', label: 'Reservas', icon: <CalendarDays size={16}/> },
     { id: 'favoritos', label: 'Favoritos', icon: <Heart size={16}/> },
   ]
+  const profileFields = [form.name, form.phone, form.city, form.state]
+  const profileCompletion = Math.round((profileFields.filter(Boolean).length / profileFields.length) * 100)
+  const upcomingBookings = bookings.filter(booking => booking.date >= today && ['pending', 'confirmed'].includes(booking.status)).length
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        {/* Avatar */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="w-20 h-20 bg-primary-500 rounded-full flex items-center justify-center text-white text-3xl font-bold mb-3">
-            {profile?.name?.charAt(0)?.toUpperCase() || 'U'}
+    <div className="min-h-screen bg-slate-50">
+      <div className="max-w-3xl mx-auto px-4 py-6 sm:py-10">
+        <section className="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-500 to-blue-400 rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-primary-900/10 mb-5">
+          <div className="absolute -top-16 -right-12 w-48 h-48 rounded-full bg-white/10" aria-hidden="true" />
+          <div className="relative flex flex-col sm:flex-row sm:items-center gap-5">
+            <div className="w-20 h-20 bg-white/20 ring-4 ring-white/15 rounded-2xl flex items-center justify-center text-white text-3xl font-extrabold shrink-0">
+              {profile?.name?.charAt(0)?.toUpperCase() || 'U'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-2xl font-extrabold truncate">{profile?.name || 'Minha conta'}</h1>
+                <span className="text-[11px] bg-white/15 border border-white/20 px-2.5 py-1 rounded-full font-bold">
+                  {profile?.role === 'host' ? 'Anfitrião' : 'Cliente'}
+                </span>
+              </div>
+              <p className="text-white/75 text-sm mt-1">Membro desde {profile?.created_at ? new Date(profile.created_at).getFullYear() : '2026'}</p>
+              <div className="grid grid-cols-3 gap-2 mt-5 max-w-md">
+                {[{ label: 'Próximas', value: upcomingBookings }, { label: 'Reservas', value: bookings.length }, { label: 'Favoritos', value: favorites.length }].map(item => (
+                  <div key={item.label} className="rounded-xl bg-white/10 border border-white/10 py-2.5 text-center">
+                    <p className="text-xl font-extrabold">{item.value}</p><p className="text-[10px] text-white/70">{item.label}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <h1 className="text-xl font-bold text-gray-800">{profile?.name}</h1>
-          <span className="mt-1 text-xs bg-primary-100 text-primary-600 px-3 py-1 rounded-full font-semibold capitalize">
-            {profile?.role === 'host' ? 'Anfitrião' : 'Cliente'}
-          </span>
-          <p className="text-gray-400 text-xs mt-1">Membro desde {profile?.created_at ? new Date(profile.created_at).getFullYear() : '2026'}</p>
-          <div className="flex gap-6 mt-4 text-center">
-            {[{label:'Avaliações',val:myReviews.length},{label:'Reservas',val:bookings.length},{label:'Favoritos',val:favorites.length}].map((s,i)=>(
-              <div key={i}><p className="text-xl font-bold text-gray-800">{s.val}</p><p className="text-xs text-gray-500">{s.label}</p></div>
-            ))}
-          </div>
-        </div>
+        </section>
 
         {/* Banner de confirmacao de pagamento (Bug A) */}
         {confirming && (
@@ -181,9 +181,9 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
         )}
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6">
+        <div className="grid grid-cols-3 gap-1 p-1.5 mb-6 bg-white rounded-2xl border border-gray-100 shadow-sm sticky top-20 z-30">
           {tabs.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)} className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl font-semibold text-sm transition-all ${tab === t.id ? 'bg-primary-500 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}>
+            <button key={t.id} onClick={() => setTab(t.id)} className={`min-w-0 flex items-center justify-center gap-1.5 px-2 sm:px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm transition-all ${tab === t.id ? 'bg-primary-500 text-white shadow-md shadow-primary-500/20' : 'text-gray-500 hover:bg-gray-50'}`}>
               {t.icon}{t.label}
             </button>
           ))}
@@ -191,27 +191,47 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
 
         {/* Perfil */}
         {tab === 'perfil' && (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-bold text-gray-800">Informações pessoais</h2>
-              <Link to="/configuracoes" className="flex items-center gap-1.5 text-primary-500 text-sm font-semibold hover:underline"><Edit2 size={14}/> Editar</Link>
-            </div>
-            <div className="space-y-4">
-              {[
-                { label: 'Nome', key: 'name' },
-                { label: 'Telefone', key: 'phone' },
-                { label: 'Cidade', key: 'city' },
-              ].map(f => (
-                <div key={f.key}>
-                  <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">{f.label}</label>
-                  <p className="text-gray-700 py-2 border-b border-gray-100">{form[f.key] || <span className="text-gray-400 italic">Não informado</span>}</p>
+          <div className="space-y-5">
+            {profileCompletion < 100 && (
+              <section className="rounded-2xl border border-amber-100 bg-amber-50 p-4 sm:p-5">
+                <div className="flex items-start gap-3">
+                  <Sparkles size={20} className="text-amber-500 shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between gap-3"><p className="font-bold text-amber-900">Complete seu perfil</p><span className="text-xs font-bold text-amber-700">{profileCompletion}%</span></div>
+                    <div className="h-2 bg-amber-100 rounded-full overflow-hidden mt-2"><div className="h-full bg-amber-400 rounded-full transition-all" style={{ width: `${profileCompletion}%` }} /></div>
+                    <p className="text-xs text-amber-800/80 mt-2">Nome, telefone e localização ajudam no atendimento das reservas.</p>
+                  </div>
                 </div>
-              ))}
-              <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Email</label>
-                <p className="text-gray-500 py-2 border-b border-gray-100">{user?.email}</p>
+              </section>
+            )}
+
+            <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div><h2 className="font-bold text-gray-900">Informações pessoais</h2><p className="text-xs text-gray-400 mt-0.5">Dados usados na sua experiência PoolDay</p></div>
+                <Link to="/configuracoes" className="inline-flex items-center gap-1.5 text-primary-600 bg-primary-50 rounded-xl px-3 py-2 text-xs font-bold hover:bg-primary-100"><Edit2 size={14}/> Editar</Link>
               </div>
-            </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <ProfileInfo icon={<User size={17} />} label="Nome" value={form.name} />
+                <ProfileInfo icon={<Mail size={17} />} label="E-mail confirmado" value={user?.email} verified />
+                <ProfileInfo icon={<Phone size={17} />} label="WhatsApp" value={formatPhone(form.phone)} />
+                <ProfileInfo icon={<MapPin size={17} />} label="Localização" value={[form.city, form.state].filter(Boolean).join(' - ')} />
+              </div>
+            </section>
+
+            <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 sm:p-6">
+              <h2 className="font-bold text-gray-900 mb-4">Atalhos da conta</h2>
+              <div className="grid sm:grid-cols-2 gap-3">
+                <QuickLink to="/configuracoes" icon={<Settings size={19} />} title="Configurações" description="Dados, avisos e segurança" />
+                {profile?.role === 'host' && <QuickLink to="/anfitriao" icon={<LayoutDashboard size={19} />} title="Painel do anfitrião" description="Anúncios, agenda e ganhos" />}
+                <QuickLink to="/explorar" icon={<CalendarDays size={19} />} title="Encontrar um espaço" description="Veja datas disponíveis" />
+                <QuickLink to="/privacidade" icon={<ShieldCheck size={19} />} title="Privacidade" description="Como protegemos seus dados" />
+                <a href="https://wa.me/5582996987838" target="_blank" rel="noopener noreferrer" className="sm:col-span-2 flex items-center gap-3 rounded-xl border border-gray-100 p-4 hover:border-primary-200 hover:bg-primary-50/50 transition-colors">
+                  <span className="w-10 h-10 rounded-xl bg-green-50 text-green-600 flex items-center justify-center"><HelpCircle size={19} /></span>
+                  <span className="flex-1 min-w-0"><b className="block text-sm text-gray-800">Precisa de ajuda?</b><span className="text-xs text-gray-500">Fale com a equipe PoolDay no WhatsApp</span></span>
+                  <ArrowRight size={17} className="text-gray-300" />
+                </a>
+              </div>
+            </section>
           </div>
         )}
 
@@ -378,5 +398,28 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
         </div>
       )}
     </div>
+  )
+}
+
+function ProfileInfo({ icon, label, value, verified = false }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl bg-gray-50 p-4 min-w-0">
+      <span className="text-primary-500 mt-0.5 shrink-0">{icon}</span>
+      <div className="min-w-0">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400">{label}</p>
+        <p className="text-sm font-medium text-gray-700 mt-1 break-words">{value || <span className="text-gray-400 italic font-normal">Não informado</span>}</p>
+        {verified && <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-bold mt-1"><CheckCircle size={11} /> Verificado</span>}
+      </div>
+    </div>
+  )
+}
+
+function QuickLink({ to, icon, title, description }) {
+  return (
+    <Link to={to} className="flex items-center gap-3 rounded-xl border border-gray-100 p-4 hover:border-primary-200 hover:bg-primary-50/50 transition-colors">
+      <span className="w-10 h-10 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center shrink-0">{icon}</span>
+      <span className="flex-1 min-w-0"><b className="block text-sm text-gray-800">{title}</b><span className="text-xs text-gray-500">{description}</span></span>
+      <ArrowRight size={17} className="text-gray-300 shrink-0" />
+    </Link>
   )
 }
