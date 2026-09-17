@@ -134,7 +134,7 @@ export default function App() {
           <Route path="/anfitriao" element={<ProtectedRoute hostOnly><Layout><HostDashboard /></Layout></ProtectedRoute>} />
           <Route path="/anfitriao/boas-vindas" element={<ProtectedRoute hostOnly><Layout><HostWelcome /></Layout></ProtectedRoute>} />
           <Route path="/anfitriao/cadastrar-espaco" element={<ProtectedRoute hostOnly><Layout noFooter><OnboardingWizard /></Layout></ProtectedRoute>} />
-          <Route path="/anfitriao/nova-piscina" element={<ProtectedRoute hostOnly><Layout><NewProperty /></Layout></ProtectedRoute>} />
+          <Route path="/anfitriao/nova-piscina" element={<ProtectedRoute hostOnly><Layout noFooter><OnboardingWizard /></Layout></ProtectedRoute>} />
           <Route path="/anfitriao/:id/calendario" element={<ProtectedRoute hostOnly><Layout><AvailabilityCalendar /></Layout></ProtectedRoute>} />
           <Route path="/anfitriao/editar/:id" element={<ProtectedRoute hostOnly><Layout><NewProperty /></Layout></ProtectedRoute>} />
           <Route path="*" element={<Layout><NotFound /></Layout>} />
