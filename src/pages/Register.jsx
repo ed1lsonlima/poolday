@@ -3,11 +3,12 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Waves, Mail, Lock, User, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
+import CityField from '../components/common/CityField'
 
 export default function Register() {
   const [params] = useSearchParams()
   const [role, setRole] = useState(params.get('role') || 'client')
-  const [form, setForm] = useState({ name: '', email: '', phone: '', password: '', confirm: '' })
+  const [form, setForm] = useState({ name: '', email: '', phone: '', city: '', state: null, municipality_code: null, password: '', confirm: '' })
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const { signUp, signInWithGoogle } = useAuth()
@@ -86,6 +87,7 @@ export default function Register() {
             <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input id="register-phone" className="input-field pl-11" type="tel" autoComplete="tel" placeholder={role === 'host' ? 'WhatsApp (obrigatório)' : 'Telefone (opcional)'} value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} required={role === 'host'} />
           </div>
+          <CityField value={form} onChange={location => setForm({ ...form, ...location })} label="Cidade e estado" description="Opcional. Ajuda a PoolDay a chegar à sua região; não coletamos localização exata." />
           <div className="relative">
             <label htmlFor="register-password" className="sr-only">Senha</label>
             <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -112,4 +114,3 @@ export default function Register() {
     </div>
   )
 }
-

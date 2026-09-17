@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { MapPin, Users, Clock, Shield, Star, ChevronLeft, ChevronRight, Heart, Share2, CheckCircle, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import BookingCalendar from '../components/common/BookingCalendar'
+import { withReviewAuthors } from '../lib/publicProfiles'
 
 const amenityIcons = { 'Piscina': '🏊', 'Wi-Fi': '📶', 'Estacionamento': '🚗', 'Churrasqueira': '🍖', 'Spa': '🛁', 'Toalhas': '🛁', 'Drinks': '🥤', 'Vista mar': '🌊', 'Jardim': '🌿', 'Deck': '🪵' }
 
@@ -25,13 +26,18 @@ export default function PropertyDetail() {
   const [loading, setLoading] = useState(true)
   const [imgIndex, setImgIndex] = useState(0)
   const [selectedDate, setSelectedDate] = useState('')
-  const [guests, setGuests] = useState(1)
   const [bookingLoading, setBookingLoading] = useState(false)
   const [isFav, setIsFav] = useState(false)
   const [unavailableDates, setUnavailableDates] = useState(new Set())
   const [lightbox, setLightbox] = useState(false)
+  const propertyRequest = useRef(0)
 
-  useEffect(() => { fetchProperty() }, [id])
+  useEffect(() => {
+    const request = ++propertyRequest.current
+    setLoading(true); setProperty(null); setHost(null); setReviews([]); setImgIndex(0); setSelectedDate(''); setUnavailableDates(new Set()); setLightbox(false)
+    fetchProperty(request)
+    return () => { propertyRequest.current++ }
+  }, [id])
   useEffect(() => { if (user && property) checkFavorite() }, [user, property])
   useEffect(() => { if (property) fetchUnavailable() }, [property])
   useEffect(() => {
@@ -41,17 +47,19 @@ export default function PropertyDetail() {
     return () => window.removeEventListener('keydown', onKey)
   }, [lightbox])
 
-  async function fetchProperty() {
+  async function fetchProperty(request) {
     const { data } = await supabase.from('properties').select('*').eq('id', id).single()
+    if (request !== propertyRequest.current) return
     if (!data) { navigate('/explorar'); return }
     setProperty(data)
     document.title = `${data.name} em ${data.city} | PoolDay`
     const [{ data: hostData }, { data: reviewData }] = await Promise.all([
-      supabase.from('profiles').select('name, created_at').eq('id', data.host_id).single(),
-      supabase.from('reviews').select('rating, comment, created_at, reviewer:profiles!reviewer_id(name)').eq('property_id', id).order('created_at', { ascending: false }).limit(20),
+      supabase.from('public_profiles').select('name, created_at').eq('id', data.host_id).single(),
+      supabase.from('reviews').select('rating, comment, created_at, reviewer_id').eq('property_id', id).order('created_at', { ascending: false }).limit(20),
     ])
+    if (request !== propertyRequest.current) return
     setHost(hostData)
-    setReviews(reviewData || [])
+    setReviews(await withReviewAuthors(reviewData || []))
     setLoading(false)
   }
 
@@ -95,7 +103,6 @@ export default function PropertyDetail() {
   async function handleBooking() {
     if (!user) { toast.error('Faça login para reservar!'); navigate('/entrar'); return }
     if (!selectedDate) { toast.error('Selecione uma data!'); return }
-    if (guests < 1) { toast.error('Selecione o número de convidados!'); return }
 
     const weekday = new Date(selectedDate + 'T00:00:00').getDay()
     if (property.available_days?.length && !property.available_days.includes(weekday)) {
@@ -107,28 +114,41 @@ export default function PropertyDetail() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('Sua sessão expirou. Entre novamente.')
 
-      // A reserva temporária é criada no servidor, dentro de uma transação.
-      // Isso impede duas pessoas de pagarem pela mesma data ao mesmo tempo.
-      const bookingRes = await fetch('/api/create-booking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ propertyId: property.id, date: selectedDate, guests }),
-      })
-      const bookingData = await bookingRes.json()
-      if (!bookingRes.ok || !bookingData.bookingId) throw new Error(bookingData.message || bookingData.error || 'Não foi possível reservar esta data.')
+      // Guarda a reserva temporária no navegador para retomar o mesmo checkout
+      // se a internet cair depois de o servidor criar a preferência de pagamento.
+      const holdKey = `poolday:hold:${user.id}:${property.id}:${selectedDate}`
+      let savedHold = null
+      try { savedHold = JSON.parse(sessionStorage.getItem(holdKey) || 'null') } catch { sessionStorage.removeItem(holdKey) }
+      let bookingId = savedHold?.bookingId && new Date(savedHold.holdExpiresAt).getTime() > Date.now() ? savedHold.bookingId : null
+
+      if (!bookingId) {
+        const bookingRes = await fetch('/api/create-booking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ propertyId: property.id, date: selectedDate }),
+        })
+        const bookingData = await bookingRes.json()
+        if (!bookingRes.ok || !bookingData.bookingId) throw new Error(bookingData.message || bookingData.error || 'Não foi possível reservar esta data.')
+        bookingId = bookingData.bookingId
+        sessionStorage.setItem(holdKey, JSON.stringify({ bookingId, holdExpiresAt: bookingData.holdExpiresAt }))
+      }
 
       // O valor final é recalculado NO SERVIDOR a partir do preço real do espaço.
       const res = await fetch('/api/create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ bookingId: bookingData.bookingId }),
+        body: JSON.stringify({ bookingId }),
       })
       const data = await res.json()
       if (data.init_point) {
         window.location.href = data.init_point
       } else if (data.error === 'host_sem_mp') {
         toast.error('Este anfitrião ainda não ativou os pagamentos. Tente outro espaço ou volte em breve.', { duration: 5000 })
-        await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', bookingData.bookingId)
+        await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', bookingId).eq('client_id', user.id)
+        sessionStorage.removeItem(holdKey)
+      } else if (res.status === 409) {
+        sessionStorage.removeItem(holdKey)
+        throw new Error(data.error || 'A reserva temporária expirou. Clique novamente para tentar de novo.')
       } else {
         throw new Error(data.error || 'Erro ao criar pagamento')
       }
@@ -335,23 +355,7 @@ export default function PropertyDetail() {
                     unavailableDates={unavailableDates}
                   />
                 </div>
-                <label htmlFor="booking-guests" className="block">
-                  <span className="text-xs font-semibold text-gray-500 uppercase mb-2 block">Convidados</span>
-                  <div className="relative">
-                    <Users size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                    <input
-                      id="booking-guests"
-                      type="number"
-                      min="1"
-                      max={property.max_capacity}
-                      inputMode="numeric"
-                      className="input-field pl-10"
-                      value={guests}
-                      onChange={event => setGuests(Math.max(1, Number(event.target.value) || 1))}
-                    />
-                  </div>
-                  <span className="text-xs text-gray-400 mt-1 block">Capacidade máxima: {property.max_capacity} pessoas</span>
-                </label>
+                <p className="text-xs text-gray-500">A diária inclui o espaço para seu grupo. Respeite o limite de {property.max_capacity} pessoas.</p>
               </div>
 
               {(property.hora_inicio != null && property.hora_fim != null) && (
@@ -419,4 +423,3 @@ export default function PropertyDetail() {
     </div>
   )
 }
-

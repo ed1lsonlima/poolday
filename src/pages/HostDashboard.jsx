@@ -6,13 +6,13 @@ import { Plus, LayoutDashboard, CreditCard, Calendar, Eye, Edit, Trash2, CheckCi
 import toast from 'react-hot-toast'
 import { formatDateBR } from '../lib/formatDate'
 
-function ActionButton({ icon, label, onClick, variant = 'primary' }) {
+function ActionButton({ icon, label, onClick, variant = 'primary', disabled = false }) {
   const hover = variant === 'danger' ? 'hover:text-red-500 hover:bg-red-50'
     : variant === 'warning' ? 'hover:text-yellow-500 hover:bg-yellow-50'
     : 'hover:text-primary-500 hover:bg-primary-50'
   return (
-    <button onClick={onClick} title={label} aria-label={label}
-      className={`group relative flex items-center gap-1 p-2 text-gray-400 ${hover} rounded-lg transition-colors`}>
+    <button onClick={onClick} title={label} aria-label={label} disabled={disabled}
+      className={`group relative flex items-center gap-1 p-2 text-gray-400 ${hover} rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed`}>
       {icon}
       <span className="sm:hidden text-xs font-medium">{label}</span>
       <span className="hidden sm:group-hover:block absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2 py-1 bg-gray-800 text-white text-[11px] rounded whitespace-nowrap z-20 pointer-events-none shadow-lg">{label}</span>
@@ -84,11 +84,15 @@ export default function HostDashboard() {
     } finally { setMpLoading(false) }
   }
 
-  async function toggleActive(id, current) {
-    const { error } = await supabase.from('properties').update({ is_active: !current }).eq('id', id)
+  async function toggleActive(property) {
+    const { id, is_active: current } = property
+    if (!current && property.moderation_status !== 'approved') return toast.error('O anúncio precisa ser aprovado antes de aparecer nas buscas.')
+    if (!current && profile.suspended) return toast.error('Sua conta está suspensa. Entre em contato com o suporte.')
+    const { data, error } = await supabase.from('properties').update({ is_active: !current }).eq('id', id).eq('host_id', user.id).select('is_active').single()
     if (error) return toast.error('Não foi possível atualizar o espaço.')
     fetchProperties()
-    if (!current) toast.success('Espaço ativado! Já aparece nas buscas para os clientes.')
+    if (!current && !data?.is_active) return toast.error('O espaço ainda está aguardando aprovação para ser ativado.')
+    if (!current) toast.success('Espaço aprovado ativado! Já aparece nas buscas para os clientes.')
     else toast('Espaço pausado. Ele fica oculto das buscas até você reativar.', { icon: '⏸️' })
   }
 
@@ -110,7 +114,7 @@ export default function HostDashboard() {
       return
     }
     if (!count) {
-      toast.error('Não foi possível excluir (permissão negada no banco). Rode a migração fix-excluir-espaco.sql no Supabase.')
+      toast.error('Não foi possível excluir este espaço. Atualize a página e tente novamente.')
       return
     }
     setProperties(prev => prev.filter(p => p.id !== id))
@@ -123,7 +127,7 @@ export default function HostDashboard() {
     cancelled: { label: 'Cancelada', color: 'text-red-600 bg-red-50', icon: <XCircle size={14}/> },
     completed: { label: 'Concluída', color: 'text-gray-600 bg-gray-100', icon: <CheckCircle size={14}/> },
   }
-  const promoUsed = bookings.filter(b => b.promotion_applied && b.status !== 'cancelled').length
+  const promoUsed = bookings.filter(b => b.promotion_applied && (['confirmed', 'completed'].includes(b.status) || (b.status === 'pending' && new Date(b.hold_expires_at) > new Date()))).length
   const promoRemaining = Math.max(0, 3 - promoUsed)
 
   if (!profile || profile.role !== 'host') {
@@ -191,7 +195,7 @@ export default function HostDashboard() {
                 { label: 'Total Reservas', value: stats.total, color: 'text-primary-500' },
                 { label: 'Confirmadas', value: stats.confirmed, color: 'text-green-500' },
                 { label: 'Pendentes', value: stats.pending, color: 'text-yellow-500' },
-                { label: 'Ganhos (R$)', value: `R$ ${stats.revenue.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, color: 'text-primary-500' },
+                { label: 'Receita prevista', value: `R$ ${stats.revenue.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, color: 'text-primary-500' },
               ].map((s, i) => (
                 <div key={i} className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
                   <p className="text-gray-500 text-xs uppercase font-semibold mb-1">{s.label}</p>
@@ -217,16 +221,17 @@ export default function HostDashboard() {
                         <div className="flex-1 min-w-0">
                           <h3 className="font-semibold text-gray-800 truncate">{p.name}</h3>
                           <p className="text-sm text-gray-500">{p.city} • R$ {Number(p.price_per_day || p.price_per_hour).toLocaleString('pt-BR')}/diária</p>
-                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${p.is_active ? 'text-green-600 bg-green-50' : 'text-gray-500 bg-gray-100'}`}>
-                            {p.is_active ? 'Ativo' : 'Pausado'}
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${p.moderation_status === 'rejected' ? 'text-red-700 bg-red-50' : p.moderation_status !== 'approved' ? 'text-amber-700 bg-amber-50' : p.is_active ? 'text-green-600 bg-green-50' : 'text-gray-500 bg-gray-100'}`}>
+                            {p.moderation_status === 'rejected' ? 'Ajustes solicitados' : p.moderation_status !== 'approved' ? 'Em análise' : p.is_active ? 'Ativo · aprovado' : 'Pausado · aprovado'}
                           </span>
+                          {p.moderation_note && <p className="text-xs text-gray-500 mt-2 break-words">Equipe PoolDay: {p.moderation_note}</p>}
                         </div>
                       </div>
                       <div className="flex flex-wrap items-center gap-1 sm:gap-2">
                         <ActionButton icon={<Eye size={16}/>} label="Ver" onClick={() => navigate(`/espaco/${p.id}`)} />
                         <ActionButton icon={<Calendar size={16}/>} label="Disponibilidade" onClick={() => navigate(`/anfitriao/${p.id}/calendario`)} />
                         <ActionButton icon={<Edit size={16}/>} label="Editar" onClick={() => navigate(`/anfitriao/editar/${p.id}`)} />
-                        <ActionButton icon={p.is_active ? <XCircle size={16}/> : <CheckCircle size={16}/>} label={p.is_active ? 'Pausar' : 'Ativar'} onClick={() => toggleActive(p.id, p.is_active)} variant="warning" />
+                        <ActionButton icon={p.is_active ? <XCircle size={16}/> : <CheckCircle size={16}/>} label={p.is_active ? 'Pausar' : p.moderation_status !== 'approved' ? 'Aguarda aprovação' : 'Ativar'} disabled={!p.is_active && (p.moderation_status !== 'approved' || profile.suspended)} onClick={() => toggleActive(p)} variant="warning" />
                         <ActionButton icon={<Trash2 size={16}/>} label="Excluir" onClick={() => setDeleting(p)} variant="danger" />
                       </div>
                     </div>
@@ -299,7 +304,7 @@ export default function HostDashboard() {
               <p className="text-xs text-primary-600 font-semibold mb-6">Promoção: {promoRemaining} de 3 reservas sem taxa disponíveis.</p>
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="bg-green-50 rounded-xl p-5">
-                  <p className="text-xs text-green-600 font-semibold uppercase">Total Recebido</p>
+                  <p className="text-xs text-green-600 font-semibold uppercase">Receita prevista das reservas</p>
                   <p className="text-2xl font-bold text-green-700 mt-1">R$ {stats.revenue.toLocaleString('pt-BR', {minimumFractionDigits:2})}</p>
                 </div>
                 <div className="bg-yellow-50 rounded-xl p-5">
@@ -307,10 +312,11 @@ export default function HostDashboard() {
                   <p className="text-2xl font-bold text-yellow-700 mt-1">R$ {stats.pendingRevenue.toLocaleString('pt-BR', {minimumFractionDigits:2})}</p>
                 </div>
                 <div className="bg-gray-50 rounded-xl p-5">
-                  <p className="text-xs text-gray-500 font-semibold uppercase">Total Repasses</p>
+                  <p className="text-xs text-gray-500 font-semibold uppercase">Reservas confirmadas</p>
                   <p className="text-2xl font-bold text-gray-700 mt-1">{stats.confirmed}</p>
                 </div>
               </div>
+              <p className="text-xs text-gray-500 mt-4">Estes valores são calculados pelas reservas e não representam saldo disponível ou repasse concluído. Confira tarifas do meio de pagamento, estornos e liberação do saldo no Mercado Pago.</p>
             </div>
           </div>
         )}
@@ -338,4 +344,3 @@ export default function HostDashboard() {
     </div>
   )
 }
-

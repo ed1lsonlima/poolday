@@ -12,4 +12,3 @@ REVOKE ALL ON FUNCTION public.upsert_mp_credentials(UUID, TEXT, TEXT, TEXT, TEXT
 
 GRANT EXECUTE ON FUNCTION public.upsert_mp_credentials(UUID, TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ)
   TO service_role;
-

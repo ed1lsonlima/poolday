@@ -181,4 +181,3 @@ $$;
 
 REVOKE ALL ON FUNCTION public.get_available_property_ids(DATE) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.get_available_property_ids(DATE) TO anon, authenticated;
-

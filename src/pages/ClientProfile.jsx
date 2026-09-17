@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { User, CalendarDays, Heart, Edit2, MapPin, Star, X, Users, CheckCircle, MessageCircle } from 'lucide-react'
+import { User, CalendarDays, Heart, Edit2, MapPin, Star, X, CheckCircle, MessageCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Link, useSearchParams } from 'react-router-dom'
 import { formatDateBR } from '../lib/formatDate'
@@ -306,10 +306,7 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
                   <span className="text-gray-500 flex items-center gap-1.5"><CalendarDays size={14}/> Data</span>
                   <span className="font-medium text-gray-800">{formatDateBR(detail.date)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500 flex items-center gap-1.5"><Users size={14}/> Convidados</span>
-                  <span className="font-medium text-gray-800">{detail.guests} pessoa{detail.guests > 1 ? 's' : ''}</span>
-                </div>
+                {detail.guests != null && <div className="flex justify-between"><span className="text-gray-500">Convidados (reserva anterior)</span><span>{detail.guests}</span></div>}
                 <div className="flex justify-between border-t pt-2.5">
                   <span className="text-gray-500">Valor total</span>
                   <span className="font-bold text-gray-800">R$ {Number(detail.total_amount).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>

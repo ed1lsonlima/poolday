@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Upload, X, Plus, ChevronLeft, ChevronRight, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
+import CityField from '../components/common/CityField'
 
 const TYPES = [
   { id: 'pool', label: 'Piscina' }, { id: 'chacara', label: 'Chácara' },
@@ -13,7 +14,6 @@ const TYPES = [
 const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Área gourmet','Som ambiente','Projetor','Câmeras de segurança']
 const DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
 
-const BR_STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 const CONTACT_RE = /@|instagram|whatsapp|facebook|tiktok|t\.me|wa\.me|https?:\/\/|www\.|\.com|\(\d{2}\)\s*\d|\d{8,}/i
 const STEPS = ['Tipo e local', 'Informações', 'Fotos', 'Comodidades', 'Revisão']
 
@@ -98,13 +98,14 @@ export default function OnboardingWizard() {
     if (CONTACT_RE.test(form.rules || '')) { toast.error('As regras não podem conter @, redes sociais, links ou telefone.'); return }
     setLoading(true)
     try {
-      const payload = { ...form, images, amenities, available_days: availableDays, host_id: user.id, is_active: true, price_per_hour: null, max_capacity: Number(form.max_capacity), price_per_day: Number(form.price_per_day), hora_inicio: Number(form.hora_inicio), hora_fim: Number(form.hora_fim) }
+      const { municipality_code: _municipalityCode, ...propertyForm } = form
+      const payload = { ...propertyForm, images, amenities, available_days: availableDays, host_id: user.id, is_active: false, price_per_hour: null, max_capacity: Number(form.max_capacity), price_per_day: Number(form.price_per_day), hora_inicio: Number(form.hora_inicio), hora_fim: Number(form.hora_fim) }
       const { error } = await supabase.from('properties').insert(payload)
       if (error) throw error
-      toast.success('Espaço publicado!')
+      toast.success('Espaço enviado para análise!')
       navigate('/anfitriao')
     } catch (err) {
-      toast.error('Erro ao publicar. Tente novamente.')
+      toast.error('Erro ao enviar para análise. Tente novamente.')
     } finally { setLoading(false) }
   }
 
@@ -136,18 +137,7 @@ export default function OnboardingWizard() {
                 ))}
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium text-gray-600 mb-1 block">Cidade *</label>
-                <input className="input-field" placeholder="Ex: Arapiraca" value={form.city} onChange={e => update('city', e.target.value)} />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600 mb-1 block">Estado *</label>
-                <select className="input-field" value={form.state} onChange={e => update('state', e.target.value)}>
-                  {BR_STATES.map(uf => <option key={uf} value={uf}>{uf}</option>)}
-                </select>
-              </div>
-            </div>
+            <CityField value={form} onChange={location => setForm(prev => ({ ...prev, ...location }))} required label="Cidade e estado do espaço" description="Cidade padronizada pelo IBGE para que seu espaço seja encontrado nas buscas." />
             <div>
               <label className="text-sm font-medium text-gray-600 mb-1 block">Bairro</label>
               <input className="input-field" placeholder="Ex: Centro" value={form.neighborhood} onChange={e => update('neighborhood', e.target.value)} />
@@ -265,6 +255,7 @@ export default function OnboardingWizard() {
 
             <div className="card p-5">
               <h2 className="font-bold text-gray-800 mb-3 text-sm">Resumo</h2>
+              <p className="text-sm text-primary-700 bg-primary-50 rounded-xl p-3 mb-4">Seu anúncio passará por análise antes de aparecer nas buscas. Você acompanha a aprovação no painel do anfitrião.</p>
               <ul className="space-y-1.5 text-sm text-gray-600">
                 <li><span className="text-gray-400">Tipo:</span> {TYPES.find(t => t.id === form.type)?.label}</li>
                 <li><span className="text-gray-400">Local:</span> {form.city}{form.state ? `, ${form.state}` : ''}</li>
@@ -289,8 +280,8 @@ export default function OnboardingWizard() {
               Próximo <ChevronRight size={16}/>
             </button>
           ) : (
-            <button type="button" onClick={handlePublish} disabled={loading} className="btn-primary flex items-center gap-2 py-3 px-6">
-              {loading ? 'Publicando...' : <>Publicar espaço <Check size={16}/></>}
+            <button type="button" onClick={handlePublish} disabled={loading || uploading} className="btn-primary flex items-center gap-2 py-3 px-6">
+              {loading ? 'Enviando...' : <>Enviar para análise <Check size={16}/></>}
             </button>
           )}
         </div>
@@ -298,4 +289,3 @@ export default function OnboardingWizard() {
     </div>
   )
 }
-

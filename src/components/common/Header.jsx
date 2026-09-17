@@ -10,7 +10,7 @@ export default function Header() {
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifs, setNotifs] = useState([])
   const [unseen, setUnseen] = useState(0)
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, signOut, isAdmin } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const showHomeButton = pathname !== '/'
@@ -169,6 +169,7 @@ export default function Header() {
                   </div>
                 </div>
                 <div className="p-2">
+                  {isAdmin && <MenuItem icon={<LayoutDashboard size={18}/>} label="Administração PoolDay" to="/admin" onClick={() => setMenuOpen(false)} />}
                   <MenuItem icon={<User size={18}/>} label="Ver perfil" to="/perfil" onClick={() => setMenuOpen(false)} />
                   <MenuItem icon={<CalendarDays size={18}/>} label="Minhas Reservas" to="/reservas" onClick={() => setMenuOpen(false)} />
                   <MenuItem icon={<Heart size={18}/>} label="Favoritos" to="/favoritos" onClick={() => setMenuOpen(false)} />
@@ -210,4 +211,3 @@ function MenuItem({ icon, label, to, onClick }) {
     </Link>
   )
 }
-

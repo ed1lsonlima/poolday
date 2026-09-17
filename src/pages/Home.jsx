@@ -3,10 +3,12 @@ import { useNavigate, Link } from 'react-router-dom'
 import {
   Search, MapPin, Waves, Shield, Star, ChevronRight,
   CreditCard, CheckCircle, DollarSign,
-  Calendar, ChevronDown, FileText, Users
+  Calendar, ChevronDown, FileText
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import PropertyCard from '../components/common/PropertyCard'
+import DatePicker from '../components/common/DatePicker'
+import { withReviewAuthors } from '../lib/publicProfiles'
 
 const CATEGORIES = [
   { id: 'pool',      label: 'Piscina',             emoji: '🏊' },
@@ -18,7 +20,7 @@ const CATEGORIES = [
 ]
 
 const FAQS = [
-  { q: 'Como funciona a reserva?', a: 'Busque o espaço ideal, escolha a data, selecione o número de convidados e finalize o pagamento pelo site. Rápido e seguro.' },
+  { q: 'Como funciona a reserva?', a: 'Busque o espaço ideal, escolha a data e finalize o pagamento da diária pelo site. Respeite a capacidade máxima informada pelo anfitrião.' },
   { q: 'O que está incluído na reserva?', a: 'Cada anfitrião define o que está incluído no espaço. Veja as comodidades na página do espaço antes de reservar.' },
   { q: 'Quantas pessoas posso levar?', a: 'Cada espaço tem uma capacidade máxima definida pelo anfitrião. Você pode verificar isso na página do espaço.' },
   { q: 'Terei acesso a banheiro?', a: 'Isso depende de cada espaço. Verifique a descrição e as comodidades listadas na página do espaço.' },
@@ -190,7 +192,6 @@ function initialsOf(name = '') {
 export default function Home() {
   const [city, setCity]       = useState('')
   const [date, setDate]       = useState('')
-  const [guests, setGuests]   = useState('')
   const [typeIdx, setTypeIdx] = useState(0)
   const [typeOpen, setTypeOpen] = useState(false)
   const [featured, setFeatured] = useState([])
@@ -208,15 +209,15 @@ export default function Home() {
   useEffect(() => {
     supabase
       .from('reviews')
-      .select('id, rating, comment, created_at, reviewer:profiles!reviewer_id(name, city), property:properties!property_id(name, city)')
+      .select('id, rating, comment, created_at, reviewer_id, property:properties!property_id(name, city)')
       .not('comment', 'is', null)
       .neq('comment', '')
       .gte('rating', 4)
       .order('created_at', { ascending: false })
       .limit(6)
-      .then(({ data, error }) => {
+      .then(async ({ data, error }) => {
         if (error) { setReviews([]); return }
-        setReviews(data || [])
+        setReviews(await withReviewAuthors(data || []))
       })
   }, [])
 
@@ -234,16 +235,9 @@ export default function Home() {
     if (city.trim()) params.set('cidade', city.trim())
     if (SPACE_TYPES[typeIdx].id) params.set('tipo', SPACE_TYPES[typeIdx].id)
     if (date) params.set('data', date)
-    if (guests) params.set('convidados', guests)
     navigate(`/explorar?${params.toString()}`)
   }
 
-  function handleLocation() {
-    if (!navigator.geolocation) return
-    navigator.geolocation.getCurrentPosition(() => {
-      navigate('/explorar')
-    })
-  }
 
   return (
     <div className="min-h-screen bg-white">
@@ -330,21 +324,9 @@ export default function Home() {
               )}
             </div>
 
-            <div className="grid grid-cols-2 border-b border-gray-100">
-              <label className="flex items-center gap-3 px-5 py-3 border-r border-gray-100 focus-within:bg-primary-50/40">
-                <Calendar size={18} className="text-primary-500 shrink-0" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-bold text-gray-400 uppercase tracking-wide">Data</span>
-                  <input type="date" min={new Date().toISOString().split('T')[0]} value={date} onChange={e => setDate(e.target.value)} className="w-full bg-transparent outline-none text-gray-800 mt-0.5" />
-                </span>
-              </label>
-              <label className="flex items-center gap-3 px-5 py-3 focus-within:bg-primary-50/40">
-                <Users size={18} className="text-primary-500 shrink-0" />
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs font-bold text-gray-400 uppercase tracking-wide">Pessoas</span>
-                  <input type="number" min="1" inputMode="numeric" placeholder="Quantas?" value={guests} onChange={e => setGuests(e.target.value)} className="w-full bg-transparent outline-none text-gray-800 mt-0.5" />
-                </span>
-              </label>
+            <div className="border-b border-gray-100 px-5 py-3">
+              <p className="block text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Data</p>
+              <DatePicker value={date} onChange={setDate} />
             </div>
 
             <div className="px-4 py-4 rounded-b-3xl">
@@ -355,13 +337,6 @@ export default function Home() {
             </div>
           </form>
 
-          <button
-            onClick={handleLocation}
-            className="mt-4 flex items-center gap-2 mx-auto text-white/80 hover:text-white text-sm transition-all bg-white/10 hover:bg-white/20 px-4 py-2 rounded-full active:scale-95"
-          >
-            <MapPin size={15} />
-            <span>Usar minha localização</span>
-          </button>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-4 text-white/70 text-xs">
             <span className="flex items-center gap-1.5"><CreditCard size={13}/> Pagamento 100% seguro</span>
@@ -615,4 +590,3 @@ export default function Home() {
     </div>
   )
 }
-

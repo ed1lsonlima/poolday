@@ -8,6 +8,7 @@ import ErrorBoundary from './components/common/ErrorBoundary'
 import ScrollToTop from './components/common/ScrollToTop'
 
 const Home = lazy(() => import('./pages/Home'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
 const Explore = lazy(() => import('./pages/Explore'))
 const Register = lazy(() => import('./pages/Register'))
 const Login = lazy(() => import('./pages/Login'))
@@ -31,6 +32,7 @@ const SejaAnfitriao = lazy(() => import('./pages/SejaAnfitriao'))
 
 const META = {
   '/': ['PoolDay — Alugue Piscinas e Espaços de Lazer por Diária', 'Reserve piscinas, chácaras e espaços de lazer por diária com pagamento seguro.'],
+  '/admin': ['Administração — PoolDay', 'Painel privado de administração da plataforma PoolDay.'],
   '/explorar': ['Explorar espaços — PoolDay', 'Encontre piscinas e espaços de lazer disponíveis para reservar por diária.'],
   '/cadastro': ['Criar conta — PoolDay', 'Crie sua conta no PoolDay para reservar ou anunciar um espaço.'],
   '/entrar': ['Entrar — PoolDay', 'Entre na sua conta PoolDay.'],
@@ -65,7 +67,13 @@ function PageLoading() {
 }
 
 function ProtectedRoute({ children, hostOnly = false }) {
-  const { user, profile, loading } = useAuth()
+  const { user, profile, loading, profileError, retryProfile } = useAuth()
+  if (profileError && user && !profile) return (
+    <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 text-center">
+      <p className="text-gray-600">{profileError}</p>
+      <button className="btn-primary mt-4" onClick={retryProfile}>Tentar novamente</button>
+    </div>
+  )
   if (loading || (user && !profile)) return (
     <div className="min-h-screen flex items-center justify-center">
       <div className="animate-spin w-10 h-10 border-4 border-primary-500 border-t-transparent rounded-full" />
@@ -105,6 +113,7 @@ export default function App() {
         <Suspense fallback={<PageLoading />}>
         <Routes>
           <Route path="/" element={<Layout><Home /></Layout>} />
+          <Route path="/admin" element={<ProtectedRoute><Layout noFooter><AdminDashboard /></Layout></ProtectedRoute>} />
           <Route path="/explorar" element={<Layout><Explore /></Layout>} />
           <Route path="/espaco/:id" element={<Layout noFooter><PropertyDetail /></Layout>} />
           <Route path="/anfitriao/:id/perfil" element={<Layout><HostProfile /></Layout>} />
@@ -136,4 +145,3 @@ export default function App() {
     </ErrorBoundary>
   )
 }
-

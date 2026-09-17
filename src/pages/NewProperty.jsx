@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Upload, X, Plus, ChevronLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
+import CityField from '../components/common/CityField'
 
 const TYPES = [
   { id: 'pool', label: 'Piscina' }, { id: 'chacara', label: 'Chácara' },
@@ -12,7 +13,6 @@ const TYPES = [
 ]
 const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Área gourmet','Som ambiente','Projetor','Câmeras de segurança']
 const DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
-const BR_STATES = ['AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO']
 // Detecta contato externo (anti-fuga da plataforma): @, redes sociais, links, telefone
 const CONTACT_RE = /@|instagram|whatsapp|facebook|tiktok|t\.me|wa\.me|https?:\/\/|www\.|\.com|\(\d{2}\)\s*\d|\d{8,}/i
 
@@ -127,19 +127,22 @@ export default function NewProperty() {
       return
     }
     if (images.length === 0) { toast.error('Adicione pelo menos 1 foto!'); return }
+    if (!form.city || !form.state) { toast.error('Selecione cidade e estado.'); return }
     if (Number(form.price_per_day) < 30) { toast.error('Preço mínimo é R$ 30!'); return }
     if (Number(form.hora_inicio) >= Number(form.hora_fim)) { toast.error('O horário de término precisa ser depois do início.'); return }
     setLoading(true)
     try {
-      const payload = { ...form, images, amenities, available_days: availableDays, host_id: user.id, is_active: true, price_per_hour: null, max_capacity: Number(form.max_capacity), price_per_day: Number(form.price_per_day), hora_inicio: Number(form.hora_inicio), hora_fim: Number(form.hora_fim), video_url: form.video_url?.trim() || null }
+      const { municipality_code: _municipalityCode, ...propertyForm } = form
+      const payload = { ...propertyForm, images, amenities, available_days: availableDays, host_id: user.id, is_active: false, price_per_hour: null, max_capacity: Number(form.max_capacity), price_per_day: Number(form.price_per_day), hora_inicio: Number(form.hora_inicio), hora_fim: Number(form.hora_fim), video_url: form.video_url?.trim() || null }
       if (isEditing) {
-        const { error } = await supabase.from('properties').update(payload).eq('id', id)
+        const { data, error } = await supabase.from('properties').update(payload).eq('id', id).eq('host_id', user.id).select('id').single()
         if (error) throw error
-        toast.success('Espaço atualizado!')
+        if (!data) throw new Error('Espaço não atualizado')
+        toast.success('Alterações enviadas para análise!')
       } else {
         const { error } = await supabase.from('properties').insert(payload)
         if (error) throw error
-        toast.success('Espaço cadastrado!')
+        toast.success('Espaço enviado para análise!')
       }
       navigate('/anfitriao')
     } catch (err) {
@@ -177,18 +180,7 @@ export default function NewProperty() {
               <input className="input-field" placeholder="Ex: Chácara Recanto Verde" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
               <p className="text-xs text-gray-400 mt-1">Use só o nome do espaço. Não coloque @ do Instagram, telefone, link ou endereço aqui.</p>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium text-gray-600 mb-1 block">Cidade *</label>
-                <input className="input-field" placeholder="Ex: Arapiraca" value={form.city} onChange={e => setForm({...form, city: e.target.value})} required />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-gray-600 mb-1 block">Estado *</label>
-                <select className="input-field" value={form.state} onChange={e => setForm({...form, state: e.target.value})} required>
-                  {BR_STATES.map(uf => <option key={uf} value={uf}>{uf}</option>)}
-                </select>
-              </div>
-            </div>
+            <CityField value={form} onChange={location => setForm(prev => ({ ...prev, ...location }))} required={!isEditing || !form.city} label="Cidade e estado do espaço" description="Cidade padronizada pelo IBGE para que seu espaço seja encontrado nas buscas." />
             <div>
               <label className="text-sm font-medium text-gray-600 mb-1 block">Bairro</label>
               <input className="input-field" placeholder="Ex: Centro" value={form.neighborhood} onChange={e => setForm({...form, neighborhood: e.target.value})} />
@@ -357,12 +349,12 @@ export default function NewProperty() {
             </div>
           </div>
 
-          <button type="submit" disabled={loading} className="btn-primary w-full py-4 text-base">
-            {loading ? 'Salvando...' : (isEditing ? 'Salvar alterações' : 'Cadastrar espaço')}
+          <p className="text-sm text-gray-500">{isEditing ? 'Ao salvar, o anúncio volta para análise e fica oculto até a nova aprovação. Reservas já realizadas não são canceladas.' : 'Seu anúncio será analisado pela equipe PoolDay antes de aparecer nas buscas.'}</p>
+          <button type="submit" disabled={loading || uploading} className="btn-primary w-full py-4 text-base">
+            {loading ? 'Enviando...' : (isEditing ? 'Salvar e enviar para análise' : 'Enviar espaço para análise')}
           </button>
         </form>
       </div>
     </div>
   )
 }
-
