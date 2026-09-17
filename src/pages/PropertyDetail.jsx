@@ -6,7 +6,7 @@ import { MapPin, Users, Clock, Shield, Star, ChevronLeft, ChevronRight, Heart, S
 import toast from 'react-hot-toast'
 import BookingCalendar from '../components/common/BookingCalendar'
 
-const amenityIcons = { 'Piscina': '🏊', 'Wi-Fi': '📶', 'Estacionamento': '🚗', 'Churrasco': '🍖', 'Spa': '🛁', 'Toalhas': '🛁', 'Drinks': '🥤', 'Vista mar': '🌊', 'Jardim': '🌿', 'Deck': '🪵' }
+const amenityIcons = { 'Piscina': '🏊', 'Wi-Fi': '📶', 'Estacionamento': '🚗', 'Churrasqueira': '🍖', 'Spa': '🛁', 'Toalhas': '🛁', 'Drinks': '🥤', 'Vista mar': '🌊', 'Jardim': '🌿', 'Deck': '🪵' }
 
 // Converte um link do YouTube em URL de embed; retorna null se não for YouTube.
 function youtubeEmbed(url) {
@@ -17,7 +17,7 @@ function youtubeEmbed(url) {
 
 export default function PropertyDetail() {
   const { id } = useParams()
-  const { user, profile } = useAuth()
+  const { user } = useAuth()
   const navigate = useNavigate()
   const [property, setProperty] = useState(null)
   const [host, setHost] = useState(null)
@@ -83,7 +83,7 @@ export default function PropertyDetail() {
 
   async function handleShare() {
     const url = window.location.href
-    const text = `${property.name} em ${property.city} — alugue por horas ou diária no PoolDay`
+    const text = `${property.name} em ${property.city} — reserve a diária pelo PoolDay`
     if (navigator.share) {
       try { await navigator.share({ title: property.name, text, url }) } catch { /* cancelado */ }
     } else {
@@ -104,47 +104,36 @@ export default function PropertyDetail() {
 
     setBookingLoading(true)
     try {
-      const { data: blocked } = await supabase.from('blocked_dates').select('id').eq('property_id', property.id).eq('date', selectedDate).maybeSingle()
-      if (blocked) { toast.error('Essa data não está disponível.'); setBookingLoading(false); return }
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Sua sessão expirou. Entre novamente.')
 
-      // Data ocupada se houver reserva confirmada, ou pendente criada há menos de 2h
-      // (pendências antigas são pagamentos abandonados e não travam mais a data).
-      const { data: existing } = await supabase.from('bookings').select('id, status, created_at').eq('property_id', property.id).eq('date', selectedDate).in('status', ['pending', 'confirmed'])
-      const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000
-      const blockedByBooking = (existing || []).some(b => b.status === 'confirmed' || new Date(b.created_at).getTime() > twoHoursAgo)
-      if (blockedByBooking) { toast.error('Essa data já foi reservada.'); setBookingLoading(false); return }
-
-      const totalAmount = Number(property.price_per_day || property.price_per_hour)
-      const { data: booking, error } = await supabase.from('bookings').insert({
-        property_id: property.id,
-        host_id: property.host_id,
-        client_id: user.id,
-        date: selectedDate,
-        guests,
-        total_amount: totalAmount,
-        platform_fee: totalAmount * 0.15,
-        host_amount: totalAmount * 0.85,
-        status: 'pending',
-      }).select().single()
-      if (error) throw error
+      // A reserva temporária é criada no servidor, dentro de uma transação.
+      // Isso impede duas pessoas de pagarem pela mesma data ao mesmo tempo.
+      const bookingRes = await fetch('/api/create-booking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ propertyId: property.id, date: selectedDate, guests }),
+      })
+      const bookingData = await bookingRes.json()
+      if (!bookingRes.ok || !bookingData.bookingId) throw new Error(bookingData.message || bookingData.error || 'Não foi possível reservar esta data.')
 
       // O valor final é recalculado NO SERVIDOR a partir do preço real do espaço.
       const res = await fetch('/api/create-payment', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId: booking.id }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ bookingId: bookingData.bookingId }),
       })
       const data = await res.json()
       if (data.init_point) {
         window.location.href = data.init_point
       } else if (data.error === 'host_sem_mp') {
         toast.error('Este anfitrião ainda não ativou os pagamentos. Tente outro espaço ou volte em breve.', { duration: 5000 })
-        await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', booking.id)
+        await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', bookingData.bookingId)
       } else {
         throw new Error(data.error || 'Erro ao criar pagamento')
       }
     } catch (err) {
-      toast.error('Erro ao processar reserva. Tente novamente.')
+      toast.error(err.message || 'Erro ao processar reserva. Tente novamente.')
       console.error(err)
     } finally { setBookingLoading(false) }
   }
@@ -157,8 +146,7 @@ export default function PropertyDetail() {
 
   if (!property) return null
   const images = property.images?.length ? property.images : ['https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?w=800&q=80']
-  const totalAmount = Number(property.price_per_day || property.price_per_hour)
-  const today = new Date().toISOString().split('T')[0]
+  const totalAmount = Number(property.price_per_day || property.price_per_hour || 0)
   const avgRating = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0
 
   return (
@@ -168,10 +156,10 @@ export default function PropertyDetail() {
         <img src={images[imgIndex]} alt={property.name} onClick={() => setLightbox(true)} className="w-full h-full object-cover cursor-zoom-in" />
         {images.length > 1 && (
           <>
-            <button onClick={() => setImgIndex(i => (i - 1 + images.length) % images.length)} className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow hover:bg-white">
+            <button aria-label="Foto anterior" onClick={() => setImgIndex(i => (i - 1 + images.length) % images.length)} className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow hover:bg-white">
               <ChevronLeft size={20}/>
             </button>
-            <button onClick={() => setImgIndex(i => (i + 1) % images.length)} className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow hover:bg-white">
+            <button aria-label="Próxima foto" onClick={() => setImgIndex(i => (i + 1) % images.length)} className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow hover:bg-white">
               <ChevronRight size={20}/>
             </button>
             <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
@@ -180,13 +168,13 @@ export default function PropertyDetail() {
           </>
         )}
         <div className="absolute top-4 left-4 flex gap-2">
-          <button onClick={() => navigate(-1)} className="bg-white/90 backdrop-blur-sm rounded-full p-2 hover:bg-white shadow"><ChevronLeft size={20}/></button>
+          <button aria-label="Voltar" onClick={() => navigate(-1)} className="bg-white/90 backdrop-blur-sm rounded-full p-2 hover:bg-white shadow"><ChevronLeft size={20}/></button>
         </div>
         <div className="absolute top-4 right-4 flex gap-2">
-          <button onClick={handleShare} className="bg-white/90 backdrop-blur-sm rounded-full p-2 hover:bg-white shadow">
+          <button aria-label="Compartilhar espaço" onClick={handleShare} className="bg-white/90 backdrop-blur-sm rounded-full p-2 hover:bg-white shadow">
             <Share2 size={20} className="text-gray-600" />
           </button>
-          <button onClick={toggleFavorite} className="bg-white/90 backdrop-blur-sm rounded-full p-2 hover:bg-white shadow">
+          <button aria-label={isFav ? 'Remover dos favoritos' : 'Salvar nos favoritos'} onClick={toggleFavorite} className="bg-white/90 backdrop-blur-sm rounded-full p-2 hover:bg-white shadow">
             <Heart size={20} className={isFav ? 'text-red-500 fill-red-500' : 'text-gray-600'} />
           </button>
         </div>
@@ -208,7 +196,7 @@ export default function PropertyDetail() {
               )}
               <div className="flex items-center gap-1"><MapPin size={14}/>{property.city} — BR</div>
               <div className="flex items-center gap-1"><Users size={14}/>Até {property.max_capacity} pessoas</div>
-              <div className="flex items-center gap-1"><Clock size={14}/>Por horas ou diária</div>
+              <div className="flex items-center gap-1"><Clock size={14}/>Diária completa</div>
             </div>
 
             <div className="flex flex-wrap gap-2 mb-6">
@@ -347,14 +335,30 @@ export default function PropertyDetail() {
                     unavailableDates={unavailableDates}
                   />
                 </div>
+                <label htmlFor="booking-guests" className="block">
+                  <span className="text-xs font-semibold text-gray-500 uppercase mb-2 block">Convidados</span>
+                  <div className="relative">
+                    <Users size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                    <input
+                      id="booking-guests"
+                      type="number"
+                      min="1"
+                      max={property.max_capacity}
+                      inputMode="numeric"
+                      className="input-field pl-10"
+                      value={guests}
+                      onChange={event => setGuests(Math.max(1, Number(event.target.value) || 1))}
+                    />
+                  </div>
+                  <span className="text-xs text-gray-400 mt-1 block">Capacidade máxima: {property.max_capacity} pessoas</span>
+                </label>
               </div>
 
               {(property.hora_inicio != null && property.hora_fim != null) && (
                 <div className="flex items-start gap-2 text-xs text-gray-500 mb-4 bg-gray-50 rounded-xl p-3">
                   <Clock size={14} className="text-primary-500 shrink-0 mt-0.5"/>
                   <span>
-                    Funciona das <b className="text-gray-700">{String(property.hora_inicio).padStart(2,'0')}h às {String(property.hora_fim).padStart(2,'0')}h</b>
-                    {property.min_duration > 1 && <> · mínimo de <b className="text-gray-700">{property.min_duration}h</b></>}. O horário exato é combinado com o anfitrião.
+                    Funciona das <b className="text-gray-700">{String(property.hora_inicio).padStart(2,'0')}h às {String(property.hora_fim).padStart(2,'0')}h</b>. A reserva inclui todo esse período.
                   </span>
                 </div>
               )}
@@ -415,3 +419,4 @@ export default function PropertyDetail() {
     </div>
   )
 }
+

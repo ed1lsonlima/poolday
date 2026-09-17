@@ -17,11 +17,7 @@ export default function PropertyCard({ property }) {
   const rating = property.reviews_avg || 0
   const reviewCount = property.reviews_count || 0
 
-  // Antes o card sempre escrevia "/diária", mesmo quando o valor exibido
-  // era o preço por hora. Agora o rótulo acompanha o valor mostrado.
-  const hasDaily = Number(property.price_per_day) > 0
-  const price = hasDaily ? property.price_per_day : property.price_per_hour
-  const priceLabel = hasDaily ? '/diária' : '/hora'
+  const price = Number(property.price_per_day || property.price_per_hour || 0)
 
   return (
     <Link to={`/espaco/${property.id}`} className="group block">
@@ -64,9 +60,10 @@ export default function PropertyCard({ property }) {
           <span className="font-bold text-gray-900">
             R$ {Number(price || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
           </span>
-          <span className="text-gray-500 text-sm"> {priceLabel}</span>
+          <span className="text-gray-500 text-sm"> /diária</span>
         </div>
       </div>
     </Link>
   )
 }
+

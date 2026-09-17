@@ -1,13 +1,16 @@
 import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { createClient } from '@supabase/supabase-js';
 
-const SITE_URL = process.env.SITE_URL || 'https://poolday-self.vercel.app';
-const PLATFORM_FEE_RATE = 0.15;
-
+const SITE_URL = process.env.SITE_URL || 'https://www.pooldaybr.com';
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY
 );
+
+function bearerToken(req) {
+  const value = req.headers.authorization || '';
+  return value.startsWith('Bearer ') ? value.slice(7) : null;
+}
 
 // Renova o token do anfitrião via refresh_token se estiver perto de vencer.
 async function getValidHostToken(creds) {
@@ -48,6 +51,11 @@ export default async function handler(req, res) {
   }
 
   try {
+    const token = bearerToken(req);
+    if (!token) return res.status(401).json({ error: 'Faça login para pagar.' });
+    const { data: authData, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !authData?.user) return res.status(401).json({ error: 'Sua sessão expirou. Entre novamente.' });
+
     const { bookingId } = req.body || {};
     if (!bookingId) return res.status(400).json({ error: 'bookingId é obrigatório' });
 
@@ -64,11 +72,14 @@ export default async function handler(req, res) {
     if (booking.status !== 'pending') {
       return res.status(400).json({ error: 'Esta reserva não está mais aguardando pagamento.' });
     }
+    if (booking.client_id !== authData.user.id) {
+      return res.status(403).json({ error: 'Você não pode pagar esta reserva.' });
+    }
 
     // 2. Recalcula o valor NO SERVIDOR a partir do preço real do espaço.
     const { data: property, error: propError } = await supabase
       .from('properties')
-      .select('id, name, price_per_day, price_per_hour, is_active')
+      .select('id, name, is_active')
       .eq('id', booking.property_id)
       .single();
 
@@ -76,19 +87,22 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Espaço indisponível.' });
     }
 
-    const totalAmount = Math.round(Number(property.price_per_day || property.price_per_hour) * 100) / 100;
-    if (!totalAmount || totalAmount <= 0) {
-      return res.status(400).json({ error: 'Preço do espaço inválido.' });
+    // Calcula valores e reivindica, de forma transacional, uma das 3 reservas
+    // promocionais do anfitrião. Repetir a chamada devolve a mesma promoção.
+    const { data: paymentRows, error: prepareError } = await supabase.rpc('prepare_booking_payment', { p_booking_id: bookingId });
+    if (prepareError) {
+      if ((prepareError.message || '').includes('RESERVA_INDISPONIVEL')) {
+        return res.status(409).json({ error: 'Reserva expirada ou indisponível.' });
+      }
+      throw prepareError;
     }
-    const platformFee = Math.round(totalAmount * PLATFORM_FEE_RATE * 100) / 100;
-    const hostAmount = Math.round((totalAmount - platformFee) * 100) / 100;
+    const paymentData = Array.isArray(paymentRows) ? paymentRows[0] : paymentRows;
+    const totalAmount = Number(paymentData.total_amount);
+    const platformFee = Number(paymentData.platform_fee);
 
-    // Grava os valores corretos na reserva (corrige qualquer valor adulterado no insert).
-    await supabase.from('bookings').update({
-      total_amount: totalAmount,
-      platform_fee: platformFee,
-      host_amount: hostAmount,
-    }).eq('id', bookingId);
+    if (paymentData.payment_init_point && new Date(paymentData.payment_expires_at).getTime() > Date.now()) {
+      return res.status(200).json({ init_point: paymentData.payment_init_point, promotion_applied: paymentData.promotion_applied });
+    }
 
     // 3. Credenciais do anfitrião (tabela privada, só o servidor lê).
     const { data: creds } = await supabase
@@ -135,13 +149,23 @@ export default async function handler(req, res) {
         notification_url: `${SITE_URL}/api/webhook?booking=${booking.id}`,
         auto_return: 'approved',
         statement_descriptor: 'POOLDAY',
-        marketplace_fee: platformFee,
+        marketplace_fee: platformFee > 0 ? platformFee : undefined,
+        expires: true,
+        expiration_date_to: new Date(paymentData.hold_expires_at).toISOString(),
       },
     });
 
-    res.status(200).json({ init_point: result.init_point });
+    const { error: savePreferenceError } = await supabase.from('bookings').update({
+      payment_preference_id: String(result.id),
+      payment_init_point: result.init_point,
+      payment_expires_at: paymentData.hold_expires_at,
+    }).eq('id', bookingId).eq('status', 'pending');
+    if (savePreferenceError) throw savePreferenceError;
+
+    res.status(200).json({ init_point: result.init_point, promotion_applied: paymentData.promotion_applied });
   } catch (error) {
     console.error('Erro ao criar preferência:', error);
     res.status(500).json({ error: 'Erro ao processar pagamento' });
   }
 }
+

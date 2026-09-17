@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import PropertyCard from '../components/common/PropertyCard'
-import { Search, SlidersHorizontal, X, Users, Waves } from 'lucide-react'
+import { CalendarDays, Search, SlidersHorizontal, X, Users, Waves } from 'lucide-react'
 
 const types = [
   { id: '', label: 'Todos os espaços', icon: '🌐' },
@@ -14,11 +14,8 @@ const types = [
   { id: 'futevolei', label: 'Quadra de Futevôlei', icon: '🏐' },
 ]
 
-/* O card mostra a diária quando existe, senão o preço por hora.
-   O filtro de preço tem que enxergar o MESMO número, senão o usuário
-   filtra por "até R$ 200" e some um espaço de R$ 50/hora. */
 function effectivePrice(p) {
-  return Number(p.price_per_day) > 0 ? Number(p.price_per_day) : Number(p.price_per_hour) || 0
+  return Number(p.price_per_day || p.price_per_hour || 0)
 }
 
 function PropertyCardSkeleton() {
@@ -41,6 +38,7 @@ export default function Explore() {
   const [filters, setFilters] = useState({
     cidade: params.get('cidade') || '',
     tipo: params.get('tipo') || '',
+    date: params.get('data') || '',
     maxGuests: params.get('convidados') || '',
     maxPrice: params.get('maxPrice') || '',
   })
@@ -55,6 +53,7 @@ export default function Explore() {
     setFilters({
       cidade: params.get('cidade') || '',
       tipo: params.get('tipo') || '',
+      date: params.get('data') || '',
       maxGuests: params.get('convidados') || '',
       maxPrice: params.get('maxPrice') || '',
     })
@@ -64,29 +63,50 @@ export default function Explore() {
     const id = ++requestId.current
     setLoading(true)
 
-    let query = supabase.from('properties').select('*').eq('is_active', true)
+    async function fetchProperties() {
+      let query = supabase.from('properties').select('*').eq('is_active', true)
 
-    const cidade = params.get('cidade')
-    const tipo = params.get('tipo')
-    const convidados = Number(params.get('convidados'))
+      const cidade = params.get('cidade')
+      const tipo = params.get('tipo')
+      const date = params.get('data')
+      const convidados = Number(params.get('convidados'))
 
-    if (cidade) query = query.ilike('city', `%${cidade}%`)
-    if (tipo) query = query.eq('type', tipo)
-    if (convidados > 0) query = query.gte('max_capacity', convidados)
+      if (cidade) query = query.ilike('city', `%${cidade}%`)
+      if (tipo) query = query.eq('type', tipo)
+      if (convidados > 0) query = query.gte('max_capacity', convidados)
 
-    query.order('created_at', { ascending: false }).then(({ data }) => {
+      const [propertiesResult, availabilityResult] = await Promise.all([
+        query.order('created_at', { ascending: false }),
+        date
+          ? supabase.rpc('get_available_property_ids', { p_date: date })
+          : Promise.resolve({ data: null, error: null }),
+      ])
+
       if (id !== requestId.current) return // resposta velha, descarta
 
-      let rows = data || []
+      if (propertiesResult.error || availabilityResult.error) {
+        console.error('Não foi possível carregar os espaços', propertiesResult.error || availabilityResult.error)
+        setProperties([])
+        setLoading(false)
+        return
+      }
+
+      let rows = propertiesResult.data || []
+      if (date) {
+        const availableIds = new Set((availabilityResult.data || []).map(item => item.property_id))
+        rows = rows.filter(property => availableIds.has(property.id))
+      }
 
       // Preço filtrado aqui e não no banco: a regra depende de qual dos dois
       // campos vale para cada espaço, e o volume atual não justifica SQL.
       const max = Number(params.get('maxPrice'))
-      if (max > 0) rows = rows.filter(p => effectivePrice(p) <= max)
+      if (max > 0) rows = rows.filter(property => effectivePrice(property) <= max)
 
       setProperties(rows)
       setLoading(false)
-    })
+    }
+
+    fetchProperties()
   }, [params])
 
   useEffect(() => {
@@ -100,6 +120,7 @@ export default function Explore() {
     const p = new URLSearchParams()
     if (next.cidade?.trim()) p.set('cidade', next.cidade.trim())
     if (next.tipo) p.set('tipo', next.tipo)
+    if (next.date) p.set('data', next.date)
     if (next.maxGuests) p.set('convidados', next.maxGuests)
     if (next.maxPrice) p.set('maxPrice', next.maxPrice)
     setParams(p)
@@ -112,7 +133,7 @@ export default function Explore() {
   }
 
   function clearFilters() {
-    setFilters({ cidade: '', tipo: '', maxGuests: '', maxPrice: '' })
+    setFilters({ cidade: '', tipo: '', date: '', maxGuests: '', maxPrice: '' })
     setParams(new URLSearchParams())
     setShowFilters(false)
   }
@@ -128,6 +149,8 @@ export default function Explore() {
           <div className="flex-1 flex items-center gap-2 bg-gray-50 rounded-xl px-4 py-2.5 border border-gray-200 focus-within:border-primary-400 focus-within:bg-white transition-colors">
             <Search size={18} className="text-gray-400 shrink-0" />
             <input
+              aria-label="Buscar por cidade"
+              autoComplete="address-level2"
               className="flex-1 bg-transparent outline-none text-sm text-gray-700 placeholder:text-gray-400"
               placeholder="Buscar por cidade..."
               value={filters.cidade}
@@ -152,7 +175,7 @@ export default function Explore() {
           >
             <SlidersHorizontal size={18} />
             <span className="hidden sm:inline">Filtros</span>
-            {(filters.maxPrice || filters.maxGuests) && (
+            {(filters.date || filters.maxPrice || filters.maxGuests) && (
               <span className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 bg-primary-500 rounded-full ring-2 ring-white" />
             )}
           </button>
@@ -177,7 +200,21 @@ export default function Explore() {
         {/* Painel de filtros */}
         <div className={`accordion-body ${showFilters ? 'is-open' : ''} border-t border-gray-100`}>
           <div>
-            <form onSubmit={applyFilters} className="max-w-6xl mx-auto px-4 py-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <form onSubmit={applyFilters} className="max-w-6xl mx-auto px-4 py-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div>
+                <label htmlFor="explore-date" className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Data</label>
+                <div className="relative">
+                  <CalendarDays size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <input
+                    id="explore-date"
+                    type="date"
+                    min={new Date().toISOString().slice(0, 10)}
+                    className="input-field text-sm pl-9"
+                    value={filters.date}
+                    onChange={e => setFilters({ ...filters, date: e.target.value })}
+                  />
+                </div>
+              </div>
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Preço máx. (R$)</label>
                 <input
@@ -245,7 +282,7 @@ export default function Explore() {
             <p className="text-gray-500 text-sm leading-relaxed">
               {params.get('cidade')
                 ? `Ainda não temos espaços disponíveis em ${params.get('cidade')} com esses filtros.`
-                : 'Tente ajustar os filtros para ver mais opções.'}
+                : 'Estamos preparando os primeiros espaços. Se você tem uma piscina ou área de lazer, anuncie gratuitamente e apareça primeiro.'}
             </p>
             <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
               {hasFilters && (
@@ -267,3 +304,4 @@ export default function Explore() {
     </div>
   )
 }
+

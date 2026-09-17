@@ -18,7 +18,7 @@ export default function HostWelcome() {
             <Search size={20} className="text-gray-500 shrink-0" />
             <div>
               <p className="font-semibold text-gray-800 text-sm">Quero alugar um espaço</p>
-              <p className="text-xs text-gray-400">Buscar piscinas e chácaras por hora ou diária</p>
+              <p className="text-xs text-gray-400">Buscar piscinas e chácaras por diária</p>
             </div>
           </button>
 
@@ -37,3 +37,4 @@ export default function HostWelcome() {
     </div>
   )
 }
+

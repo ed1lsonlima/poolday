@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { Plus, LayoutDashboard, CreditCard, Star, Calendar, Eye, Edit, Trash2, CheckCircle, XCircle, Clock, Link2, ShieldCheck, MessageCircle } from 'lucide-react'
+import { Plus, LayoutDashboard, CreditCard, Calendar, Eye, Edit, Trash2, CheckCircle, XCircle, Clock, Link2, ShieldCheck, MessageCircle } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDateBR } from '../lib/formatDate'
 
@@ -48,7 +48,8 @@ export default function HostDashboard() {
   }, [searchParams])
 
   async function fetchProperties() {
-    const { data } = await supabase.from('properties').select('*').eq('host_id', user.id).order('created_at', { ascending: false })
+    const { data, error } = await supabase.from('properties').select('*').eq('host_id', user.id).order('created_at', { ascending: false })
+    if (error) toast.error('Não foi possível carregar seus espaços.')
     setProperties(data || [])
     setLoading(false)
   }
@@ -60,9 +61,9 @@ export default function HostDashboard() {
     setBookings(bk)
     setStats({
       total: bk.length,
-      confirmed: bk.filter(b => b.status === 'confirmed').length,
+      confirmed: bk.filter(b => ['confirmed', 'completed'].includes(b.status)).length,
       pending: bk.filter(b => b.status === 'pending').length,
-      revenue: bk.filter(b => b.status === 'confirmed').reduce((s, b) => s + Number(b.host_amount || 0), 0),
+      revenue: bk.filter(b => ['confirmed', 'completed'].includes(b.status)).reduce((s, b) => s + Number(b.host_amount || 0), 0),
       pendingRevenue: bk.filter(b => b.status === 'pending').reduce((s, b) => s + Number(b.host_amount || 0), 0),
     })
   }
@@ -84,7 +85,8 @@ export default function HostDashboard() {
   }
 
   async function toggleActive(id, current) {
-    await supabase.from('properties').update({ is_active: !current }).eq('id', id)
+    const { error } = await supabase.from('properties').update({ is_active: !current }).eq('id', id)
+    if (error) return toast.error('Não foi possível atualizar o espaço.')
     fetchProperties()
     if (!current) toast.success('Espaço ativado! Já aparece nas buscas para os clientes.')
     else toast('Espaço pausado. Ele fica oculto das buscas até você reativar.', { icon: '⏸️' })
@@ -121,6 +123,8 @@ export default function HostDashboard() {
     cancelled: { label: 'Cancelada', color: 'text-red-600 bg-red-50', icon: <XCircle size={14}/> },
     completed: { label: 'Concluída', color: 'text-gray-600 bg-gray-100', icon: <CheckCircle size={14}/> },
   }
+  const promoUsed = bookings.filter(b => b.promotion_applied && b.status !== 'cancelled').length
+  const promoRemaining = Math.max(0, 3 - promoUsed)
 
   if (!profile || profile.role !== 'host') {
     return (
@@ -160,6 +164,10 @@ export default function HostDashboard() {
 
         {tab === 'dashboard' && (
           <>
+            <div className="bg-gradient-to-r from-orange-50 to-primary-50 border border-orange-100 rounded-2xl p-4 mb-6">
+              <p className="font-bold text-gray-800 text-sm">🎁 Oferta de lançamento: 3 reservas com taxa zero</p>
+              <p className="text-gray-600 text-xs mt-1">{promoRemaining > 0 ? `Você ainda tem ${promoRemaining} reserva${promoRemaining > 1 ? 's' : ''} recebendo 100% do valor anunciado.` : 'Suas 3 reservas promocionais foram utilizadas. Nas próximas, a taxa padrão é de 15%.'}</p>
+            </div>
             {/* Aviso WhatsApp (#2) */}
             {!profile.phone ? (
               <div className="flex items-start gap-3 bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-6">
@@ -240,6 +248,7 @@ export default function HostDashboard() {
                           <p className="font-semibold text-gray-800 truncate">{b.properties?.name}</p>
                           <p className="text-sm text-gray-500">{b.client?.name} • {formatDateBR(b.date)}</p>
                           <p className="text-sm font-medium text-gray-700">R$ {Number(b.total_amount).toLocaleString('pt-BR', {minimumFractionDigits:2})}</p>
+                          {b.promotion_applied && b.status !== 'cancelled' && <span className="inline-flex mt-1 text-[11px] font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">Taxa zero · você recebe 100%</span>}
                         </div>
                         <span className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full ${st.color}`}>
                           {st.icon} {st.label}
@@ -286,7 +295,8 @@ export default function HostDashboard() {
 
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
               <h2 className="font-bold text-gray-800 mb-2">Pagamentos via Mercado Pago</h2>
-              <p className="text-gray-500 text-sm mb-6">Os repasses são processados automaticamente. 15% de taxa de serviço é descontada de cada reserva.</p>
+              <p className="text-gray-500 text-sm mb-2">Os repasses são processados automaticamente. As 3 primeiras reservas confirmadas têm taxa zero; depois, a taxa de serviço é de 15%.</p>
+              <p className="text-xs text-primary-600 font-semibold mb-6">Promoção: {promoRemaining} de 3 reservas sem taxa disponíveis.</p>
               <div className="grid md:grid-cols-3 gap-4">
                 <div className="bg-green-50 rounded-xl p-5">
                   <p className="text-xs text-green-600 font-semibold uppercase">Total Recebido</p>
@@ -328,3 +338,4 @@ export default function HostDashboard() {
     </div>
   )
 }
+

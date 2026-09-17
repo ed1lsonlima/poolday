@@ -2,8 +2,8 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   Search, MapPin, Waves, Shield, Star, ChevronRight,
-  CreditCard, MessageCircle, CheckCircle, DollarSign,
-  Calendar, ChevronDown, FileText
+  CreditCard, CheckCircle, DollarSign,
+  Calendar, ChevronDown, FileText, Users
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import PropertyCard from '../components/common/PropertyCard'
@@ -189,6 +189,8 @@ function initialsOf(name = '') {
 
 export default function Home() {
   const [city, setCity]       = useState('')
+  const [date, setDate]       = useState('')
+  const [guests, setGuests]   = useState('')
   const [typeIdx, setTypeIdx] = useState(0)
   const [typeOpen, setTypeOpen] = useState(false)
   const [featured, setFeatured] = useState([])
@@ -231,6 +233,8 @@ export default function Home() {
     const params = new URLSearchParams()
     if (city.trim()) params.set('cidade', city.trim())
     if (SPACE_TYPES[typeIdx].id) params.set('tipo', SPACE_TYPES[typeIdx].id)
+    if (date) params.set('data', date)
+    if (guests) params.set('convidados', guests)
     navigate(`/explorar?${params.toString()}`)
   }
 
@@ -256,7 +260,7 @@ export default function Home() {
             Encontre a piscina perfeita<br/>para o seu dia
           </h1>
           <p className="text-white/80 text-base mb-8">
-            Reserve por horas ou diária, com segurança e sem complicação.
+            Reserve por diária, com segurança e sem complicação.
           </p>
 
           <form onSubmit={handleSearch} className="bg-white/95 backdrop-blur rounded-3xl shadow-[0_20px_60px_-15px_rgba(11,63,114,0.45)] ring-1 ring-white/40 text-left">
@@ -265,8 +269,10 @@ export default function Home() {
                 <MapPin size={18} className="text-primary-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Qual cidade?</p>
+                <label htmlFor="home-city" className="text-xs font-bold text-gray-400 uppercase tracking-wide">Qual cidade?</label>
                 <input
+                  id="home-city"
+                  autoComplete="address-level2"
                   className="w-full text-base text-gray-800 outline-none mt-0.5 placeholder:text-gray-400 placeholder:font-normal bg-transparent"
                   placeholder="Digite a cidade"
                   value={city}
@@ -324,6 +330,23 @@ export default function Home() {
               )}
             </div>
 
+            <div className="grid grid-cols-2 border-b border-gray-100">
+              <label className="flex items-center gap-3 px-5 py-3 border-r border-gray-100 focus-within:bg-primary-50/40">
+                <Calendar size={18} className="text-primary-500 shrink-0" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs font-bold text-gray-400 uppercase tracking-wide">Data</span>
+                  <input type="date" min={new Date().toISOString().split('T')[0]} value={date} onChange={e => setDate(e.target.value)} className="w-full bg-transparent outline-none text-gray-800 mt-0.5" />
+                </span>
+              </label>
+              <label className="flex items-center gap-3 px-5 py-3 focus-within:bg-primary-50/40">
+                <Users size={18} className="text-primary-500 shrink-0" />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs font-bold text-gray-400 uppercase tracking-wide">Pessoas</span>
+                  <input type="number" min="1" inputMode="numeric" placeholder="Quantas?" value={guests} onChange={e => setGuests(e.target.value)} className="w-full bg-transparent outline-none text-gray-800 mt-0.5" />
+                </span>
+              </label>
+            </div>
+
             <div className="px-4 py-4 rounded-b-3xl">
               <button type="submit" className="btn-primary w-full flex items-center justify-center gap-2 py-3.5 shadow-lg shadow-primary-500/30 hover:shadow-primary-600/40 transition-shadow">
                 <Search size={18} />
@@ -375,8 +398,8 @@ export default function Home() {
           <Reveal>
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-2xl font-extrabold text-gray-800">Espaços em destaque</h2>
-                <p className="text-gray-500 text-sm mt-0.5">Confira alguns dos espaços disponíveis</p>
+                <h2 className="text-2xl font-extrabold text-gray-800">{featured.length ? 'Espaços em destaque' : 'Seja um dos primeiros anfitriões'}</h2>
+                <p className="text-gray-500 text-sm mt-0.5">{featured.length ? 'Confira alguns dos espaços disponíveis' : 'O PoolDay está abrindo novos espaços pelo Brasil'}</p>
               </div>
               <Link to="/explorar" className="text-primary-500 text-sm font-semibold hover:underline flex items-center gap-1 group">
                 Ver todos <ChevronRight size={16} className="transition-transform group-hover:translate-x-0.5"/>
@@ -396,8 +419,8 @@ export default function Home() {
                   <div className="w-14 h-14 bg-primary-50 rounded-2xl flex items-center justify-center">
                     <Waves size={28} className="text-primary-400" />
                   </div>
-                  <p className="font-semibold text-gray-600">Seja o primeiro a cadastrar seu espaço!</p>
-                  <p className="text-gray-400 text-sm">Os espaços aparecerão aqui conforme forem cadastrados.</p>
+                  <p className="font-semibold text-gray-700">Seu espaço pode aparecer aqui primeiro</p>
+                  <p className="text-gray-500 text-sm">Anuncie gratuitamente e receba 100% do valor nas suas 3 primeiras reservas.</p>
                   <Link to="/cadastro?role=host" className="btn-primary text-sm px-5 py-2.5 mt-1">
                     Cadastrar meu espaço
                   </Link>
@@ -434,7 +457,7 @@ export default function Home() {
         <div className="space-y-5">
           {[
             { icon: <Search size={26} className="text-primary-500"/>, title: 'Encontre', desc: 'Busque piscinas e espaços incríveis na sua cidade com filtros inteligentes.' },
-            { icon: <Calendar size={26} className="text-primary-500"/>, title: 'Reserve', desc: 'Escolha data, horário e faça sua reserva com pagamento seguro.' },
+            { icon: <Calendar size={26} className="text-primary-500"/>, title: 'Reserve', desc: 'Escolha a data e faça sua reserva diária com pagamento seguro.' },
             { icon: <Waves size={26} className="text-primary-500"/>, title: 'Aproveite', desc: 'Curta seu dia de piscina com amigos e família. Diversão garantida!' },
           ].map((step, i) => (
             <Reveal key={i} delay={i * 90}>
@@ -494,7 +517,7 @@ export default function Home() {
               Tem uma piscina?<br/>Ganhe dinheiro com ela!
             </h2>
             <p className="text-white/80 mb-8 text-base leading-relaxed">
-              Cadastre seu espaço gratuitamente e comece a receber reservas. Você define o preço, escolhe os dias e aprova cada reserva antes.
+              Cadastre seu espaço gratuitamente e comece a receber reservas. Você define o preço, os dias disponíveis e o horário de uso da diária.
             </p>
             <Link
               to="/cadastro?role=host"
@@ -507,7 +530,7 @@ export default function Home() {
           <div className="mt-8 grid grid-cols-1 gap-3">
             {[
               { icon: <DollarSign size={22}/>, title: 'Ganhe dinheiro', desc: 'Transforme sua piscina em uma fonte de renda extra.' },
-              { icon: <Calendar size={22}/>, title: 'Você define o horário', desc: 'Controle total sobre disponibilidade e preços.' },
+              { icon: <Calendar size={22}/>, title: 'Você define o horário', desc: 'Informe o início e o fim da diária para o cliente.' },
               { icon: <Shield size={22}/>, title: 'Pagamento seguro', desc: 'Receba diretamente na sua conta com segurança.' },
             ].map((item, i) => (
               <Reveal key={i} delay={i * 80}>
@@ -592,3 +615,4 @@ export default function Home() {
     </div>
   )
 }
+

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Waves, Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import { Waves, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function Login() {
@@ -30,6 +30,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-lg p-8 w-full max-w-md">
+        <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-600 mb-4"><ArrowLeft size={16}/> Início</Link>
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-2 mb-4">
             <Waves className="text-primary-500" size={28} />
@@ -52,16 +53,19 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
+            <label htmlFor="login-email" className="sr-only">E-mail</label>
             <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input className="input-field pl-11" type="email" placeholder="Email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required />
+            <input id="login-email" className="input-field pl-11" type="email" autoComplete="email" placeholder="Email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required />
           </div>
           <div className="relative">
+            <label htmlFor="login-password" className="sr-only">Senha</label>
             <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input className="input-field pl-11 pr-11" type={showPass ? 'text' : 'password'} placeholder="Senha" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required />
-            <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+            <input id="login-password" className="input-field pl-11 pr-11" type={showPass ? 'text' : 'password'} autoComplete="current-password" placeholder="Senha" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required />
+            <button type="button" aria-label={showPass ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
               {showPass ? <EyeOff size={18}/> : <Eye size={18}/>}
             </button>
           </div>
+          <div className="text-right"><Link to="/recuperar-senha" className="text-sm text-primary-600 font-medium hover:underline">Esqueci minha senha</Link></div>
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
@@ -75,3 +79,4 @@ export default function Login() {
     </div>
   )
 }
+
