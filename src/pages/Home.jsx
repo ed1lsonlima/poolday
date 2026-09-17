@@ -196,7 +196,7 @@ export default function Home() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    supabase.from('properties').select('*').eq('is_active', true)
+    supabase.from('property_listings').select('*')
       .order('created_at', { ascending: false }).limit(4)
       .then(({ data }) => { setFeatured(data || []); setLoadingFeatured(false) })
   }, [])
@@ -205,7 +205,7 @@ export default function Home() {
   useEffect(() => {
     supabase
       .from('reviews')
-      .select('id, rating, comment, created_at, reviewer_id, property:properties!property_id(name, city)')
+      .select('id, rating, comment, created_at, reviewer_id, property_id')
       .not('comment', 'is', null)
       .neq('comment', '')
       .gte('rating', 4)
@@ -213,7 +213,13 @@ export default function Home() {
       .limit(6)
       .then(async ({ data, error }) => {
         if (error) { setReviews([]); return }
-        setReviews(await withReviewAuthors(data || []))
+        const rows = data || []
+        const propertyIds = [...new Set(rows.map(review => review.property_id).filter(Boolean))]
+        const { data: listings } = propertyIds.length
+          ? await supabase.from('property_listings').select('id,name,city').in('id', propertyIds)
+          : { data: [] }
+        const listingById = new Map((listings || []).map(listing => [listing.id, listing]))
+        setReviews(await withReviewAuthors(rows.map(review => ({ ...review, property: listingById.get(review.property_id) }))))
       })
   }, [])
 
