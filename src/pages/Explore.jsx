@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import PropertyCard from '../components/common/PropertyCard'
-import { CalendarDays, Search, SlidersHorizontal, X, Users, Waves } from 'lucide-react'
+import DatePicker from '../components/common/DatePicker'
+import { normalizeBookingDate } from '../components/common/BookingCalendar'
+import { Search, SlidersHorizontal, X, Waves } from 'lucide-react'
 
 const types = [
   { id: '', label: 'Todos os espaços', icon: '🌐' },
@@ -33,13 +35,13 @@ export default function Explore() {
   const [params, setParams] = useSearchParams()
   const [properties, setProperties] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
 
   const [filters, setFilters] = useState({
     cidade: params.get('cidade') || '',
     tipo: params.get('tipo') || '',
-    date: params.get('data') || '',
-    maxGuests: params.get('convidados') || '',
+    date: normalizeBookingDate(params.get('data')),
     maxPrice: params.get('maxPrice') || '',
   })
 
@@ -50,11 +52,16 @@ export default function Explore() {
   // Mantém os campos em sincronia quando a URL muda por fora
   // (voltar/avançar no navegador, link vindo da Home).
   useEffect(() => {
+    const date = normalizeBookingDate(params.get('data'))
+    if (params.has('data') && params.get('data') !== date) {
+      const cleaned = new URLSearchParams(params)
+      cleaned.delete('data')
+      setParams(cleaned, { replace: true })
+    }
     setFilters({
       cidade: params.get('cidade') || '',
       tipo: params.get('tipo') || '',
-      date: params.get('data') || '',
-      maxGuests: params.get('convidados') || '',
+      date,
       maxPrice: params.get('maxPrice') || '',
     })
   }, [params])
@@ -62,18 +69,17 @@ export default function Explore() {
   useEffect(() => {
     const id = ++requestId.current
     setLoading(true)
+    setLoadError(false)
 
     async function fetchProperties() {
       let query = supabase.from('properties').select('*').eq('is_active', true)
 
       const cidade = params.get('cidade')
       const tipo = params.get('tipo')
-      const date = params.get('data')
-      const convidados = Number(params.get('convidados'))
+      const date = normalizeBookingDate(params.get('data'))
 
       if (cidade) query = query.ilike('city', `%${cidade}%`)
       if (tipo) query = query.eq('type', tipo)
-      if (convidados > 0) query = query.gte('max_capacity', convidados)
 
       const [propertiesResult, availabilityResult] = await Promise.all([
         query.order('created_at', { ascending: false }),
@@ -87,6 +93,7 @@ export default function Explore() {
       if (propertiesResult.error || availabilityResult.error) {
         console.error('Não foi possível carregar os espaços', propertiesResult.error || availabilityResult.error)
         setProperties([])
+        setLoadError(true)
         setLoading(false)
         return
       }
@@ -120,8 +127,8 @@ export default function Explore() {
     const p = new URLSearchParams()
     if (next.cidade?.trim()) p.set('cidade', next.cidade.trim())
     if (next.tipo) p.set('tipo', next.tipo)
-    if (next.date) p.set('data', next.date)
-    if (next.maxGuests) p.set('convidados', next.maxGuests)
+    const date = normalizeBookingDate(next.date)
+    if (date) p.set('data', date)
     if (next.maxPrice) p.set('maxPrice', next.maxPrice)
     setParams(p)
   }
@@ -133,7 +140,7 @@ export default function Explore() {
   }
 
   function clearFilters() {
-    setFilters({ cidade: '', tipo: '', date: '', maxGuests: '', maxPrice: '' })
+    setFilters({ cidade: '', tipo: '', date: '', maxPrice: '' })
     setParams(new URLSearchParams())
     setShowFilters(false)
   }
@@ -175,7 +182,7 @@ export default function Explore() {
           >
             <SlidersHorizontal size={18} />
             <span className="hidden sm:inline">Filtros</span>
-            {(filters.date || filters.maxPrice || filters.maxGuests) && (
+            {(filters.date || filters.maxPrice) && (
               <span className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 bg-primary-500 rounded-full ring-2 ring-white" />
             )}
           </button>
@@ -200,20 +207,10 @@ export default function Explore() {
         {/* Painel de filtros */}
         <div className={`accordion-body ${showFilters ? 'is-open' : ''} border-t border-gray-100`}>
           <div>
-            <form onSubmit={applyFilters} className="max-w-6xl mx-auto px-4 py-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            <form onSubmit={applyFilters} className="max-w-6xl mx-auto px-4 py-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div>
-                <label htmlFor="explore-date" className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Data</label>
-                <div className="relative">
-                  <CalendarDays size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  <input
-                    id="explore-date"
-                    type="date"
-                    min={new Date().toISOString().slice(0, 10)}
-                    className="input-field text-sm pl-9"
-                    value={filters.date}
-                    onChange={e => setFilters({ ...filters, date: e.target.value })}
-                  />
-                </div>
+                <p className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Data</p>
+                <DatePicker value={filters.date} onChange={date => setFilters({ ...filters, date })} />
               </div>
               <div>
                 <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Preço máx. (R$)</label>
@@ -224,19 +221,6 @@ export default function Explore() {
                   value={filters.maxPrice}
                   onChange={e => setFilters({ ...filters, maxPrice: e.target.value })}
                 />
-              </div>
-              <div>
-                <label className="text-xs font-semibold text-gray-500 uppercase mb-1 block">Convidados</label>
-                <div className="relative">
-                  <Users size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
-                  <input
-                    type="number" min="1" inputMode="numeric"
-                    className="input-field text-sm pl-9"
-                    placeholder="Ex: 15"
-                    value={filters.maxGuests}
-                    onChange={e => setFilters({ ...filters, maxGuests: e.target.value })}
-                  />
-                </div>
               </div>
               <div className="flex items-end gap-2">
                 <button type="submit" className="btn-primary py-2.5 flex-1 text-sm">Ver resultados</button>
@@ -271,6 +255,8 @@ export default function Explore() {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
             {[...Array(8)].map((_, i) => <PropertyCardSkeleton key={i} />)}
           </div>
+        ) : loadError ? (
+          <div role="alert" className="text-center py-16"><h2 className="font-bold text-xl">Não conseguimos carregar os espaços</h2><p className="text-gray-500 mt-2">Confira sua conexão e tente novamente.</p><button onClick={() => setParams(new URLSearchParams(params))} className="btn-primary mt-4">Tentar novamente</button></div>
         ) : count === 0 ? (
           /* Antes isso era um beco sem saída. Agora sempre sobra um caminho:
              afrouxar o filtro, ou virar anfitrião na cidade que ele buscou. */
@@ -304,4 +290,3 @@ export default function Explore() {
     </div>
   )
 }
-

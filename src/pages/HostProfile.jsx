@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import PropertyCard from '../components/common/PropertyCard'
+import { withReviewAuthors } from '../lib/publicProfiles'
 import { MapPin, Star, ShieldCheck, Calendar } from 'lucide-react'
 
 export default function HostProfile() {
@@ -11,22 +12,31 @@ export default function HostProfile() {
   const [properties, setProperties] = useState([])
   const [reviews, setReviews] = useState([])
   const [loading, setLoading] = useState(true)
+  const requestId = useRef(0)
 
-  useEffect(() => { fetchHost() }, [id])
+  useEffect(() => {
+    const request = ++requestId.current
+    setHost(null); setProperties([]); setReviews([]); setLoading(true)
+    fetchHost(request)
+    return () => { requestId.current++ }
+  }, [id])
 
-  async function fetchHost() {
-    setLoading(true)
-    const { data: hostData } = await supabase.from('profiles').select('*').eq('id', id).eq('role', 'host').single()
+  async function fetchHost(request) {
+    const { data: hostData } = await supabase.from('public_profiles').select('*').eq('id', id).eq('role', 'host').single()
+    if (request !== requestId.current) return
     if (!hostData) { navigate('/'); return }
     setHost(hostData)
 
     const { data: props } = await supabase.from('properties').select('*').eq('host_id', id).eq('is_active', true).order('created_at', { ascending: false })
+    if (request !== requestId.current) return
     setProperties(props || [])
 
     if (props?.length) {
       const propertyIds = props.map(p => p.id)
-      const { data: reviewData } = await supabase.from('reviews').select('rating, comment, created_at, profiles(name)').in('property_id', propertyIds).order('created_at', { ascending: false })
-      setReviews(reviewData || [])
+      const { data: reviewData } = await supabase.from('reviews').select('rating, comment, created_at, reviewer_id').in('property_id', propertyIds).order('created_at', { ascending: false })
+      const attributedReviews = await withReviewAuthors(reviewData || [])
+      if (request !== requestId.current) return
+      setReviews(attributedReviews)
     }
     setLoading(false)
   }

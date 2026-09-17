@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { useNavigate, Link } from 'react-router-dom'
-import { User, Mail, Phone, MapPin, LogOut, ShieldCheck, FileText, LayoutDashboard } from 'lucide-react'
+import { User, Mail, Phone, LogOut, ShieldCheck, FileText, LayoutDashboard } from 'lucide-react'
 import toast from 'react-hot-toast'
+import CityField from '../components/common/CityField'
 
 function Field({ label, icon, value, onChange, placeholder }) {
   return (
@@ -14,13 +15,13 @@ function Field({ label, icon, value, onChange, placeholder }) {
 }
 
 export default function Configuracoes() {
-  const { user, profile, updateProfile, signOut } = useAuth()
+  const { user, profile, updateProfile, signOut, isAdmin } = useAuth()
   const [form, setForm] = useState({ name: '', phone: '', city: '' })
   const [saving, setSaving] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (profile) setForm({ name: profile.name || '', phone: profile.phone || '', city: profile.city || '' })
+    if (profile) setForm({ name: profile.name || '', phone: profile.phone || '', city: profile.city || '', state: profile.state || null, municipality_code: profile.municipality_code || null })
   }, [profile])
 
   async function handleSave() {
@@ -52,7 +53,7 @@ export default function Configuracoes() {
           <div className="space-y-4">
             <Field label="Nome" icon={<User size={15}/>} value={form.name} onChange={v => setForm({ ...form, name: v })} placeholder="Seu nome" />
             <Field label="Telefone" icon={<Phone size={15}/>} value={form.phone} onChange={v => setForm({ ...form, phone: v })} placeholder="(82) 99999-9999" />
-            <Field label="Cidade" icon={<MapPin size={15}/>} value={form.city} onChange={v => setForm({ ...form, city: v })} placeholder="Sua cidade" />
+            <CityField value={form} onChange={location => setForm({ ...form, ...location })} />
             <div>
               <label className="text-xs font-semibold text-gray-500 uppercase mb-1 flex items-center gap-1.5"><Mail size={15}/> Email</label>
               <p className="text-gray-500 py-2 border-b border-gray-100">{user?.email}</p>
@@ -62,6 +63,7 @@ export default function Configuracoes() {
         </section>
 
         {/* Conta */}
+        {isAdmin && <Link to="/admin" className="btn-primary flex justify-center mb-5">Abrir administração PoolDay</Link>}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-5">
           <h2 className="font-bold text-gray-800 mb-3">Conta</h2>
           <div className="flex items-center justify-between py-2 border-b border-gray-50">

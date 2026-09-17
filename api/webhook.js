@@ -53,7 +53,6 @@ export default async function handler(req, res) {
       .single();
 
     if (!booking) return res.status(200).json({ success: true, ignored: true });
-    if (booking.status === 'confirmed') return res.status(200).json({ success: true, already: true });
 
     const { data: creds } = await supabase
       .from('mp_credentials')
@@ -64,14 +63,14 @@ export default async function handler(req, res) {
     // O pagamento foi criado com o token do ANFITRIÃO, então a consulta
     // precisa usar o token dele (o da plataforma retornaria 404).
     const token = creds?.mp_access_token || process.env.MP_ACCESS_TOKEN;
-    if (!token) return res.status(200).json({ success: true, ignored: true });
+    if (!token) return res.status(503).json({ error: 'Credenciais indisponíveis' });
 
     const mpRes = await fetch(`https://api.mercadopago.com/v1/payments/${paymentId}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     if (!mpRes.ok) {
       console.error('Falha ao consultar pagamento no MP:', mpRes.status);
-      return res.status(200).json({ success: true, ignored: true });
+      return res.status(503).json({ error: 'Consulta indisponível' });
     }
     const payment = await mpRes.json();
 
@@ -81,25 +80,21 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true, ignored: true });
     }
 
-    if (payment.status === 'approved') {
-      const paid = Number(payment.transaction_amount || 0);
-      if (paid + 0.01 < Number(booking.total_amount)) {
-        console.error('Valor pago menor que o total da reserva', paid, booking.total_amount);
-        return res.status(200).json({ success: true, ignored: true });
-      }
-      const { error } = await supabase
-        .from('bookings')
-        .update({ status: 'confirmed', payment_id: String(paymentId) })
-        .eq('id', booking.id)
-        .eq('status', 'pending');
-      if (error) throw error;
-    } else if (['cancelled', 'rejected', 'refunded', 'charged_back'].includes(payment.status)) {
-      await supabase
-        .from('bookings')
-        .update({ status: 'cancelled', payment_id: String(paymentId) })
-        .eq('id', booking.id)
-        .eq('status', 'pending');
-    }
+    const paid = Number(payment.transaction_amount || 0);
+    if (Math.abs(paid - Number(booking.total_amount)) > 0.01 || payment.currency_id !== 'BRL') return res.status(400).json({ error: 'Valor ou moeda divergente' });
+    const fees = payment.fee_details || [];
+    const refunded = Number(payment.transaction_amount_refunded || 0);
+    const terminal = ['refunded', 'charged_back'].includes(payment.status);
+    const { error: ledgerError } = await supabase.rpc('record_payment', { p_payment: {
+      payment_id: String(paymentId), booking_id: booking.id, status: payment.status,
+      amount: paid, refunded_amount: refunded,
+      platform_fee: terminal ? 0 : fees.filter(f => f.type === 'application_fee').reduce((sum, f) => sum + Number(f.amount || 0), 0),
+      provider_fee: fees.filter(f => f.type !== 'application_fee').reduce((sum, f) => sum + Number(f.amount || 0), 0),
+      host_net: terminal ? 0 : payment.transaction_details?.net_received_amount ?? null,
+      payment_created_at: payment.date_created,
+      provider_updated_at: payment.date_last_updated || payment.date_created,
+    } });
+    if (ledgerError) throw ledgerError;
 
     res.status(200).json({ success: true });
   } catch (error) {
