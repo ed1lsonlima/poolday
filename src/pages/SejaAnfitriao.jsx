@@ -18,8 +18,8 @@ import { supabase } from '../lib/supabase'
    → 6. Botão grande "Criar minha conta"
    → 7. Rede de segurança discreta no WhatsApp (a gente cadastra pra você)
 
-   A taxa de 15% aparece de leve e SEMPRE enquadrada como "quem paga é
-   o cliente" — nunca como custo do anfitrião.
+   Oferta de lançamento: as 3 primeiras reservas não têm taxa para o
+   anfitrião. Da quarta em diante, a taxa da plataforma é de 15%.
    ════════════════════════════════════════════════════════════════ */
 
 // WhatsApp comercial do PoolDay (rede de segurança, não é o CTA principal)
@@ -52,14 +52,19 @@ const TIPOS = ['Piscina', 'Chácara', 'Área de lazer / gourmet', 'Sítio', 'Sal
 
 export default function SejaAnfitriao() {
   // ── Simulador ──────────────────────────────────────────────
-  const [diaria, setDiaria] = useState(350)      // o que o anfitrião quer receber
+  const [diaria, setDiaria] = useState(350)
   const [reservas, setReservas] = useState(8)    // reservas por mês
-  const ganhoMes = useMemo(() => diaria * reservas, [diaria, reservas])
-  const ganhoAno = ganhoMes * 12
-  const clientePaga = Math.round(diaria * 1.15)   // taxa vai por conta do cliente
+  const ganhoMes = useMemo(() => {
+    const promocionais = Math.min(reservas, 3)
+    return (promocionais * diaria) + ((reservas - promocionais) * diaria * 0.85)
+  }, [diaria, reservas])
+  const ganhoAno = useMemo(() => {
+    const totalReservas = reservas * 12
+    return (Math.min(totalReservas, 3) * diaria) + (Math.max(totalReservas - 3, 0) * diaria * 0.85)
+  }, [diaria, reservas])
 
   // ── Formulário ─────────────────────────────────────────────
-  const [form, setForm] = useState({ nome: '', whatsapp: '', cidade: '', tipo: 'Piscina' })
+  const [form, setForm] = useState({ nome: '', whatsapp: '', cidade: '', tipo: 'Piscina', consentimento: false })
   const [enviando, setEnviando] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const formRef = useRef(null)
@@ -80,6 +85,7 @@ export default function SejaAnfitriao() {
     const whatsDigits = form.whatsapp.replace(/\D/g, '')
     if (nome.length < 2) return toast.error('Digite seu nome')
     if (whatsDigits.length < 10) return toast.error('Digite um WhatsApp válido com DDD')
+    if (!form.consentimento) return toast.error('Confirme que você concorda com o uso dos dados para receber nosso contato.')
 
     setEnviando(true)
     try {
@@ -89,6 +95,7 @@ export default function SejaAnfitriao() {
         cidade: form.cidade.trim() || null,
         tipo_espaco: form.tipo,
         origem: 'google-ads',
+        consentimento_em: new Date().toISOString(),
       })
       if (error) throw error
 
@@ -127,15 +134,15 @@ export default function SejaAnfitriao() {
         <FloatingBubbles />
         <div className="relative max-w-5xl mx-auto px-5 pt-14 pb-16 md:pt-20 md:pb-24 text-center">
           <span className="inline-block bg-white/15 backdrop-blur px-4 py-1.5 rounded-full text-sm font-medium mb-5">
-            🏊 Seu espaço parado pode virar renda
+            🎁 0% de taxa nas suas 3 primeiras reservas
           </span>
           <h1 className="text-3xl md:text-5xl font-extrabold leading-tight max-w-3xl mx-auto">
             Transforme sua piscina em{' '}
             <span className="text-orange-400">dinheiro todo fim de semana</span>
           </h1>
           <p className="mt-5 text-lg md:text-xl text-white/90 max-w-2xl mx-auto">
-            Anunciar é <b>grátis</b>. Você define o preço, controla sua agenda e recebe
-            direto no Pix. Enquanto seu espaço fica parado, ele podia estar te pagando.
+            Anunciar é <b>grátis</b>. Você define o preço e os horários da diária.
+            Nas 3 primeiras reservas, o valor da diária é 100% seu.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <button
@@ -153,7 +160,7 @@ export default function SejaAnfitriao() {
             </a>
           </div>
           <p className="mt-5 text-sm text-white/70">
-            Sem mensalidade • Cadastro em minutos • Você no controle
+            Sem mensalidade • 3 primeiras reservas sem taxa • Você no controle
           </p>
         </div>
         {/* onda decorativa */}
@@ -229,13 +236,13 @@ export default function SejaAnfitriao() {
             </p>
           </div>
 
-          {/* A taxa, de leve e enquadrada como custo do cliente */}
+          {/* Regra transparente da promoção */}
           <div className="mt-4 flex items-start gap-2 text-sm text-gray-500 bg-gray-50 rounded-xl p-3">
             <span className="text-lg leading-none">✅</span>
             <p>
-              O melhor: <b>a taxa de serviço é paga por quem aluga, não por você.</b>{' '}
-              Se você quer receber {BRL(diaria)}, o cliente paga {BRL(clientePaga)} e{' '}
-              <b>os {BRL(diaria)} caem 100% pra você</b>. Simples assim.
+              <b>Oferta de lançamento:</b> nas suas 3 primeiras reservas você recebe 100% da diária.
+              A partir da 4ª reserva, o PoolDay desconta 15% e você recebe 85% do valor anunciado.
+              O cálculo acima já considera essa regra.
             </p>
           </div>
 
@@ -257,8 +264,8 @@ export default function SejaAnfitriao() {
           <div className="grid md:grid-cols-3 gap-5">
             <Beneficio
               emoji="🆓"
-              titulo="Anunciar é grátis"
-              texto="Sem mensalidade e sem taxa pra cadastrar. Você só ganha — nunca paga pra ter seu espaço na plataforma."
+              titulo="3 reservas com taxa zero"
+              texto="Nas 3 primeiras reservas confirmadas, você recebe 100% do valor anunciado. Depois, a taxa é de 15%."
             />
             <Beneficio
               emoji="🎯"
@@ -267,8 +274,8 @@ export default function SejaAnfitriao() {
             />
             <Beneficio
               emoji="🔒"
-              titulo="Pagamento seguro no Pix"
-              texto="O cliente paga antes pelo Mercado Pago e o dinheiro vem direto pra você. Sem calote, sem dor de cabeça."
+              titulo="Pagamento seguro"
+              texto="O cliente paga antes pelo Mercado Pago e o repasse segue a regra exibida no painel. Sem cobrança por fora."
             />
           </div>
         </div>
@@ -292,36 +299,43 @@ export default function SejaAnfitriao() {
 
             <div className="card p-6 md:p-8 shadow-md space-y-4">
               <div>
-                <label className="text-sm font-semibold text-gray-700 block mb-1">Seu nome *</label>
+                <label htmlFor="lead-nome" className="text-sm font-semibold text-gray-700 block mb-1">Seu nome *</label>
                 <input
+                  id="lead-nome"
                   className="input-field"
+                  autoComplete="name"
                   placeholder="Como podemos te chamar?"
                   value={form.nome}
                   onChange={(e) => setForm({ ...form, nome: e.target.value })}
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold text-gray-700 block mb-1">WhatsApp *</label>
+                <label htmlFor="lead-whatsapp" className="text-sm font-semibold text-gray-700 block mb-1">WhatsApp *</label>
                 <input
+                  id="lead-whatsapp"
                   className="input-field"
                   inputMode="numeric"
+                  autoComplete="tel"
                   placeholder="(82) 99999-9999"
                   value={form.whatsapp}
                   onChange={(e) => setForm({ ...form, whatsapp: maskWhats(e.target.value) })}
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold text-gray-700 block mb-1">Sua cidade</label>
+                <label htmlFor="lead-cidade" className="text-sm font-semibold text-gray-700 block mb-1">Sua cidade</label>
                 <input
+                  id="lead-cidade"
                   className="input-field"
+                  autoComplete="address-level2"
                   placeholder="Ex: Maceió"
                   value={form.cidade}
                   onChange={(e) => setForm({ ...form, cidade: e.target.value })}
                 />
               </div>
               <div>
-                <label className="text-sm font-semibold text-gray-700 block mb-1">O que você quer alugar?</label>
+                <label htmlFor="lead-tipo" className="text-sm font-semibold text-gray-700 block mb-1">O que você quer alugar?</label>
                 <select
+                  id="lead-tipo"
                   className="input-field"
                   value={form.tipo}
                   onChange={(e) => setForm({ ...form, tipo: e.target.value })}
@@ -329,6 +343,16 @@ export default function SejaAnfitriao() {
                   {TIPOS.map((t) => <option key={t}>{t}</option>)}
                 </select>
               </div>
+
+              <label className="flex items-start gap-3 text-xs text-gray-600 leading-relaxed cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 w-4 h-4 accent-primary-500 shrink-0"
+                  checked={form.consentimento}
+                  onChange={(e) => setForm({ ...form, consentimento: e.target.checked })}
+                />
+                <span>Concordo em receber contato do PoolDay pelo WhatsApp sobre o cadastro do meu espaço e li a <Link to="/privacidade" className="text-primary-600 underline">Política de Privacidade</Link>.</span>
+              </label>
 
               <button
                 onClick={handleSubmit}
@@ -417,7 +441,7 @@ const PassoAPasso = forwardRef(function PassoAPasso({ nome }, ref) {
       </div>
 
       <Link
-        to="/cadastro?tipo=anfitriao"
+        to="/cadastro?role=host"
         onClick={() => dispararConversao(GOOGLE_ADS.label_criar_conta)}
         className="mt-8 block w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg py-4 rounded-2xl transition-all active:scale-[0.98]"
       >
@@ -459,11 +483,11 @@ function FaixaBrasil() {
     <section className="bg-white border-y border-gray-100 py-8">
       <div className="max-w-5xl mx-auto px-5 text-center">
         <p className="text-2xl md:text-3xl font-extrabold">
-          🇧🇷 O PoolDay é no <span className="text-primary-500">Brasil inteiro</span>
+          🇧🇷 Anuncie de <span className="text-primary-500">qualquer lugar do Brasil</span>
         </p>
         <p className="mt-2 text-gray-500 max-w-xl mx-auto">
-          Todo dia mais gente entra na plataforma procurando um espaço pra alugar —
-          do Nordeste ao Sul. Coloque o seu no mapa e comece a aparecer pra esses clientes.
+          O cadastro está aberto para anfitriões de todas as cidades. Coloque o seu espaço no mapa
+          e seja um dos primeiros da sua região.
         </p>
         <div className="mt-5 flex flex-wrap justify-center gap-2">
           {cidades.map((c) => (
@@ -521,7 +545,7 @@ function TelasPorDentro({ onCta }) {
               </div>
               <div className="relative pt-7 px-4 text-white">
                 <div className="flex items-center gap-1 text-sm font-bold"><Waves size={16} /> PoolDay</div>
-                <p className="mt-6 text-[15px] font-extrabold leading-tight">Alugue piscinas e espaços por hora</p>
+                <p className="mt-6 text-[15px] font-extrabold leading-tight">Alugue piscinas e espaços por diária</p>
               </div>
             </div>
             <div className="p-3">
@@ -550,7 +574,7 @@ function TelasPorDentro({ onCta }) {
                 </div>
                 <div className="mt-1 h-2 w-16 bg-gray-200 rounded" />
                 <div className="mt-3 grid grid-cols-3 gap-1.5">
-                  {['👥 20','🕐 8h','🅿️ Sim'].map((t) => (
+                  {['👥 20','📅 Diária','🅿️ Sim'].map((t) => (
                     <div key={t} className="text-[9px] text-gray-500 bg-gray-50 rounded py-1 text-center">{t}</div>
                   ))}
                 </div>
@@ -619,3 +643,4 @@ function FloatingBubbles() {
     </div>
   )
 }
+
