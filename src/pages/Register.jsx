@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Waves, Mail, Lock, User, Phone, Eye, EyeOff } from 'lucide-react'
+import { Waves, Mail, Lock, User, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function Register() {
@@ -16,7 +16,7 @@ export default function Register() {
   async function handleSubmit(e) {
     e.preventDefault()
     if (form.password !== form.confirm) return toast.error('As senhas não coincidem!')
-    if (form.password.length < 6) return toast.error('Senha deve ter pelo menos 6 caracteres!')
+    if (form.password.length < 8) return toast.error('Senha deve ter pelo menos 8 caracteres!')
     if (role === 'host' && !form.phone.trim()) return toast.error('Como anfitrião, informe um telefone/WhatsApp — é por ele que os clientes vão falar com você.')
     setLoading(true)
     try {
@@ -40,6 +40,7 @@ export default function Register() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-lg p-8 w-full max-w-md">
+        <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-600 mb-4"><ArrowLeft size={16}/> Início</Link>
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-2 mb-4">
             <Waves className="text-primary-500" size={28} />
@@ -61,37 +62,42 @@ export default function Register() {
         </div>
 
         <div className="flex rounded-xl border border-gray-200 p-1 mb-6">
-          <button onClick={() => setRole('client')} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${role === 'client' ? 'bg-primary-500 text-white' : 'text-gray-500 hover:text-gray-700'}`}>
+          <button type="button" aria-pressed={role === 'client'} onClick={() => setRole('client')} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${role === 'client' ? 'bg-primary-500 text-white' : 'text-gray-500 hover:text-gray-700'}`}>
             Cliente
           </button>
-          <button onClick={() => setRole('host')} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${role === 'host' ? 'bg-primary-500 text-white' : 'text-gray-500 hover:text-gray-700'}`}>
+          <button type="button" aria-pressed={role === 'host'} onClick={() => setRole('host')} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${role === 'host' ? 'bg-primary-500 text-white' : 'text-gray-500 hover:text-gray-700'}`}>
             Anfitrião
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">
+            <label htmlFor="register-name" className="sr-only">Nome completo</label>
             <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input className="input-field pl-11" placeholder="Nome completo" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
+            <input id="register-name" className="input-field pl-11" autoComplete="name" placeholder="Nome completo" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
           </div>
           <div className="relative">
+            <label htmlFor="register-email" className="sr-only">E-mail</label>
             <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input className="input-field pl-11" type="email" placeholder="Email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required />
+            <input id="register-email" className="input-field pl-11" type="email" autoComplete="email" placeholder="Email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} required />
           </div>
           <div className="relative">
+            <label htmlFor="register-phone" className="sr-only">WhatsApp</label>
             <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input className="input-field pl-11" placeholder={role === 'host' ? 'WhatsApp (obrigatório)' : 'Telefone (opcional)'} value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} required={role === 'host'} />
+            <input id="register-phone" className="input-field pl-11" type="tel" autoComplete="tel" placeholder={role === 'host' ? 'WhatsApp (obrigatório)' : 'Telefone (opcional)'} value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} required={role === 'host'} />
           </div>
           <div className="relative">
+            <label htmlFor="register-password" className="sr-only">Senha</label>
             <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input className="input-field pl-11 pr-11" type={showPass ? 'text' : 'password'} placeholder="Senha (mínimo 6 caracteres)" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required />
-            <button type="button" onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
+            <input id="register-password" className="input-field pl-11 pr-11" type={showPass ? 'text' : 'password'} autoComplete="new-password" placeholder="Senha (mínimo 8 caracteres)" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required />
+            <button type="button" aria-label={showPass ? 'Ocultar senha' : 'Mostrar senha'} onClick={() => setShowPass(!showPass)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
               {showPass ? <EyeOff size={18}/> : <Eye size={18}/>}
             </button>
           </div>
           <div className="relative">
+            <label htmlFor="register-confirm" className="sr-only">Confirmar senha</label>
             <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input className="input-field pl-11" type={showPass ? 'text' : 'password'} placeholder="Confirmar senha" value={form.confirm} onChange={e => setForm({...form, confirm: e.target.value})} required />
+            <input id="register-confirm" className="input-field pl-11" type={showPass ? 'text' : 'password'} autoComplete="new-password" placeholder="Confirmar senha" value={form.confirm} onChange={e => setForm({...form, confirm: e.target.value})} required />
           </div>
           <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? 'Criando conta...' : 'Criar conta'}
@@ -106,3 +112,4 @@ export default function Register() {
     </div>
   )
 }
+
