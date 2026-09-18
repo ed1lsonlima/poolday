@@ -4,11 +4,31 @@ import { useAuth } from '../context/AuthContext'
 import { Waves, Mail, Lock, User, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CityField from '../components/common/CityField'
+import { clearHostSignupPrefill, readHostSignupPrefill } from '../lib/hostLanding'
+
+function initialRegisterForm(isHost) {
+  const prefill = isHost && typeof window !== 'undefined'
+    ? readHostSignupPrefill(window.sessionStorage)
+    : null
+
+  return {
+    name: prefill?.name || '',
+    email: '',
+    phone: prefill?.phone || '',
+    city: prefill?.city || '',
+    state: null,
+    municipality_code: null,
+    password: '',
+    confirm: '',
+  }
+}
 
 export default function Register() {
   const [params] = useSearchParams()
-  const [role, setRole] = useState(params.get('role') || 'client')
-  const [form, setForm] = useState({ name: '', email: '', phone: '', city: '', state: null, municipality_code: null, password: '', confirm: '' })
+  const initialRole = params.get('role') === 'host' ? 'host' : 'client'
+  const [role, setRole] = useState(initialRole)
+  const [form, setForm] = useState(() => initialRegisterForm(initialRole === 'host'))
+  const [hasHostPrefill] = useState(() => initialRole === 'host' && Boolean(form.name || form.phone))
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const { signUp, signInWithGoogle } = useAuth()
@@ -27,6 +47,7 @@ export default function Register() {
       } else {
         toast.success('Conta criada! Confirme pelo link enviado ao seu email.')
       }
+      if (role === 'host') clearHostSignupPrefill(window.sessionStorage)
       navigate(role === 'host' ? '/anfitriao/boas-vindas' : '/')
     } catch (err) {
       toast.error(err.message || 'Erro ao criar conta')
@@ -35,7 +56,7 @@ export default function Register() {
 
   async function handleGoogle() {
     try { await signInWithGoogle() }
-    catch (err) { toast.error('Erro ao entrar com Google') }
+    catch { toast.error('Erro ao entrar com Google') }
   }
 
   return (
@@ -51,16 +72,20 @@ export default function Register() {
           <p className="text-gray-500 text-sm mt-1">Cadastre-se para começar</p>
         </div>
 
-        <button onClick={handleGoogle} className="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-xl py-3 mb-6 hover:bg-gray-50 transition-colors">
-          <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
-          <span className="font-medium text-gray-700">Continuar com Google</span>
-        </button>
+        {role === 'client' && (
+          <>
+            <button onClick={handleGoogle} className="w-full flex items-center justify-center gap-3 border border-gray-200 rounded-xl py-3 mb-6 hover:bg-gray-50 transition-colors">
+              <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5" />
+              <span className="font-medium text-gray-700">Continuar com Google</span>
+            </button>
 
-        <div className="flex items-center gap-3 mb-6">
-          <div className="flex-1 h-px bg-gray-200" />
-          <span className="text-gray-400 text-sm">ou</span>
-          <div className="flex-1 h-px bg-gray-200" />
-        </div>
+            <div className="flex items-center gap-3 mb-6">
+              <div className="flex-1 h-px bg-gray-200" />
+              <span className="text-gray-400 text-sm">ou</span>
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+          </>
+        )}
 
         <div className="flex rounded-xl border border-gray-200 p-1 mb-6">
           <button type="button" aria-pressed={role === 'client'} onClick={() => setRole('client')} className={`flex-1 py-2 rounded-lg text-sm font-semibold transition-all ${role === 'client' ? 'bg-primary-500 text-white' : 'text-gray-500 hover:text-gray-700'}`}>
@@ -70,6 +95,12 @@ export default function Register() {
             Anfitrião
           </button>
         </div>
+
+        {role === 'host' && hasHostPrefill && (
+          <div className="mb-5 rounded-xl border border-primary-100 bg-primary-50 px-4 py-3 text-sm text-primary-700">
+            Continuando seu cadastro de anfitrião: seu nome e WhatsApp já vieram preenchidos.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="relative">

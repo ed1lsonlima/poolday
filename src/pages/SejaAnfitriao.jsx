@@ -1,8 +1,9 @@
-import { useState, useMemo, useRef } from 'react'
+import { forwardRef, useState, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Waves } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
+import { calculateHostEarnings, saveHostSignupPrefill } from '../lib/hostLanding'
 
 /* ════════════════════════════════════════════════════════════════
    LANDING PAGE — SEJA ANFITRIÃO  (rota: /seja-anfitriao)
@@ -38,30 +39,23 @@ function dispararConversao(label) {
     if (typeof window !== 'undefined' && window.gtag && GOOGLE_ADS.id && label) {
       window.gtag('event', 'conversion', { send_to: `${GOOGLE_ADS.id}/${label}` })
     }
-  } catch (_) { /* nunca deixa a medição quebrar a página */ }
+  } catch { /* nunca deixa a medição quebrar a página */ }
 }
-
-// (Opcional) cole o ID de um vídeo do YouTube mostrando o cadastro.
-// Ex: 'dQw4w9WgXcQ'. Vazio = mostra só os cartões de passo a passo.
-const YOUTUBE_ID = ''
 
 const BRL = (n) =>
   n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
 
 const TIPOS = ['Piscina', 'Chácara', 'Área de lazer', 'Sítio', 'Salão de festas', 'Outro']
+const WHATSAPP_AJUDA = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Oi! Vi a página Seja Anfitrião do PoolDay e quero ajuda para cadastrar meu espaço.')}`
 
 export default function SejaAnfitriao() {
   // ── Simulador ──────────────────────────────────────────────
   const [diaria, setDiaria] = useState(350)
   const [reservas, setReservas] = useState(8)    // reservas por mês
-  const ganhoMes = useMemo(() => {
-    const promocionais = Math.min(reservas, 3)
-    return (promocionais * diaria) + ((reservas - promocionais) * diaria * 0.85)
-  }, [diaria, reservas])
-  const ganhoAno = useMemo(() => {
-    const totalReservas = reservas * 12
-    return (Math.min(totalReservas, 3) * diaria) + (Math.max(totalReservas - 3, 0) * diaria * 0.85)
-  }, [diaria, reservas])
+  const { monthly: ganhoMes, yearly: ganhoAno } = useMemo(
+    () => calculateHostEarnings(diaria, reservas),
+    [diaria, reservas],
+  )
 
   // ── Formulário ─────────────────────────────────────────────
   const [form, setForm] = useState({ nome: '', whatsapp: '', cidade: '', tipo: 'Piscina', consentimento: false })
@@ -94,10 +88,19 @@ export default function SejaAnfitriao() {
         whatsapp: whatsDigits,
         cidade: form.cidade.trim() || null,
         tipo_espaco: form.tipo,
-        origem: 'google-ads',
+        origem: 'landing_seja_anfitriao',
         consentimento_em: new Date().toISOString(),
       })
       if (error) throw error
+
+      try {
+        saveHostSignupPrefill(window.sessionStorage, {
+          name: nome,
+          phone: whatsDigits,
+          city: form.cidade,
+          propertyType: form.tipo,
+        })
+      } catch { /* o cadastro continua mesmo se o navegador bloquear o armazenamento */ }
 
       dispararConversao(GOOGLE_ADS.label_formulario)   // conversão principal
       setEnviado(true)
@@ -124,7 +127,7 @@ export default function SejaAnfitriao() {
             onClick={() => scrollTo(formRef)}
             className="text-sm font-semibold text-primary-600 hover:text-primary-700"
           >
-            Começar agora
+            Começar grátis
           </button>
         </div>
       </header>
@@ -137,28 +140,36 @@ export default function SejaAnfitriao() {
             🎁 0% de taxa nas suas 3 primeiras reservas
           </span>
           <h1 className="text-3xl md:text-5xl font-extrabold leading-tight max-w-3xl mx-auto">
-            Transforme sua piscina em{' '}
-            <span className="text-orange-400">dinheiro todo fim de semana</span>
+            Transforme seu espaço parado em{' '}
+            <span className="text-orange-400">uma nova fonte de renda</span>
           </h1>
           <p className="mt-5 text-lg md:text-xl text-white/90 max-w-2xl mx-auto">
-            Anunciar é <b>grátis</b>. Você define o preço e os horários da diária.
-            Nas 3 primeiras reservas, o valor da diária é 100% seu.
+            Cadastre grátis, escolha os dias disponíveis e defina o valor da diária.
+            Nas 3 primeiras reservas, <b>100% do valor anunciado fica com você.</b>
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <button
               onClick={() => scrollTo(formRef)}
               className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg py-4 px-8 rounded-2xl shadow-lg transition-all active:scale-[0.97]"
             >
-              Quero anunciar meu espaço
+              Começar meu cadastro grátis
             </button>
             <a
-              href="#simulador"
-              onClick={(e) => { e.preventDefault(); document.getElementById('simulador')?.scrollIntoView({ behavior: 'smooth' }) }}
+              href={WHATSAPP_AJUDA}
+              target="_blank"
+              rel="noopener noreferrer"
               className="bg-white/15 hover:bg-white/25 backdrop-blur text-white font-semibold text-lg py-4 px-8 rounded-2xl transition-all"
             >
-              Ver quanto posso ganhar
+              Prefiro ajuda pelo WhatsApp
             </a>
           </div>
+          <a
+            href="#simulador"
+            onClick={(e) => { e.preventDefault(); document.getElementById('simulador')?.scrollIntoView({ behavior: 'smooth' }) }}
+            className="mt-5 inline-block text-sm font-semibold text-white/90 underline underline-offset-4 hover:text-white"
+          >
+            Simular quanto posso receber
+          </a>
           <p className="mt-5 text-sm text-white/70">
             Sem mensalidade • 3 primeiras reservas sem taxa • Você no controle
           </p>
@@ -169,8 +180,7 @@ export default function SejaAnfitriao() {
         </svg>
       </section>
 
-      {/* ══ FAIXA: BRASIL INTEIRO / MOVIMENTO ══ */}
-      <FaixaBrasil />
+      <ComoFunciona onCta={() => scrollTo(formRef)} />
 
       {/* ══ SIMULADOR ══ */}
       <section id="simulador" className="max-w-3xl mx-auto px-5 py-14 md:py-20">
@@ -245,6 +255,9 @@ export default function SejaAnfitriao() {
               O cálculo acima já considera essa regra.
             </p>
           </div>
+          <p className="mt-3 text-xs text-gray-400 text-center">
+            Simulação ilustrativa baseada no valor e na quantidade escolhidos. A procura varia por região, época e qualidade do anúncio; não há garantia de renda.
+          </p>
 
           <button
             onClick={() => scrollTo(formRef)}
@@ -261,7 +274,7 @@ export default function SejaAnfitriao() {
           <h2 className="text-center text-2xl md:text-3xl font-extrabold mb-10">
             Por que anunciar no PoolDay
           </h2>
-          <div className="grid md:grid-cols-3 gap-5">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <Beneficio
               emoji="🆓"
               titulo="3 reservas com taxa zero"
@@ -277,6 +290,11 @@ export default function SejaAnfitriao() {
               titulo="Pagamento seguro"
               texto="O cliente paga antes pelo Mercado Pago e o repasse segue a regra exibida no painel. Sem cobrança por fora."
             />
+            <Beneficio
+              emoji="📍"
+              titulo="Endereço protegido"
+              texto="A localização exata e as instruções de acesso só são liberadas ao cliente depois da reserva confirmada."
+            />
           </div>
         </div>
       </section>
@@ -284,20 +302,26 @@ export default function SejaAnfitriao() {
       {/* ══ TELAS POR DENTRO (iPhones) ══ */}
       <TelasPorDentro onCta={() => scrollTo(formRef)} />
 
+      {/* ══ ABERTO PARA TODO O BRASIL ══ */}
+      <FaixaBrasil />
+
       {/* ══ FORMULÁRIO ══ */}
       <section ref={formRef} className="max-w-xl mx-auto px-5 py-14 md:py-20">
         {!enviado ? (
           <>
             <div className="text-center mb-8">
               <h2 className="text-2xl md:text-3xl font-extrabold">
-                Comece agora. <span className="text-primary-500">Leva 1 minuto.</span>
+                Comece em 1 minuto. <span className="text-primary-500">Finalize no seu ritmo.</span>
               </h2>
               <p className="mt-2 text-gray-500">
-                Preencha e a gente já te mostra o passo a passo pra colocar seu espaço no ar.
+                Deixe seus dados básicos e continue para criar sua conta. Seu nome e WhatsApp já vão preenchidos.
               </p>
             </div>
 
-            <div className="card p-6 md:p-8 shadow-md space-y-4">
+            <form
+              className="card p-6 md:p-8 shadow-md space-y-4"
+              onSubmit={(event) => { event.preventDefault(); handleSubmit() }}
+            >
               <div>
                 <label htmlFor="lead-nome" className="text-sm font-semibold text-gray-700 block mb-1">Seu nome *</label>
                 <input
@@ -307,6 +331,7 @@ export default function SejaAnfitriao() {
                   placeholder="Como podemos te chamar?"
                   value={form.nome}
                   onChange={(e) => setForm({ ...form, nome: e.target.value })}
+                  required
                 />
               </div>
               <div>
@@ -319,6 +344,7 @@ export default function SejaAnfitriao() {
                   placeholder="(82) 99999-9999"
                   value={form.whatsapp}
                   onChange={(e) => setForm({ ...form, whatsapp: maskWhats(e.target.value) })}
+                  required
                 />
               </div>
               <div>
@@ -355,16 +381,16 @@ export default function SejaAnfitriao() {
               </label>
 
               <button
-                onClick={handleSubmit}
+                type="submit"
                 disabled={enviando}
                 className="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg py-4 rounded-2xl transition-all active:scale-[0.98] disabled:opacity-60"
               >
-                {enviando ? 'Enviando...' : 'Quero começar a ganhar dinheiro'}
+                {enviando ? 'Enviando...' : 'Continuar meu cadastro grátis'}
               </button>
               <p className="text-center text-xs text-gray-400">
-                Seus dados são usados só pra te ajudar a começar. Sem spam.
+                Cadastro grátis e sem mensalidade. Seus dados são usados só para ajudar no cadastro. Sem spam.
               </p>
-            </div>
+            </form>
           </>
         ) : (
           <PassoAPasso ref={passosRef} nome={form.nome} />
@@ -383,18 +409,11 @@ export default function SejaAnfitriao() {
   )
 }
 
-/* ─────────────────────────────────────────────────────────────
-   PASSO A PASSO (aparece depois que o lead é enviado)
-   É o momento de pico de empolgação — aqui a gente empurra pro
-   cadastro sozinho, reforçando o ganho em cada etapa.
-   ───────────────────────────────────────────────────────────── */
-import { forwardRef } from 'react'
-
-const TUTORIAL = [
-  { n: 1, img: '/tutorial/passo1.png', legenda: 'Na tela inicial, toque no menu no canto superior direito.' },
-  { n: 2, img: '/tutorial/passo2.png', legenda: 'Toque em “Painel do Anfitrião”.' },
-  { n: 3, img: '/tutorial/passo3.png', legenda: 'Na aba Pagamentos, conecte seu Mercado Pago (aparece o selo verde “Conta conectada”). Depois toque em “+ Novo Espaço”.' },
-  { n: 4, img: '/tutorial/passo4.png', legenda: 'Escolha o tipo de espaço e capriche: fotos boas, vídeo do YouTube (se tiver), seu preço, comodidades (piscina, churrasqueira, área gourmet, câmeras…), disponibilidade, descrição e regras. Depois é só tocar em Cadastrar. Pronto — seu espaço no ar! 🎉' },
+const CADASTRO_PASSOS = [
+  { n: 1, emoji: '👤', titulo: 'Crie sua conta', texto: 'Informe seu e-mail e uma senha. Seu nome e WhatsApp já vão preenchidos.' },
+  { n: 2, emoji: '🏡', titulo: 'Conte como é o espaço', texto: 'Escolha o tipo, confirme a localização e deixe o PoolDay sugerir um título seguro para o anúncio.' },
+  { n: 3, emoji: '📅', titulo: 'Defina diária e disponibilidade', texto: 'Você escolhe o preço, os dias e o horário em que deseja receber clientes.' },
+  { n: 4, emoji: '📷', titulo: 'Adicione fotos e instruções', texto: 'Use fotos sem telefone, @ ou nome comercial. O endereço completo só aparece depois do pagamento.' },
 ]
 
 const PassoAPasso = forwardRef(function PassoAPasso({ nome }, ref) {
@@ -407,41 +426,25 @@ const PassoAPasso = forwardRef(function PassoAPasso({ nome }, ref) {
         {nome ? `Boa, ${nome.split(' ')[0]}!` : 'Boa!'} Agora falta pouco 🚀
       </h2>
       <p className="mt-2 text-gray-500 max-w-md mx-auto">
-        Seu espaço está a 4 passos de começar a te render dinheiro. É só seguir as telas:
+        Seus dados ficaram salvos. Agora crie sua conta e conclua estas etapas simples:
       </p>
 
-      {YOUTUBE_ID && (
-        <div className="mt-6 aspect-video rounded-2xl overflow-hidden shadow-md">
-          <iframe
-            className="w-full h-full"
-            src={`https://www.youtube.com/embed/${YOUTUBE_ID}`}
-            title="Como cadastrar seu espaço no PoolDay"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-          />
-        </div>
-      )}
-
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-8">
-        {TUTORIAL.map((p) => (
-          <div key={p.n} className="flex flex-col items-center">
-            <div className="rounded-[2rem] bg-gray-900 p-1.5 shadow-xl w-[190px]">
-              <img
-                src={p.img}
-                alt={`Passo ${p.n}`}
-                loading="lazy"
-                className="w-full rounded-[1.7rem] block"
-              />
+      <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left">
+        {CADASTRO_PASSOS.map((p) => (
+          <div key={p.n} className="rounded-2xl border border-gray-100 bg-white p-5 shadow-sm flex gap-4">
+            <div className="w-11 h-11 shrink-0 rounded-xl bg-primary-50 flex items-center justify-center text-2xl" aria-hidden="true">
+              {p.emoji}
             </div>
-            <p className="mt-3 text-sm text-gray-600 text-center max-w-[250px] leading-snug">
-              <b className="text-primary-600">{p.n}.</b> {p.legenda}
-            </p>
+            <div>
+              <p className="font-bold text-gray-800"><span className="text-primary-600">{p.n}.</span> {p.titulo}</p>
+              <p className="mt-1 text-sm text-gray-500 leading-relaxed">{p.texto}</p>
+            </div>
           </div>
         ))}
       </div>
 
       <Link
-        to="/cadastro?role=host"
+        to="/cadastro?role=host&origem=seja-anfitriao"
         onClick={() => dispararConversao(GOOGLE_ADS.label_criar_conta)}
         className="mt-8 block w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg py-4 rounded-2xl transition-all active:scale-[0.98]"
       >
@@ -455,11 +458,43 @@ const PassoAPasso = forwardRef(function PassoAPasso({ nome }, ref) {
         rel="noopener noreferrer"
         className="mt-4 inline-block text-sm text-gray-500 hover:text-primary-600"
       >
-        Travou em alguma parte? <b className="underline">A gente cadastra pra você</b> →
+        Prefere ajuda? <b className="underline">Fale com a equipe no WhatsApp</b> →
       </a>
     </div>
   )
 })
+
+function ComoFunciona({ onCta }) {
+  const passos = [
+    { n: 1, emoji: '📝', titulo: 'Cadastre grátis', texto: 'Crie sua conta e mostre seu espaço com fotos claras e informações simples.' },
+    { n: 2, emoji: '🎛️', titulo: 'Você decide tudo', texto: 'Escolha o valor da diária, os dias disponíveis, os horários e as regras do local.' },
+    { n: 3, emoji: '💳', titulo: 'Receba reservas', texto: 'O cliente paga pela plataforma e você acompanha a reserva e o repasse no painel.' },
+  ]
+
+  return (
+    <section className="max-w-5xl mx-auto px-5 py-14 md:py-20">
+      <div className="text-center mb-10">
+        <p className="text-sm font-bold uppercase tracking-wider text-primary-600">Simples do começo ao fim</p>
+        <h2 className="mt-2 text-2xl md:text-3xl font-extrabold">Como funciona em 3 passos</h2>
+      </div>
+      <div className="grid md:grid-cols-3 gap-5">
+        {passos.map((passo) => (
+          <div key={passo.n} className="relative rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+            <span className="absolute top-4 right-4 text-5xl font-black text-gray-100" aria-hidden="true">{passo.n}</span>
+            <div className="text-4xl" aria-hidden="true">{passo.emoji}</div>
+            <h3 className="mt-4 text-lg font-bold text-gray-800">{passo.titulo}</h3>
+            <p className="mt-2 text-sm leading-relaxed text-gray-500">{passo.texto}</p>
+          </div>
+        ))}
+      </div>
+      <div className="mt-8 text-center">
+        <button onClick={onCta} className="text-primary-600 font-bold hover:text-primary-700 underline underline-offset-4">
+          Quero cadastrar meu espaço
+        </button>
+      </div>
+    </section>
+  )
+}
 
 /* ── Cartão de benefício ── */
 function Beneficio({ emoji, titulo, texto }) {
@@ -565,7 +600,7 @@ function TelasPorDentro({ onCta }) {
             <Phone>
               <div className="h-[42%] bg-gradient-to-br from-primary-300 to-primary-500 relative">
                 <span className="absolute top-2 right-2 bg-white/90 text-primary-600 text-[10px] font-bold px-2 py-0.5 rounded-full">R$ 350/diária</span>
-                <span className="absolute bottom-2 left-2 text-white text-[10px] font-medium">☀️ Piscina + área gourmet</span>
+                <span className="absolute bottom-2 left-2 text-white text-[10px] font-medium">☀️ Piscina com churrasqueira e deck</span>
               </div>
               <div className="p-3">
                 <div className="flex items-center justify-between">
@@ -574,7 +609,7 @@ function TelasPorDentro({ onCta }) {
                 </div>
                 <div className="mt-1 h-2 w-16 bg-gray-200 rounded" />
                 <div className="mt-3 grid grid-cols-3 gap-1.5">
-                  {['👥 20','📅 Diária','🅿️ Sim'].map((t) => (
+                  {['🔥 Churrasqueira','📅 Diária','🅿️ Estacionamento'].map((t) => (
                     <div key={t} className="text-[9px] text-gray-500 bg-gray-50 rounded py-1 text-center">{t}</div>
                   ))}
                 </div>
@@ -588,7 +623,7 @@ function TelasPorDentro({ onCta }) {
             <div className="h-full flex flex-col items-center justify-center px-5 text-center">
               <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center text-3xl mb-3">✅</div>
               <p className="font-extrabold text-gray-800">Reserva confirmada!</p>
-              <p className="text-[11px] text-gray-500 mt-1">Pagamento via Pix aprovado. O valor cai direto pra você.</p>
+              <p className="text-[11px] text-gray-500 mt-1">Pagamento aprovado. Acompanhe o repasse e o prazo pelo painel.</p>
               <div className="mt-4 w-full bg-gray-50 rounded-xl p-3 text-left">
                 <div className="flex justify-between text-[11px] mb-1.5"><span className="text-gray-400">Espaço</span><span className="font-semibold text-gray-700">Piscina do Sítio</span></div>
                 <div className="flex justify-between text-[11px] mb-1.5"><span className="text-gray-400">Data</span><span className="font-semibold text-gray-700">Sáb, 09/08</span></div>
