@@ -33,6 +33,7 @@ export default async function handler(req, res) {
     const paymentId = req.body?.data?.id || req.query['data.id'] || req.query.id;
     const topic = req.body?.type || req.query.type || req.query.topic;
     const bookingId = req.query.booking;
+    const requestedStage = req.query.stage;
 
     if (!paymentId || (topic && topic !== 'payment')) {
       return res.status(200).json({ success: true, ignored: true });
@@ -48,7 +49,7 @@ export default async function handler(req, res) {
     // 1. Busca a reserva pra descobrir o anfitrião (e o token dele).
     const { data: booking } = await supabase
       .from('bookings')
-      .select('id, host_id, status, total_amount')
+      .select('id, host_id, status, total_amount, first_payment_amount, balance_amount, payment_plan')
       .eq('id', bookingId)
       .single();
 
@@ -74,19 +75,23 @@ export default async function handler(req, res) {
     }
     const payment = await mpRes.json();
 
-    // 2. Validações de integridade: o pagamento é MESMO desta reserva e do valor cheio?
+    // 2. Validações de integridade: o pagamento é MESMO desta reserva e etapa?
     if (payment.external_reference !== booking.id) {
       console.error('external_reference não bate com a reserva', paymentId, bookingId);
       return res.status(200).json({ success: true, ignored: true });
     }
 
+    const stage = payment.metadata?.payment_stage || requestedStage || (booking.payment_plan === 'full' ? 'full' : null);
+    if (!['deposit', 'balance', 'full'].includes(stage)) return res.status(400).json({ error: 'Etapa de pagamento inválida' });
+    const expected = stage === 'balance' ? Number(booking.balance_amount) : Number(booking.first_payment_amount);
     const paid = Number(payment.transaction_amount || 0);
-    if (Math.abs(paid - Number(booking.total_amount)) > 0.01 || payment.currency_id !== 'BRL') return res.status(400).json({ error: 'Valor ou moeda divergente' });
+    if (Math.abs(paid - expected) > 0.01 || payment.currency_id !== 'BRL') return res.status(400).json({ error: 'Valor ou moeda divergente' });
     const fees = payment.fee_details || [];
     const refunded = Number(payment.transaction_amount_refunded || 0);
     const terminal = ['refunded', 'charged_back'].includes(payment.status);
-    const { error: ledgerError } = await supabase.rpc('record_payment', { p_payment: {
+    const { error: ledgerError } = await supabase.rpc('record_installment_payment', { p_payment: {
       payment_id: String(paymentId), booking_id: booking.id, status: payment.status,
+      payment_stage: stage, preference_id: payment.order?.id ? String(payment.order.id) : null,
       amount: paid, refunded_amount: refunded,
       platform_fee: terminal ? 0 : fees.filter(f => f.type === 'application_fee').reduce((sum, f) => sum + Number(f.amount || 0), 0),
       provider_fee: fees.filter(f => f.type !== 'application_fee').reduce((sum, f) => sum + Number(f.amount || 0), 0),
