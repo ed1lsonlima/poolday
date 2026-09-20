@@ -87,21 +87,19 @@ export default function Configuracoes() {
           </div>
         </section>
 
-        {profile?.role === 'host' && (
-          <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 sm:p-7 mb-5">
+        <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 sm:p-7 mb-5">
             <div className="flex items-center gap-3 mb-5">
               <span className="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center"><BellRing size={20} /></span>
-              <div><h2 className="font-extrabold text-gray-900">Notificações</h2><p className="text-xs text-gray-400">Escolha como acompanhar novas reservas</p></div>
+              <div><h2 className="font-extrabold text-gray-900">Notificações</h2><p className="text-xs text-gray-400">Acompanhe pagamentos, prazos e cancelamentos</p></div>
             </div>
             <PreferenceToggle
               checked={preferences.in_app_bookings !== false}
               onChange={checked => setPreferences(previous => ({ ...previous, in_app_bookings: checked }))}
-              title="Novas reservas no sininho"
-              description="Mostra novas reservas e o histórico recente no topo do site."
+              title="Avisos importantes no sininho"
+              description="Mostra pagamentos, vencimentos, confirmações e cancelamentos no topo do site."
             />
             <p className="text-xs text-gray-400 mt-3 leading-relaxed">Avisos essenciais de pagamento, segurança e mudanças na conta continuam disponíveis nas telas correspondentes.</p>
-          </section>
-        )}
+        </section>
 
         <section className="bg-white rounded-3xl shadow-sm border border-gray-100 p-5 sm:p-7 mb-5">
           <div className="flex items-center gap-3 mb-5">

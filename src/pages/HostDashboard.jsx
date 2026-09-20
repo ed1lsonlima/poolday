@@ -28,6 +28,9 @@ export default function HostDashboard() {
   const [stats, setStats] = useState({ total: 0, confirmed: 0, pending: 0, revenue: 0, pendingRevenue: 0 })
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(null)
+  const [hostCancellation, setHostCancellation] = useState(null)
+  const [hostCancelReason, setHostCancelReason] = useState('')
+  const [hostCancelLoading, setHostCancelLoading] = useState(false)
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
 
@@ -121,13 +124,40 @@ export default function HostDashboard() {
     toast.success('Espaço excluído.')
   }
 
+  async function cancelAsHost() {
+    if (!hostCancellation || hostCancelReason.trim().length < 3) return
+    setHostCancelLoading(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Sua sessão expirou.')
+      const response = await fetch('/api/cancel-booking', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ bookingId: hostCancellation.id, action: 'confirm', reason: hostCancelReason }),
+      })
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Não foi possível cancelar.')
+      toast.success('Reserva cancelada e reembolso integral solicitado ao cliente.')
+      setHostCancellation(null); setHostCancelReason(''); await fetchBookings()
+    } catch (error) { toast.error(error.message, { duration: 6000 }) }
+    finally { setHostCancelLoading(false) }
+  }
+
   const statusConfig = {
     pending: { label: 'Pendente', color: 'text-yellow-600 bg-yellow-50', icon: <Clock size={14}/> },
     confirmed: { label: 'Confirmada', color: 'text-green-600 bg-green-50', icon: <CheckCircle size={14}/> },
     cancelled: { label: 'Cancelada', color: 'text-red-600 bg-red-50', icon: <XCircle size={14}/> },
     completed: { label: 'Concluída', color: 'text-gray-600 bg-gray-100', icon: <CheckCircle size={14}/> },
   }
-  const promoUsed = bookings.filter(b => b.promotion_applied && (['confirmed', 'completed'].includes(b.status) || (b.status === 'pending' && new Date(b.hold_expires_at) > new Date()))).length
+  const hostStatus = booking => booking.payment_state === 'refund_pending' ? { label: 'Reembolso em análise', color: 'text-amber-700 bg-amber-50', icon: <Clock size={14}/> }
+    : booking.payment_state === 'deposit_paid' || booking.payment_state === 'awaiting_balance' ? { label: 'Entrada paga', color: 'text-blue-700 bg-blue-50', icon: <CreditCard size={14}/> }
+      : statusConfig[booking.status] || statusConfig.pending
+  const promoUsed = bookings.filter(b => b.promotion_applied && (
+    ['confirmed', 'completed'].includes(b.status)
+    || (b.status === 'pending' && (
+      (b.payment_state === 'awaiting_first_payment' && new Date(b.hold_expires_at) > new Date())
+      || ['deposit_paid', 'awaiting_balance', 'fully_paid', 'refund_pending'].includes(b.payment_state)
+    ))
+  )).length
   const promoRemaining = Math.max(0, 3 - promoUsed)
 
   if (!profile || profile.role !== 'host') {
@@ -246,18 +276,19 @@ export default function HostDashboard() {
               {bookings.length === 0 ? <p className="text-gray-400 text-sm">Nenhuma reserva ainda.</p> : (
                 <div className="space-y-3">
                   {bookings.map(b => {
-                    const st = statusConfig[b.status] || statusConfig.pending
+                    const st = hostStatus(b)
                     return (
                       <div key={b.id} className="flex items-center gap-4 p-3 rounded-xl border border-gray-100">
                         <div className="flex-1 min-w-0">
                           <p className="font-semibold text-gray-800 truncate">{b.properties?.name}</p>
                           <p className="text-sm text-gray-500">{b.client?.name} • {formatDateBR(b.date)}</p>
                           <p className="text-sm font-medium text-gray-700">R$ {Number(b.total_amount).toLocaleString('pt-BR', {minimumFractionDigits:2})}</p>
+                          {Number(b.paid_amount || 0) > 0 && <p className="text-xs text-gray-500">Pago: R$ {Number(b.paid_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}{Number(b.paid_amount) < Number(b.total_amount) ? ` · falta R$ ${(Number(b.total_amount) - Number(b.paid_amount)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : ''}</p>}
                           {b.promotion_applied && b.status !== 'cancelled' && <span className="inline-flex mt-1 text-[11px] font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">Taxa zero · você recebe 100%</span>}
                         </div>
-                        <span className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full ${st.color}`}>
-                          {st.icon} {st.label}
-                        </span>
+                        <div className="flex flex-col items-end gap-2"><span className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full ${st.color}`}>{st.icon} {st.label}</span>
+                          {['pending','confirmed'].includes(b.status) && b.payment_state !== 'refund_pending' && b.date >= new Date().toISOString().slice(0,10) && <button onClick={() => { setHostCancellation(b); setHostCancelReason('') }} className="text-[11px] font-semibold text-red-500 hover:underline">Não consigo receber</button>}
+                        </div>
                       </div>
                     )
                   })}
@@ -338,6 +369,19 @@ export default function HostDashboard() {
               <button onClick={() => setDeleting(null)} className="flex-1 py-2.5 rounded-xl border border-gray-200 font-semibold text-sm text-gray-600 hover:bg-gray-50 transition-colors">Cancelar</button>
               <button onClick={confirmDelete} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-semibold text-sm hover:bg-red-600 transition-colors">Excluir</button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {hostCancellation && (
+        <div className="fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4" onClick={() => !hostCancelLoading && setHostCancellation(null)}>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md" onClick={event => event.stopPropagation()}>
+            <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto"><XCircle size={23} className="text-red-500"/></div>
+            <h3 className="font-extrabold text-xl text-center mt-4">Cancelar esta reserva?</h3>
+            <p className="text-sm text-gray-500 text-center mt-2">O cliente receberá reembolso integral. O cancelamento ficará registrado para a equipe PoolDay.</p>
+            <label className="text-xs font-bold uppercase text-gray-500 block mt-5 mb-1.5">Por que você não poderá receber?</label>
+            <textarea className="input-field min-h-24 resize-y" maxLength={500} value={hostCancelReason} onChange={event => setHostCancelReason(event.target.value)} placeholder="Explique brevemente o motivo" />
+            <div className="grid grid-cols-2 gap-3 mt-5"><button className="btn-secondary" disabled={hostCancelLoading} onClick={() => setHostCancellation(null)}>Voltar</button><button className="rounded-xl bg-red-500 text-white font-bold px-4 py-3 disabled:opacity-50" disabled={hostCancelLoading || hostCancelReason.trim().length < 3} onClick={cancelAsHost}>{hostCancelLoading ? 'Processando...' : 'Cancelar reserva'}</button></div>
           </div>
         </div>
       )}

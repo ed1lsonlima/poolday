@@ -12,7 +12,7 @@ export default function Termos() {
       <p>Para usar o PoolDay é preciso ter no mínimo 18 anos e fornecer informações verdadeiras no cadastro. Você é responsável por manter a confidencialidade da sua senha e por toda atividade realizada na sua conta.</p>
 
       <h2>3. Reservas e pagamento</h2>
-      <p>As reservas são pagas dentro da plataforma através do Mercado Pago. Como oferta de lançamento, as 3 primeiras reservas confirmadas de cada Anfitrião têm taxa de serviço de 0%. A partir da 4ª reserva, o PoolDay desconta 15% do valor total. O Hóspede só deve efetuar pagamentos pelos canais oficiais da plataforma.</p>
+      <p>As reservas são pagas dentro da plataforma através do Mercado Pago. Com 8 dias ou mais de antecedência, o Hóspede paga 50% para reservar e 50% até 48 horas antes da diária; com 7 dias ou menos, paga o valor integral. Como oferta de lançamento, as 3 primeiras reservas confirmadas de cada Anfitrião têm taxa de serviço de 0%. A partir da 4ª, o PoolDay desconta 15% dos valores efetivamente recebidos ou retidos. O Hóspede só deve efetuar pagamentos pelos canais oficiais da plataforma.</p>
 
       <h2>4. Responsabilidades do Anfitrião</h2>
       <p>O Anfitrião é responsável por garantir que as informações do anúncio (fotos, preço, capacidade, comodidades e regras) sejam precisas, que o espaço esteja em condições seguras de uso, e por cumprir a reserva confirmada.</p>

@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import BookingCalendar from '../components/common/BookingCalendar'
 import { withReviewAuthors } from '../lib/publicProfiles'
 import { publicFirstName } from '../lib/propertySafety'
+import { paymentPlanForDate } from '../lib/bookingPolicy'
 
 const amenityIcons = { 'Piscina': '🏊', 'Wi-Fi': '📶', 'Estacionamento': '🚗', 'Churrasqueira': '🍖', 'Spa': '🛁', 'Toalhas': '🛁', 'Drinks': '🥤', 'Vista mar': '🌊', 'Jardim': '🌿', 'Deck': '🪵' }
 
@@ -138,7 +139,10 @@ export default function PropertyDetail() {
         window.location.href = data.init_point
       } else if (data.error === 'host_sem_mp') {
         toast.error('Este anfitrião ainda não ativou os pagamentos. Tente outro espaço ou volte em breve.', { duration: 5000 })
-        await supabase.from('bookings').update({ status: 'cancelled' }).eq('id', bookingId).eq('client_id', user.id)
+        await fetch('/api/cancel-booking', {
+          method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ bookingId, action: 'confirm', reason: 'O anfitrião ainda não ativou os pagamentos.' }),
+        })
         sessionStorage.removeItem(holdKey)
       } else if (res.status === 409) {
         sessionStorage.removeItem(holdKey)
@@ -161,6 +165,7 @@ export default function PropertyDetail() {
   if (!property) return null
   const images = property.images?.length ? property.images : ['https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?w=800&q=80']
   const totalAmount = Number(property.price_per_day || property.price_per_hour || 0)
+  const paymentSummary = selectedDate ? paymentPlanForDate(selectedDate, totalAmount) : null
   const avgRating = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0
 
   return (
@@ -341,13 +346,24 @@ export default function PropertyDetail() {
               )}
 
               <button onClick={handleBooking} disabled={bookingLoading || !selectedDate} className="btn-primary w-full text-center mb-3 disabled:opacity-60">
-                {bookingLoading ? 'Processando...' : 'Reservar agora'}
+                {bookingLoading ? 'Processando...' : paymentSummary?.paymentPlan === 'deposit' ? `Reservar pagando R$ ${paymentSummary.dueNow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Reservar e pagar o total'}
               </button>
 
               {selectedDate && (
                 <div className="text-sm text-gray-600 space-y-1.5 pt-3 border-t">
                   <div className="flex justify-between"><span>R$ {totalAmount.toLocaleString('pt-BR')} x 1 diária</span><span>R$ {totalAmount.toLocaleString('pt-BR')}</span></div>
                   <div className="flex justify-between font-bold text-gray-800 pt-1 border-t"><span>Total</span><span>R$ {totalAmount.toLocaleString('pt-BR')}</span></div>
+                  {paymentSummary?.paymentPlan === 'deposit' ? (
+                    <div className="rounded-xl bg-primary-50 border border-primary-100 p-3 mt-3 space-y-1 text-xs">
+                      <div className="flex justify-between font-bold text-primary-800"><span>Entrada agora (50%)</span><span>R$ {paymentSummary.dueNow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                      <div className="flex justify-between text-primary-700"><span>Saldo vence 72h antes</span><span>R$ {paymentSummary.remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                      <p className="text-primary-600 pt-1">O prazo final para regularizar é 48h antes da diária.</p>
+                    </div>
+                  ) : (
+                    <p className="rounded-xl bg-amber-50 border border-amber-100 p-3 mt-3 text-xs text-amber-800">Como faltam 7 dias ou menos, o pagamento é integral para confirmar a diária.</p>
+                  )}
+                  <p className="text-[11px] text-gray-500 leading-relaxed pt-2">Antes de cancelar, você verá o valor exato do reembolso. Cancelamentos gratuitos devolvem 100%; fora do período gratuito pode haver retenção de 25% ou 50%, conforme a proximidade da diária.</p>
+                  <Link to="/cancelamento" className="inline-block text-[11px] font-semibold text-primary-600 hover:underline">Ver política de cancelamento</Link>
                 </div>
               )}
 
@@ -370,7 +386,7 @@ export default function PropertyDetail() {
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex items-center justify-between lg:hidden z-40">
         <div><span className="font-bold text-gray-800 text-lg">R$ {totalAmount.toLocaleString('pt-BR')}</span><span className="text-gray-500 text-sm">/diária</span></div>
         <button onClick={handleBooking} disabled={bookingLoading || !selectedDate} className="btn-primary px-8 py-3 text-sm disabled:opacity-60">
-          {bookingLoading ? 'Aguarde...' : 'Reservar'}
+          {bookingLoading ? 'Aguarde...' : paymentSummary?.paymentPlan === 'deposit' ? 'Pagar 50%' : 'Reservar'}
         </button>
       </div>
       {/* Lightbox */}
