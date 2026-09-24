@@ -8,10 +8,10 @@ import { CHAT_NOTICES, CHAT_NOTICE_VERSION, QUICK_MESSAGES } from '../lib/chatSa
 
 const supportUrl = bookingId => `https://wa.me/5582996987838?text=${encodeURIComponent(`Olá, equipe PoolDay! Preciso de ajuda com a reserva ${bookingId}.`)}`
 
-async function request(bookingId, body) {
+async function request(bookingId, body, before) {
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) throw new Error('Entre novamente na sua conta.')
-  const response = await fetch(body ? '/api/booking-chat' : `/api/booking-chat?bookingId=${encodeURIComponent(bookingId)}`, {
+  const response = await fetch(body ? '/api/booking-chat' : `/api/booking-chat?bookingId=${encodeURIComponent(bookingId)}${before ? `&before=${encodeURIComponent(before)}` : ''}`, {
     method: body ? 'POST' : 'GET',
     headers: { Authorization: `Bearer ${session.access_token}`, ...(body && { 'Content-Type': 'application/json' }) },
     ...(body && { body: JSON.stringify({ bookingId, ...body }) }),
@@ -31,11 +31,16 @@ export default function BookingChat() {
   const [reporting, setReporting] = useState(false)
   const [reportReason, setReportReason] = useState('')
   const bottom = useRef(null)
+  const skipNextScroll = useRef(false)
 
   const load = useCallback(async (quiet = false) => {
     try {
       const next = await request(id)
-      setState(next)
+      setState(previous => {
+        if (!previous?.accepted || !next.accepted) return next
+        const merged = new Map([...previous.messages, ...next.messages].map(message => [message.id, message]))
+        return { ...next, messages: [...merged.values()].sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id.localeCompare(b.id)), hasMore: previous.hasMore }
+      })
       setError('')
     } catch (err) { if (!quiet) setError(err.message) }
   }, [id])
@@ -46,7 +51,10 @@ export default function BookingChat() {
     const timer = setInterval(() => load(true), 15000)
     return () => clearInterval(timer)
   }, [state?.accepted, load])
-  useEffect(() => { bottom.current?.scrollIntoView({ behavior: 'smooth' }) }, [state?.messages?.length])
+  useEffect(() => {
+    if (skipNextScroll.current) { skipNextScroll.current = false; return }
+    bottom.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [state?.messages?.length])
 
   async function accept() {
     setBusy(true)
@@ -62,6 +70,17 @@ export default function BookingChat() {
       await request(id, { action: 'send', content: content.trim(), urgent })
       setDraft('')
       await load(true)
+    } catch (err) { toast.error(err.message) }
+    finally { setBusy(false) }
+  }
+
+  async function loadOlder() {
+    if (!state?.messages?.length || busy) return
+    setBusy(true)
+    try {
+      const older = await request(id, null, state.messages[0].created_at)
+      skipNextScroll.current = true
+      setState(previous => ({ ...previous, messages: [...older.messages, ...previous.messages], hasMore: older.hasMore }))
     } catch (err) { toast.error(err.message) }
     finally { setBusy(false) }
   }
@@ -98,6 +117,7 @@ export default function BookingChat() {
         </section>}
         {state?.accepted && <>
           <div className="h-[min(55vh,520px)] min-h-72 overflow-y-auto p-4 sm:p-6 space-y-3 bg-slate-50" aria-label="Mensagens da reserva">
+            {state.hasMore && <button onClick={loadOlder} disabled={busy} className="block mx-auto text-xs font-bold text-primary-600 underline disabled:opacity-50">Carregar mensagens antigas</button>}
             {!state.messages.length && <p className="text-center text-sm text-gray-500 py-16">A conversa ainda não tem mensagens. Você pode começar.</p>}
             {state.messages.map(message => <div key={message.id} className={`flex ${message.sender_id === user.id ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm whitespace-pre-wrap break-words ${message.sender_id === user.id ? 'bg-primary-500 text-white' : 'bg-white text-gray-800 border border-gray-100'}`}><p>{message.content}</p><p className={`text-[10px] mt-1 ${message.sender_id === user.id ? 'text-white/75' : 'text-gray-400'}`}>{new Date(message.created_at).toLocaleString('pt-BR')}</p></div></div>)}
             <div ref={bottom}/>
