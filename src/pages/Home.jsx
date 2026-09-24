@@ -13,8 +13,6 @@ import { withReviewAuthors } from '../lib/publicProfiles'
 const CATEGORIES = [
   { id: 'pool',      label: 'Piscina',             emoji: '🏊' },
   { id: 'chacara',   label: 'Chácara',             emoji: '🌿' },
-  { id: 'court',     label: 'Quadra',              emoji: '🏀' },
-  { id: 'soccer',    label: 'Campo de Futebol',    emoji: '⚽' },
 ]
 
 const FAQS = [
@@ -33,8 +31,6 @@ const SPACE_TYPES = [
   { id: '',           label: 'Todos os espaços',     emoji: '🌐' },
   { id: 'pool',       label: 'Piscina',              emoji: '🏊' },
   { id: 'chacara',    label: 'Chácara',              emoji: '🌿' },
-  { id: 'court',      label: 'Quadra',               emoji: '🏀' },
-  { id: 'soccer',     label: 'Campo de Futebol',     emoji: '⚽' },
 ]
 
 /* ── Bolhas que sobem do fundo ───────────────────────────── */
@@ -196,7 +192,7 @@ export default function Home() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    supabase.from('property_listings').select('*')
+    supabase.from('property_listings').select('*').in('type', ['pool', 'chacara'])
       .order('created_at', { ascending: false }).limit(4)
       .then(({ data }) => { setFeatured(data || []); setLoadingFeatured(false) })
   }, [])

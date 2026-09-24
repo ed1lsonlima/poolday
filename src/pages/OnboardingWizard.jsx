@@ -10,7 +10,6 @@ import { PRESENCE_OPTIONS, presenceLabel } from '../lib/presence'
 
 const TYPES = [
   { id: 'pool', label: 'Piscina' }, { id: 'chacara', label: 'Chácara' },
-  { id: 'court', label: 'Quadra' }, { id: 'soccer', label: 'Campo de futebol' },
 ]
 const AMENITIES = ['Piscina', 'Wi-Fi', 'Estacionamento', 'Spa', 'Toalhas', 'Drinks', 'Vista mar', 'Jardim', 'Deck', 'Churrasqueira', 'Área gourmet', 'Som ambiente', 'Projetor', 'Câmeras de segurança']
 const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
@@ -52,7 +51,7 @@ export default function OnboardingWizard() {
     try {
       const saved = JSON.parse(localStorage.getItem(draftKey) || 'null')
       if (saved?.version === 1) {
-        setForm(previous => ({ ...previous, ...saved.form }))
+        setForm(previous => ({ ...previous, ...saved.form, type: TYPES.some(type => type.id === saved.form?.type) ? saved.form.type : 'pool' }))
         setImages(Array.isArray(saved.images) ? saved.images : [])
         setAmenities(Array.isArray(saved.amenities) ? saved.amenities : [])
         setAvailableDays(Array.isArray(saved.availableDays) ? saved.availableDays : [0, 1, 2, 3, 4, 5, 6])
@@ -224,4 +223,3 @@ function PrivateField({ label, value, onChange, placeholder }) {
 function Summary({ label, value }) {
   return <div><dt className="text-gray-400">{label}</dt><dd className="font-semibold text-gray-700">{value}</dd></div>
 }
-

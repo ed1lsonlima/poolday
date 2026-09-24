@@ -10,8 +10,6 @@ const types = [
   { id: '', label: 'Todos os espaços', icon: '🌐' },
   { id: 'pool', label: 'Piscina', icon: '🏊' },
   { id: 'chacara', label: 'Chácara', icon: '🌿' },
-  { id: 'court', label: 'Quadra', icon: '🏀' },
-  { id: 'soccer', label: 'Campo de Futebol', icon: '⚽' },
 ]
 
 function effectivePrice(p) {
@@ -70,7 +68,7 @@ export default function Explore() {
     setLoadError(false)
 
     async function fetchProperties() {
-      let query = supabase.from('property_listings').select('*')
+      let query = supabase.from('property_listings').select('*').in('type', ['pool', 'chacara'])
 
       const cidade = params.get('cidade')
       const tipo = params.get('tipo')

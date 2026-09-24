@@ -10,7 +10,6 @@ import { PRESENCE_OPTIONS } from '../lib/presence'
 
 const TYPES = [
   { id: 'pool', label: 'Piscina' }, { id: 'chacara', label: 'Chácara' },
-  { id: 'court', label: 'Quadra' }, { id: 'soccer', label: 'Campo de Futebol' },
 ]
 const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Área gourmet','Som ambiente','Projetor','Câmeras de segurança']
 const DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
@@ -347,4 +346,3 @@ export default function NewProperty() {
     </div>
   )
 }
-
