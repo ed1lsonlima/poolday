@@ -110,6 +110,7 @@ export default function PropertyDetail() {
   async function handleBooking() {
     if (!user) { toast.error('Faça login para reservar!'); navigate('/entrar'); return }
     if (!selectedDate) { toast.error('Selecione uma data!'); return }
+    if (!selectedPresence) { toast.error('Aguarde a confirmação de quem receberá você nesta data.'); return }
 
     const weekday = new Date(selectedDate + 'T00:00:00').getDay()
     if (property.available_days?.length && !property.available_days.includes(weekday)) {
@@ -341,7 +342,7 @@ export default function PropertyDetail() {
                   <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">Escolha a data</label>
                   <BookingCalendar
                     value={selectedDate}
-                    onChange={setSelectedDate}
+                    onChange={value => { setSelectedPresence(null); setSelectedDate(value) }}
                     availableWeekdays={property.available_days}
                     unavailableDates={unavailableDates}
                   />
