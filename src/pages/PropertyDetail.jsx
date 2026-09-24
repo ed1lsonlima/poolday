@@ -8,6 +8,7 @@ import BookingCalendar from '../components/common/BookingCalendar'
 import { withReviewAuthors } from '../lib/publicProfiles'
 import { publicFirstName } from '../lib/propertySafety'
 import { paymentPlanForDate } from '../lib/bookingPolicy'
+import { presenceLabel } from '../lib/presence'
 
 const amenityIcons = { 'Piscina': '🏊', 'Wi-Fi': '📶', 'Estacionamento': '🚗', 'Churrasqueira': '🍖', 'Spa': '🛁', 'Toalhas': '🛁', 'Drinks': '🥤', 'Vista mar': '🌊', 'Jardim': '🌿', 'Deck': '🪵' }
 
@@ -21,6 +22,7 @@ export default function PropertyDetail() {
   const [loading, setLoading] = useState(true)
   const [imgIndex, setImgIndex] = useState(0)
   const [selectedDate, setSelectedDate] = useState('')
+  const [selectedPresence, setSelectedPresence] = useState(null)
   const [bookingLoading, setBookingLoading] = useState(false)
   const [isFav, setIsFav] = useState(false)
   const [unavailableDates, setUnavailableDates] = useState(new Set())
@@ -35,6 +37,16 @@ export default function PropertyDetail() {
   }, [id])
   useEffect(() => { if (user && property) checkFavorite() }, [user, property])
   useEffect(() => { if (property) fetchUnavailable() }, [property])
+  useEffect(() => {
+    if (!property || !selectedDate) { setSelectedPresence(null); return }
+    let cancelled = false
+    setSelectedPresence(null)
+    fetch(`/api/host-presence?propertyId=${encodeURIComponent(property.id)}&date=${encodeURIComponent(selectedDate)}`)
+      .then(response => response.ok ? response.json() : null)
+      .then(result => { if (!cancelled) setSelectedPresence(result?.presence || property.host_presence) })
+      .catch(() => { if (!cancelled) setSelectedPresence(property.host_presence) })
+    return () => { cancelled = true }
+  }, [property, selectedDate])
   useEffect(() => {
     if (!lightbox) return
     const onKey = e => { if (e.key === 'Escape') setLightbox(false) }
@@ -274,6 +286,7 @@ export default function PropertyDetail() {
                 <span>{[property.neighborhood, property.city].filter(Boolean).join(', ')} — BR</span>
               </div>
               <p className="text-xs text-gray-400 mt-2">O endereço completo será compartilhado após a confirmação da reserva.</p>
+              <p className="text-sm text-gray-600 mt-3"><b>Recepção:</b> {selectedDate && !selectedPresence ? 'Verificando esta data...' : presenceLabel(selectedPresence || property.host_presence)}{selectedDate && selectedPresence ? ' nesta data' : !selectedDate ? ' normalmente' : ''}.</p>
             </div>
 
             <div className="border-t pt-5 mt-5">
@@ -345,7 +358,7 @@ export default function PropertyDetail() {
                 </div>
               )}
 
-              <button onClick={handleBooking} disabled={bookingLoading || !selectedDate} className="btn-primary w-full text-center mb-3 disabled:opacity-60">
+              <button onClick={handleBooking} disabled={bookingLoading || !selectedDate || !selectedPresence} className="btn-primary w-full text-center mb-3 disabled:opacity-60">
                 {bookingLoading ? 'Processando...' : paymentSummary?.paymentPlan === 'deposit' ? `Reservar pagando R$ ${paymentSummary.dueNow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Reservar e pagar o total'}
               </button>
 
@@ -385,7 +398,7 @@ export default function PropertyDetail() {
       {/* Bottom bar mobile */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex items-center justify-between lg:hidden z-40">
         <div><span className="font-bold text-gray-800 text-lg">R$ {totalAmount.toLocaleString('pt-BR')}</span><span className="text-gray-500 text-sm">/diária</span></div>
-        <button onClick={handleBooking} disabled={bookingLoading || !selectedDate} className="btn-primary px-8 py-3 text-sm disabled:opacity-60">
+        <button onClick={handleBooking} disabled={bookingLoading || !selectedDate || !selectedPresence} className="btn-primary px-8 py-3 text-sm disabled:opacity-60">
           {bookingLoading ? 'Aguarde...' : paymentSummary?.paymentPlan === 'deposit' ? 'Pagar 50%' : 'Reservar'}
         </button>
       </div>
@@ -412,3 +425,4 @@ export default function PropertyDetail() {
     </div>
   )
 }
+

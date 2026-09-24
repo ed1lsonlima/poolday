@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { Menu, X, Waves, User, CalendarDays, Heart, Settings, LogOut, LayoutDashboard, Bell, BellOff, House } from 'lucide-react'
+import { Menu, X, Waves, User, CalendarDays, Heart, Settings, LogOut, LayoutDashboard, Bell, BellOff, House, MessageCircle } from 'lucide-react'
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -13,14 +13,16 @@ export default function Header() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const showHomeButton = pathname !== '/'
-  const notificationsEnabled = profile?.notification_preferences?.in_app_bookings !== false
+  const bookingNotificationsEnabled = profile?.notification_preferences?.in_app_bookings !== false
+  const messageNotificationsEnabled = profile?.notification_preferences?.in_app_messages !== false
+  const notificationsEnabled = bookingNotificationsEnabled || messageNotificationsEnabled
 
   useEffect(() => {
     if (!user || !notificationsEnabled) { setNotifs([]); setUnseen(0); return }
     fetchNotifs()
     const interval = setInterval(fetchNotifs, 60000)
     return () => clearInterval(interval)
-  }, [user?.id, notificationsEnabled])
+  }, [user?.id, bookingNotificationsEnabled, messageNotificationsEnabled])
 
   async function fetchNotifs() {
     const { data } = await supabase
@@ -29,8 +31,9 @@ export default function Header() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20)
-    setNotifs(data || [])
-    setUnseen((data || []).filter(item => !item.read_at).length)
+    const visible = (data || []).filter(item => item.kind?.startsWith('chat') ? messageNotificationsEnabled : bookingNotificationsEnabled)
+    setNotifs(visible)
+    setUnseen(visible.filter(item => !item.read_at).length)
   }
 
   async function toggleNotifs() {
@@ -93,7 +96,7 @@ export default function Header() {
                   <div className="absolute right-2 sm:right-4 top-[4.5rem] w-[22rem] max-w-[calc(100vw-1rem)] bg-white shadow-2xl rounded-2xl border border-gray-100 overflow-hidden" onClick={e => e.stopPropagation()}>
                     <div className="p-4 border-b flex items-center gap-3">
                       <span className="w-9 h-9 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center"><Bell size={17} /></span>
-                      <div className="flex-1"><span className="font-bold text-gray-800 block">Notificações</span><span className="text-[11px] text-gray-400">Pagamentos, prazos e reservas</span></div>
+                      <div className="flex-1"><span className="font-bold text-gray-800 block">Notificações</span><span className="text-[11px] text-gray-400">Pagamentos, reservas e mensagens</span></div>
                       {unseen > 0 && <span className="text-[10px] font-bold bg-red-50 text-red-600 px-2 py-1 rounded-full">{unseen} nova{unseen > 1 ? 's' : ''}</span>}
                     </div>
                     <div className="max-h-96 overflow-y-auto">
@@ -107,7 +110,7 @@ export default function Header() {
                             className={`relative flex items-start gap-3 px-4 py-3.5 hover:bg-gray-50 border-b border-gray-50 transition-colors ${!n.read_at ? 'bg-primary-50/50' : ''}`}>
                             {!n.read_at && <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary-500" />}
                             <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                              <CalendarDays size={16} className="text-green-600" />
+                              {n.kind?.startsWith('chat') ? <MessageCircle size={16} className={n.kind === 'chat_urgent' ? 'text-amber-600' : 'text-green-600'} /> : <CalendarDays size={16} className="text-green-600" />}
                             </div>
                             <div className="min-w-0">
                               <p className="text-sm text-gray-800 font-medium leading-snug">{n.title}</p>
@@ -215,3 +218,4 @@ function MenuItem({ icon, label, to, onClick }) {
     </Link>
   )
 }
+

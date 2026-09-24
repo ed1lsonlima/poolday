@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { Link, useSearchParams } from 'react-router-dom'
 import { formatDateBR } from '../lib/formatDate'
 import PropertyCard from '../components/common/PropertyCard'
+import { presenceLabel } from '../lib/presence'
 
 const POOLDAY_WHATSAPP = '5582996987838'
 
@@ -79,10 +80,10 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
   }, [user])
 
   async function fetchBookings() {
-    const { data } = await supabase.from('bookings').select('*, host:profiles!bookings_host_id_fkey(name)').eq('client_id', user.id).order('created_at', { ascending: false })
+    const { data } = await supabase.from('bookings').select('*').eq('client_id', user.id).order('created_at', { ascending: false })
     const rows = data || []
     const propertyIds = [...new Set(rows.map(booking => booking.property_id).filter(Boolean))]
-    const confirmedIds = [...new Set(rows.filter(booking => ['confirmed', 'completed'].includes(booking.status)).map(booking => booking.property_id))]
+    const confirmedIds = [...new Set(rows.filter(booking => Number(booking.paid_amount) > 0 && ['pending', 'confirmed', 'completed'].includes(booking.status)).map(booking => booking.property_id))]
     const [{ data: listings }, { data: privateProperties }] = await Promise.all([
       propertyIds.length ? supabase.from('property_listings').select('id,name,images,city,neighborhood').in('id', propertyIds) : Promise.resolve({ data: [] }),
       confirmedIds.length ? supabase.from('property_access_details').select('*').in('property_id', confirmedIds) : Promise.resolve({ data: [] }),
@@ -318,6 +319,7 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
                       </span>
                     </div>
                     <div className="flex gap-2 mt-2">
+                      {Number(b.paid_amount) > 0 && ['pending','confirmed','completed'].includes(b.status) && <Link to={`/reserva/${b.id}/chat`} className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:underline"><MessageCircle size={12}/>Conversa</Link>}
                       {b.status === 'pending' && !['refund_pending','payment_expired','balance_expired'].includes(b.payment_state) && (
                         <button onClick={() => continuePayment(b)} disabled={paymentLoadingId === b.id} className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:underline disabled:opacity-50"><CreditCard size={12}/>{paymentLoadingId === b.id ? 'Abrindo...' : b.payment_state === 'deposit_paid' || b.payment_state === 'awaiting_balance' ? 'Pagar restante' : 'Continuar pagamento'}</button>
                       )}
@@ -393,12 +395,12 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
                 <div className="flex justify-between"><span className="text-gray-500">Já pago</span><span className="font-semibold">R$ {Number(detail.paid_amount || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
                 {Number(detail.total_amount) - Number(detail.paid_amount || 0) > 0 && <div className="flex justify-between"><span className="text-gray-500">Restante</span><span className="font-semibold text-amber-700">R$ {(Number(detail.total_amount) - Number(detail.paid_amount || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>}
               </div>
-              {detail.status === 'confirmed' ? (
+              {Number(detail.paid_amount) > 0 && ['pending','confirmed','completed'].includes(detail.status) ? (
                 <div className="mt-4 space-y-3">
                   <div className="rounded-xl p-3.5 bg-green-50 border border-green-100">
-                    <p className="text-sm font-semibold text-green-700 mb-1.5 flex items-center gap-1.5"><CheckCircle size={15}/> Reserva confirmada! Próximos passos:</p>
+                    <p className="text-sm font-semibold text-green-700 mb-1.5 flex items-center gap-1.5"><CheckCircle size={15}/> Pagamento confirmado! Próximos passos:</p>
                     <ol className="text-xs text-green-700/90 space-y-1 list-decimal list-inside">
-                      <li>Fale com a equipe PoolDay no WhatsApp (botão abaixo) para combinar os detalhes.</li>
+                      <li>Converse com o anfitrião pelo chat da reserva para combinar os detalhes.</li>
                       <li>No dia {formatDateBR(detail.date)}, é só chegar {detail.properties?.address ? 'no endereço abaixo' : 'no local combinado'}.</li>
                       <li>Aproveite! Qualquer dúvida, fale com a equipe PoolDay.</li>
                     </ol>
@@ -411,6 +413,8 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
                       {detail.properties.map_url && <a href={detail.properties.map_url} target="_blank" rel="noopener noreferrer" className="inline-flex font-semibold text-primary-600 hover:underline">Abrir localização exata no mapa →</a>}
                     </div>
                   )}
+                  <p className="rounded-xl bg-blue-50 border border-blue-100 p-3 text-xs text-blue-800"><b>Recepção:</b> {presenceLabel(detail.host_presence)}.</p>
+                  <Link to={`/reserva/${detail.id}/chat`} onClick={() => setDetail(null)} className="btn-primary flex items-center justify-center gap-2 w-full py-3 text-sm"><MessageCircle size={17}/>Abrir conversa com o anfitrião</Link>
                   <div className="rounded-xl border border-green-200 bg-white p-3.5">
                     <p className="text-xs text-gray-500 mb-2">Contato oficial do PoolDay:</p>
                     <a href={waLink(detail.properties?.name, detail.date, detail.id)} target="_blank" rel="noopener noreferrer"
@@ -423,7 +427,7 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
               ) : (
                 <div className="mt-4 rounded-xl p-3 text-xs bg-gray-50 text-gray-600 leading-relaxed">
                   {detail.payment_state === 'refund_pending' ? 'O cancelamento foi recebido. O reembolso está sendo processado e a equipe PoolDay foi avisada.'
-                    : detail.payment_state === 'deposit_paid' || detail.payment_state === 'awaiting_balance' ? '✅ Entrada confirmada. A data está bloqueada para você; pague o restante até o prazo indicado para receber o endereço completo.'
+                    : detail.payment_state === 'deposit_paid' || detail.payment_state === 'awaiting_balance' ? '✅ Entrada confirmada. A data está bloqueada para você; pague o restante até o prazo indicado.'
                     : detail.status === 'pending' ? '⏳ Aguardando a confirmação do pagamento. Assim que confirmar, a situação será atualizada automaticamente.'
                     : detail.status === 'cancelled' ? `Esta reserva foi cancelada.${Number(detail.refunded_amount) > 0 ? ` Reembolso processado: R$ ${Number(detail.refunded_amount).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.` : ''}`
                     : 'Reserva concluída. Obrigado por usar o PoolDay!'}
@@ -513,3 +517,4 @@ function QuickLink({ to, icon, title, description }) {
     </Link>
   )
 }
+

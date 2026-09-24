@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Activity, Bell, Download, MapPin, RefreshCw, ShieldCheck, Users, Wallet, Waves } from 'lucide-react'
+import { Activity, Bell, Download, MapPin, MessageCircle, RefreshCw, ShieldCheck, Users, Wallet, Waves } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 import { dayBR, downloadCSV, inPeriod, money, report, riskSignals } from '../lib/adminReports'
@@ -9,6 +9,7 @@ import BrazilMap from '../components/common/BrazilMap'
 const TABS = [
   ['overview', 'Visão geral', Activity], ['finance', 'Financeiro', Wallet],
   ['users', 'Pessoas', Users], ['properties', 'Espaços', Waves],
+  ['chats', 'Conversas', MessageCircle],
   ['regions', 'Regiões', MapPin], ['alerts', 'Alertas', Bell],
   ['audit', 'Auditoria', ShieldCheck],
 ]
@@ -29,6 +30,15 @@ async function adminRequest(body) {
     headers: { Authorization: `Bearer ${session.access_token}`, ...(body && { 'Content-Type': 'application/json' }) },
     ...(body && { body: JSON.stringify(body) }),
   })
+  const result = await response.json()
+  if (!response.ok) { const error = new Error(result.error); error.code = result.code; throw error }
+  return result
+}
+
+async function adminChatRequest(bookingId) {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Sua sessão expirou. Entre novamente.')
+  const response = await fetch(`/api/admin?action=chat-detail&bookingId=${encodeURIComponent(bookingId)}`, { headers: { Authorization: `Bearer ${session.access_token}` } })
   const result = await response.json()
   if (!response.ok) { const error = new Error(result.error); error.code = result.code; throw error }
   return result
@@ -62,6 +72,9 @@ export default function AdminDashboard() {
   const [pendingAction, setPendingAction] = useState(null)
   const [reason, setReason] = useState('')
   const [acting, setActing] = useState(false)
+  const [chatSearch, setChatSearch] = useState('')
+  const [chatDetail, setChatDetail] = useState(null)
+  const [chatBusy, setChatBusy] = useState(false)
   const dialog = useRef(null)
 
   const load = useCallback(async () => {
@@ -79,6 +92,12 @@ export default function AdminDashboard() {
   const propertiesById = useMemo(() => new Map(data?.properties.map(property => [property.id, property]) || []), [data])
 
   function startAction(action, id, name) { setReason(''); setPendingAction({ action, id, name }) }
+  async function openChat(bookingId) {
+    setChatBusy(true)
+    try { setChatDetail(await adminChatRequest(bookingId)) }
+    catch (e) { toast.error(e.message); if (e.code === 'MFA_REQUIRED') { setData(null); setMfa(true) } }
+    finally { setChatBusy(false) }
+  }
   async function submitAction(event) {
     event.preventDefault(); setActing(true)
     try {
@@ -141,12 +160,15 @@ export default function AdminDashboard() {
     </div>{!properties.length && <Empty>Nenhum espaço cadastrado.</Empty>}</section>}
 
     {tab === 'regions' && <BrazilMap users={data.users} bookings={data.bookings} payments={data.payments} from={from} to={to}/>} 
+    {tab === 'chats' && <section className="bg-white border border-gray-100 rounded-3xl p-5"><h2 className="font-bold text-lg">Conversas das reservas</h2><p className="text-xs text-gray-500 mt-1 mb-4">Acesso exclusivo da sua conta, com verificação adicional e registro de cada consulta. Revise denúncias e tentativas bloqueadas antes de tomar qualquer medida.</p><input aria-label="Buscar conversa" className="input-field mb-4" placeholder="Busque por nome, espaço ou número da reserva" value={chatSearch} onChange={event => setChatSearch(event.target.value)}/><div className="space-y-2 max-h-[32rem] overflow-y-auto">{data.bookings.filter(booking => Number(booking.paid_amount) > 0 && `${booking.id} ${usersById.get(booking.client_id)?.name || ''} ${usersById.get(booking.host_id)?.name || ''} ${propertiesById.get(booking.property_id)?.name || ''}`.toLowerCase().includes(chatSearch.toLowerCase())).map(booking => <button key={booking.id} disabled={chatBusy} onClick={() => openChat(booking.id)} className="w-full text-left border border-gray-100 rounded-xl p-3 hover:bg-primary-50 disabled:opacity-50"><p className="font-semibold text-sm">{propertiesById.get(booking.property_id)?.name || 'Espaço'} · {dayBR(booking.date)}</p><p className="text-xs text-gray-500">{usersById.get(booking.client_id)?.name || 'Cliente'} ↔ {usersById.get(booking.host_id)?.name || 'Anfitrião'} · {booking.id.slice(0,8)}</p></button>)}{!data.bookings.some(booking => Number(booking.paid_amount) > 0) && <Empty>Nenhuma reserva paga com chat disponível.</Empty>}</div></section>}
     {tab === 'alerts' && <div className="space-y-6"><p className="bg-amber-50 border border-amber-100 text-amber-900 rounded-2xl p-4 text-sm">Sinais de atenção não são acusações. Confira o contexto e registre o motivo antes de agir. Reembolsos devem ser realizados e conferidos no Mercado Pago.</p><section className="bg-white border border-gray-100 rounded-3xl p-5"><h2 className="font-bold text-lg mb-4">Notificações e revisões</h2><div className="divide-y divide-gray-100">{events.map(event => <div key={event.id} className="py-4 flex flex-wrap justify-between gap-3"><div><Badge warning={event.severity !== 'info'}>{event.severity === 'urgent' ? 'Prioridade alta' : event.severity === 'review' ? 'Revisar' : 'Informação'}</Badge><h3 className="font-semibold text-sm mt-2">{event.title}</h3>{event.detail && <p className="text-sm text-gray-500 mt-1">{event.detail}</p>}<p className="text-xs text-gray-400 mt-1">{dayBR(event.created_at)} · registro {event.entity_id?.slice(0, 8) || '—'}</p></div>{actionButton('resolve_event', event.id, event.title)}</div>)}</div>{!events.length && <Empty>Tudo em dia. Sem notificações abertas.</Empty>}</section><section className="bg-white border border-gray-100 rounded-3xl p-5"><h2 className="font-bold text-lg">Padrões para observar</h2>{signals.map(signal => <div key={signal.id} className="py-4 border-b border-gray-100"><h3 className="text-sm font-semibold">{signal.title}</h3><p className="text-sm text-gray-500 mt-1">{signal.detail}</p></div>)}{!signals.length && <Empty>Nenhum padrão atingiu os critérios de atenção.</Empty>}<p className="text-xs text-gray-400 mt-4">Critérios: telefone compartilhado, três ou mais cancelamentos, alteração de preço acima de 50%, possível contato externo e eventos de pagamento. Não usamos rastreamento oculto nem decisões automáticas de culpa.</p></section></div>}
 
     {tab === 'audit' && <section className="bg-white border border-gray-100 rounded-3xl overflow-hidden"><div className="p-5 flex justify-between flex-wrap gap-3"><h2 className="font-bold text-lg">Histórico de ações administrativas</h2><ExportButton name="auditoria" rows={data.audit.filter(item => inPeriod(item, from, to))}/></div><Table headers={['Quando', 'Ação', 'Registro', 'Motivo']}>
       {data.audit.filter(item => inPeriod(item, from, to)).map(item => <tr key={item.id}><Cell>{new Date(item.created_at).toLocaleString('pt-BR')}</Cell><Cell>{LABEL[item.action] || item.action}</Cell><Cell><span className="text-xs break-all">{item.entity_id}</span></Cell><Cell>{item.reason}</Cell></tr>)}
     </Table>{!data.audit.length && <Empty>Nenhuma ação administrativa registrada.</Empty>}</section>}
 
+    {chatDetail && <div className="fixed inset-0 z-[70] bg-black/50 p-3 sm:p-6 flex items-center justify-center" onClick={() => setChatDetail(null)}><div role="dialog" aria-modal="true" aria-label="Histórico da conversa" className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-5 sm:p-6" onClick={event => event.stopPropagation()}><div className="flex items-start justify-between gap-3"><div><h2 className="text-xl font-extrabold">Conversa da reserva</h2><p className="text-xs text-gray-500 break-all">{chatDetail.booking.id}</p></div><button onClick={() => setChatDetail(null)} className="text-sm font-semibold text-primary-600">Fechar</button></div><div className="grid sm:grid-cols-3 gap-2 my-4 text-xs">{chatDetail.acceptances.map(item => <p key={item.user_id} className="bg-blue-50 rounded-lg p-2">{item.role === 'host' ? 'Anfitrião' : 'Cliente'} aceitou em {new Date(item.accepted_at).toLocaleString('pt-BR')}</p>)}</div><h3 className="font-bold text-sm mb-2">Mensagens</h3><div className="space-y-2 max-h-72 overflow-y-auto bg-slate-50 rounded-xl p-3">{chatDetail.messages.map(message => <p key={message.id} className="bg-white rounded-lg p-2 text-sm break-words"><b>{usersById.get(message.sender_id)?.name || 'Participante'}:</b> {message.content}<span className="block text-[10px] text-gray-400 mt-1">{new Date(message.created_at).toLocaleString('pt-BR')}</span></p>)}{!chatDetail.messages.length && <p className="text-sm text-gray-500">Nenhuma mensagem enviada.</p>}</div>{chatDetail.hasMore && <p className="text-xs text-amber-700 mt-2">Exibindo as 500 mensagens mais recentes.</p>}<h3 className="font-bold text-sm mt-5 mb-2">Denúncias ({chatDetail.reports.length})</h3>{chatDetail.reports.map(item => <p key={item.id} className="text-sm bg-amber-50 rounded-lg p-2 mb-1 break-words">{item.reason} · {usersById.get(item.reporter_id)?.name || 'Participante'}</p>)}<h3 className="font-bold text-sm mt-5 mb-2">Tentativas bloqueadas ({chatDetail.moderation.length})</h3>{chatDetail.moderation.map(item => <p key={item.id} className="text-sm bg-red-50 rounded-lg p-2 mb-1 break-words"><b>{item.kind}:</b> {item.content}</p>)}</div></div>}
     <dialog ref={dialog} onCancel={() => { if (!acting) setPendingAction(null) }} onClose={() => setPendingAction(null)} className="date-dialog"><form onSubmit={submitAction} className="p-6"><h2 className="font-bold text-xl">{LABEL[pendingAction?.action]}</h2><p className="text-gray-500 text-sm mt-2 break-words">{pendingAction?.name}</p><label className="text-sm font-semibold block mt-5" htmlFor="admin-reason">Motivo da ação</label><textarea id="admin-reason" className="input-field mt-2" rows={3} minLength={5} maxLength={1000} required value={reason} onChange={e => setReason(e.target.value)} placeholder="Descreva o que foi verificado..."/><p className="text-xs text-gray-400 mt-2">A ação e o motivo ficarão registrados na auditoria.</p><div className="flex gap-3 mt-5"><button type="button" disabled={acting} className="btn-secondary flex-1" onClick={() => dialog.current.close()}>Cancelar</button><button disabled={acting || reason.trim().length < 5} className="btn-primary flex-1">{acting ? 'Salvando...' : 'Confirmar'}</button></div></form></dialog>
   </div></div>
 }
+

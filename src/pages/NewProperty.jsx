@@ -6,6 +6,7 @@ import { Upload, X, Plus, ChevronLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 import CityField from '../components/common/CityField'
 import { buildPublicPropertyTitle, containsExternalContact, isTrustedMapLink } from '../lib/propertySafety'
+import { PRESENCE_OPTIONS } from '../lib/presence'
 
 const TYPES = [
   { id: 'pool', label: 'Piscina' }, { id: 'chacara', label: 'Chácara' },
@@ -36,7 +37,7 @@ export default function NewProperty() {
     type: 'pool', description: '', rules: '', checkin_instructions: '',
     city: '', neighborhood: '', address: '', landmark: '', map_url: '', state: 'AL', cep: '',
     price_per_day: '', max_capacity: '',
-    hora_inicio: 8, hora_fim: 22,
+    hora_inicio: 8, hora_fim: 22, host_presence: 'host',
   })
 
   useEffect(() => { if (isEditing) loadProperty() }, [id])
@@ -44,7 +45,7 @@ export default function NewProperty() {
   async function loadProperty() {
     const { data } = await supabase.from('properties').select('*').eq('id', id).single()
     if (data) {
-      setForm({ type: data.type, description: data.description || '', rules: data.rules || '', checkin_instructions: data.checkin_instructions || '', city: data.city, neighborhood: data.neighborhood || '', address: data.address || '', landmark: data.landmark || '', map_url: data.map_url || '', state: data.state || 'AL', cep: data.cep || '', price_per_day: data.price_per_day || data.price_per_hour, max_capacity: data.max_capacity, hora_inicio: data.hora_inicio ?? 8, hora_fim: data.hora_fim ?? 22 })
+      setForm({ type: data.type, description: data.description || '', rules: data.rules || '', checkin_instructions: data.checkin_instructions || '', city: data.city, neighborhood: data.neighborhood || '', address: data.address || '', landmark: data.landmark || '', map_url: data.map_url || '', state: data.state || 'AL', cep: data.cep || '', price_per_day: data.price_per_day || data.price_per_hour, max_capacity: data.max_capacity, hora_inicio: data.hora_inicio ?? 8, hora_fim: data.hora_fim ?? 22, host_presence: data.host_presence || 'host' })
       setImages(data.images || [])
       setAmenities((data.amenities || []).filter(a => a.localeCompare('Churrasco', 'pt-BR', { sensitivity: 'base' }) !== 0))
       setAvailableDays(data.available_days || [0,1,2,3,4,5,6])
@@ -111,7 +112,7 @@ export default function NewProperty() {
   async function handleSubmit(e) {
     e.preventDefault()
     if (containsExternalContact(form.description || '')) {
-      toast.error('A descrição não pode conter @, redes sociais, links ou telefone. Você combina com o cliente pelo WhatsApp depois que ele reserva.')
+      toast.error('A descrição não pode conter @, redes sociais, links ou telefone. Use o chat do PoolDay após o pagamento da reserva.')
       return
     }
     if (containsExternalContact(form.rules || '')) {
@@ -310,6 +311,7 @@ export default function NewProperty() {
             </div>
 
             <p className="text-xs text-gray-400 mt-3">O cliente reserva a diária inteira dentro desse horário. Não há seleção de quantidade de horas.</p>
+            <div className="mt-5 pt-5 border-t border-gray-100"><label className="text-sm font-semibold text-gray-700 mb-2 block">Quem recebe o cliente?</label><select className="input-field" value={form.host_presence} onChange={event => setForm(previous => ({ ...previous, host_presence: event.target.value }))}>{PRESENCE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select><p className="text-xs text-gray-500 mt-2">Você pode definir uma resposta diferente para uma data livre no calendário.</p></div>
           </div>
 
           {/* Descrição */}
@@ -318,7 +320,7 @@ export default function NewProperty() {
             <div>
               <label className="text-sm font-medium text-gray-600 mb-1 block">Descrição do espaço</label>
               <textarea className="input-field resize-none" rows={4} placeholder="Descreva seu espaço..." value={form.description} onChange={e => setForm({...form, description: e.target.value})} />
-              <p className="text-xs text-gray-400 mt-1">Não coloque contato aqui (Instagram, telefone, link). Você combina tudo com o cliente pelo WhatsApp depois que ele reserva.</p>
+              <p className="text-xs text-gray-400 mt-1">Não coloque contato aqui (Instagram, telefone, link). Use o chat do PoolDay após o pagamento da reserva.</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-600 mb-1 block">Regras da casa</label>
@@ -345,3 +347,4 @@ export default function NewProperty() {
     </div>
   )
 }
+

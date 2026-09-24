@@ -38,7 +38,7 @@ export default function Register() {
     e.preventDefault()
     if (form.password !== form.confirm) return toast.error('As senhas não coincidem!')
     if (form.password.length < 8) return toast.error('Senha deve ter pelo menos 8 caracteres!')
-    if (role === 'host' && !form.phone.trim()) return toast.error('Como anfitrião, informe um telefone/WhatsApp — é por ele que os clientes vão falar com você.')
+    if (role === 'host' && !form.phone.trim()) return toast.error('Como anfitrião, informe um telefone/WhatsApp para o suporte PoolDay falar com você. O número não será exibido aos clientes.')
     setLoading(true)
     try {
       const result = await signUp({ ...form, role })
@@ -145,3 +145,4 @@ export default function Register() {
     </div>
   )
 }
+

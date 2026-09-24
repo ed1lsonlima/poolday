@@ -2,7 +2,7 @@ import LegalLayout from '../components/common/LegalLayout'
 
 export default function Termos() {
   return (
-    <LegalLayout title="Termos de Uso" updated="julho de 2026">
+    <LegalLayout title="Termos de Uso" updated="setembro de 2026">
       <p>Bem-vindo ao PoolDay. Estes Termos de Uso regulam o acesso e a utilização da plataforma, que conecta pessoas que desejam alugar piscinas, chácaras e espaços de lazer ("Hóspedes") a pessoas que oferecem esses espaços ("Anfitriões"). Ao criar uma conta ou usar o PoolDay, você concorda com estes termos.</p>
 
       <h2>1. O que é o PoolDay</h2>
@@ -24,7 +24,10 @@ export default function Termos() {
       <p>As condições de cancelamento e reembolso estão detalhadas na nossa Política de Cancelamento, que é parte integrante destes Termos.</p>
 
       <h2>7. Conduta proibida</h2>
-      <p>É proibido usar o PoolDay para fins ilegais, publicar anúncios falsos ou enganosos, contornar o pagamento pela plataforma, ou assediar outros usuários.</p>
+      <p>É proibido usar o PoolDay para fins ilegais, publicar anúncios falsos ou enganosos, contornar o pagamento pela plataforma, compartilhar contatos ou links para negociar a locação por fora, ou assediar outros usuários. Violações podem ser analisadas pela equipe e resultar em aviso, restrição ou suspensão da conta, conforme a gravidade e após revisão.</p>
+
+      <h2>7.1. Conversas da reserva</h2>
+      <p>O chat entre Hóspede e Anfitrião é liberado após a confirmação do pagamento e o aceite individual do aviso apresentado antes da primeira mensagem. As conversas ficam associadas à reserva e podem ser consultadas pela equipe PoolDay para suporte, análise de denúncias e prevenção de negociações por fora da plataforma. Uma reserva cancelada mantém seu histórico disponível para consulta, mas não permite novas mensagens entre as partes.</p>
 
       <h2>8. Limitação de responsabilidade</h2>
       <p>O PoolDay atua como intermediário tecnológico e não se responsabiliza por danos, acidentes ou prejuízos decorrentes do uso do espaço alugado, sem prejuízo das obrigações contratuais entre Hóspede e Anfitrião.</p>
@@ -37,3 +40,4 @@ export default function Termos() {
     </LegalLayout>
   )
 }
+

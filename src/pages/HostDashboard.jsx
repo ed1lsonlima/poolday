@@ -58,9 +58,12 @@ export default function HostDashboard() {
   }
 
   async function fetchBookings() {
-    const { data, error } = await supabase.from('bookings').select(`*, properties(name, images), client:profiles!bookings_client_id_fkey(name, email)`).eq('host_id', user.id).order('created_at', { ascending: false })
+    const { data, error } = await supabase.from('bookings').select('*, properties(name, images)').eq('host_id', user.id).order('created_at', { ascending: false })
     if (error) console.error('fetchBookings error:', error)
-    const bk = data || []
+    const ids = [...new Set((data || []).map(booking => booking.client_id))]
+    const { data: clients } = ids.length ? await supabase.from('public_profiles').select('id,name').in('id', ids) : { data: [] }
+    const byId = new Map((clients || []).map(client => [client.id, client]))
+    const bk = (data || []).map(booking => ({ ...booking, client: byId.get(booking.client_id) || null }))
     setBookings(bk)
     setStats({
       total: bk.length,
@@ -202,22 +205,7 @@ export default function HostDashboard() {
               <p className="font-bold text-gray-800 text-sm">🎁 Oferta de lançamento: 3 reservas com taxa zero</p>
               <p className="text-gray-600 text-xs mt-1">{promoRemaining > 0 ? `Você ainda tem ${promoRemaining} reserva${promoRemaining > 1 ? 's' : ''} recebendo 100% do valor anunciado.` : 'Suas 3 reservas promocionais foram utilizadas. Nas próximas, a taxa padrão é de 15%.'}</p>
             </div>
-            {/* Aviso WhatsApp (#2) */}
-            {!profile.phone ? (
-              <div className="flex items-start gap-3 bg-yellow-50 border border-yellow-200 rounded-2xl p-4 mb-6">
-                <MessageCircle size={20} className="text-yellow-600 shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-semibold text-yellow-800 text-sm">Você está sem WhatsApp cadastrado</p>
-                  <p className="text-yellow-700 text-xs mt-0.5">É pelo WhatsApp que o cliente combina a reserva com você. Sem ele, você pode perder reservas.</p>
-                  <Link to="/configuracoes" className="inline-block mt-2 text-xs font-semibold text-yellow-800 underline">Adicionar meu WhatsApp</Link>
-                </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 bg-green-50 border border-green-100 rounded-xl px-4 py-2.5 mb-6">
-                <MessageCircle size={16} className="text-green-600 shrink-0" />
-                <p className="text-green-700 text-xs">Mantenha seu WhatsApp ativo — é por ele que o cliente fala com você depois de reservar.</p>
-              </div>
-            )}
+            <div className="flex flex-wrap items-center justify-between gap-3 bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 mb-6"><p className="text-blue-800 text-xs">Após o pagamento, combine a chegada com o cliente pelo chat da reserva.</p><a href="https://wa.me/5582996987838?text=Ol%C3%A1%2C%20equipe%20PoolDay!%20Sou%20anfitri%C3%A3o%20e%20preciso%20de%20ajuda." target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs font-bold text-green-700"><MessageCircle size={14}/>Suporte PoolDay</a></div>
 
             {/* Metricas */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -287,6 +275,7 @@ export default function HostDashboard() {
                           {b.promotion_applied && b.status !== 'cancelled' && <span className="inline-flex mt-1 text-[11px] font-semibold text-green-700 bg-green-50 px-2 py-0.5 rounded-full">Taxa zero · você recebe 100%</span>}
                         </div>
                         <div className="flex flex-col items-end gap-2"><span className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full ${st.color}`}>{st.icon} {st.label}</span>
+                          {Number(b.paid_amount) > 0 && ['pending','confirmed','completed'].includes(b.status) && <Link to={`/reserva/${b.id}/chat`} className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:underline"><MessageCircle size={13}/>Conversa</Link>}
                           {['pending','confirmed'].includes(b.status) && b.payment_state !== 'refund_pending' && b.date >= new Date().toISOString().slice(0,10) && <button onClick={() => { setHostCancellation(b); setHostCancelReason('') }} className="text-[11px] font-semibold text-red-500 hover:underline">Não consigo receber</button>}
                         </div>
                       </div>
@@ -388,3 +377,4 @@ export default function HostDashboard() {
     </div>
   )
 }
+

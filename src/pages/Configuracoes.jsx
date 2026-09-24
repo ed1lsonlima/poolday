@@ -6,7 +6,7 @@ import CityField from '../components/common/CityField'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 
-const DEFAULT_PREFERENCES = { in_app_bookings: true }
+const DEFAULT_PREFERENCES = { in_app_bookings: true, in_app_messages: true }
 
 function Field({ label, icon, value, onChange, placeholder, autoComplete }) {
   return (
@@ -98,6 +98,12 @@ export default function Configuracoes() {
               title="Avisos importantes no sininho"
               description="Mostra pagamentos, vencimentos, confirmações e cancelamentos no topo do site."
             />
+            <PreferenceToggle
+              checked={preferences.in_app_messages !== false}
+              onChange={checked => setPreferences(previous => ({ ...previous, in_app_messages: checked }))}
+              title="Novas mensagens das reservas"
+              description="Mostra mensagens de cliente ou anfitrião no sininho do site."
+            />
             <p className="text-xs text-gray-400 mt-3 leading-relaxed">Avisos essenciais de pagamento, segurança e mudanças na conta continuam disponíveis nas telas correspondentes.</p>
         </section>
 
@@ -159,3 +165,4 @@ function PreferenceToggle({ checked, onChange, title, description }) {
 function SettingsLink({ to, icon, label }) {
   return <Link to={to} className="flex items-center gap-2 text-sm text-gray-600 hover:text-primary-600 py-3 border-b border-gray-50 last:border-0 transition-colors"><span className="text-gray-400">{icon}</span><span className="flex-1">{label}</span><ChevronRight size={16} className="text-gray-300" /></Link>
 }
+

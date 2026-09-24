@@ -4,6 +4,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, CircleCheck, Info, Lock, Save,
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { PRESENCE_OPTIONS, presenceLabel } from '../lib/presence'
 
 const WEEKDAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 const MONTHS = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
@@ -29,6 +30,10 @@ export default function AvailabilityCalendar() {
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [presenceDate, setPresenceDate] = useState('')
+  const [presenceChoice, setPresenceChoice] = useState('')
+  const [presenceOverrides, setPresenceOverrides] = useState({})
+  const [savingPresence, setSavingPresence] = useState(false)
 
   useEffect(() => { if (user) fetchData() }, [user?.id, id])
 
@@ -50,6 +55,14 @@ export default function AvailabilityCalendar() {
     setBlockedDates(blockedSet)
     setPendingBlocked(new Set(blockedSet))
     setBookedDates(new Set((bookings || []).map(item => item.date)))
+    const { data: { session } } = await supabase.auth.getSession()
+    if (session) {
+      const response = await fetch(`/api/host-presence?propertyId=${encodeURIComponent(id)}&manage=1`, { headers: { Authorization: `Bearer ${session.access_token}` } })
+      if (response.ok) {
+        const result = await response.json()
+        setPresenceOverrides(Object.fromEntries((result.overrides || []).map(item => [item.date, item.presence])))
+      }
+    }
     setLoading(false)
   }
 
@@ -132,6 +145,21 @@ export default function AvailabilityCalendar() {
 
   function goToToday() {
     setCursor(new Date(today.getFullYear(), today.getMonth(), 1))
+  }
+
+  async function savePresence() {
+    if (!presenceDate) return
+    setSavingPresence(true)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Entre novamente na sua conta.')
+      const response = await fetch('/api/host-presence', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ propertyId: id, date: presenceDate, presence: presenceChoice || null }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error)
+      setPresenceOverrides(previous => { const next = { ...previous }; if (presenceChoice) next[presenceDate] = presenceChoice; else delete next[presenceDate]; return next })
+      toast.success('Recepção atualizada para esta data!')
+    } catch (error) { toast.error(error.message || 'Não foi possível atualizar a recepção.') }
+    finally { setSavingPresence(false) }
   }
 
   if (loading) return (
@@ -228,6 +256,8 @@ export default function AvailabilityCalendar() {
           </div>
         </section>
 
+        <section className="bg-white rounded-3xl border border-gray-100 shadow-sm p-5 sm:p-6 mt-5"><h2 className="font-bold text-gray-900">Quem recebe o cliente em cada data?</h2><p className="text-sm text-gray-500 mt-1 mb-4">Padrão do espaço: {presenceLabel(property.host_presence)}. Você pode definir uma resposta diferente para uma data ainda não reservada.</p><div className="grid sm:grid-cols-[1fr_2fr_auto] gap-3 items-end"><label className="text-xs font-semibold text-gray-600">Data<input type="date" min={toKey(today)} className="input-field mt-1" value={presenceDate} onChange={event => { const date = event.target.value; setPresenceDate(date); setPresenceChoice(presenceOverrides[date] || '') }}/></label><label className="text-xs font-semibold text-gray-600">Recepção<select className="input-field mt-1" value={presenceChoice} onChange={event => setPresenceChoice(event.target.value)}><option value="">Usar padrão do espaço</option>{PRESENCE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><button type="button" onClick={savePresence} disabled={!presenceDate || savingPresence || bookedDates.has(presenceDate)} className="btn-primary py-3 px-5 text-sm disabled:opacity-50">{savingPresence ? 'Salvando...' : 'Salvar'}</button></div>{bookedDates.has(presenceDate) && <p className="text-xs text-amber-700 mt-2">Essa data já está reservada. A recepção informada ao cliente não pode ser alterada aqui.</p>}</section>
+
         <div className="mt-5 flex gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
           <Info size={19} className="shrink-0 mt-0.5" />
           <p><b>Como usar:</b> toque em uma data livre para bloqueá-la quando o espaço não puder receber reservas. Toque novamente para liberar. Datas já reservadas ficam protegidas.</p>
@@ -257,3 +287,4 @@ export default function AvailabilityCalendar() {
 function Legend({ color, label }) {
   return <div className="flex items-center gap-2"><span className={`w-4 h-4 rounded-md border ${color}`} /><span>{label}</span></div>
 }
+

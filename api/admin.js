@@ -36,6 +36,23 @@ export default async function handler(req, res) {
     if (sessionError) throw sessionError
     if (!activeSession) return res.status(403).json({ error: 'Confirme novamente seu código de segurança.', code: 'MFA_REQUIRED' })
 
+    if (req.method === 'GET' && req.query?.action === 'chat-detail') {
+      const bookingId = req.query?.bookingId
+      if (!uuid.test(bookingId || '')) return res.status(400).json({ error: 'Reserva inválida.' })
+      const [bookingResult, messagesResult, reportsResult, moderationResult, acceptanceResult] = await Promise.all([
+        db.from('bookings').select('id,client_id,host_id,property_id,date,status,paid_amount').eq('id', bookingId).maybeSingle(),
+        db.from('messages').select('id,sender_id,content,created_at').eq('booking_id', bookingId).order('created_at', { ascending: false }).limit(500),
+        db.from('booking_chat_reports').select('id,reporter_id,reason,created_at').eq('booking_id', bookingId).order('created_at', { ascending: false }).limit(50),
+        db.from('booking_chat_moderation_events').select('id,sender_id,kind,content,created_at').eq('booking_id', bookingId).order('created_at', { ascending: false }).limit(100),
+        db.from('booking_chat_acceptances').select('user_id,role,notice_version,accepted_at').eq('booking_id', bookingId),
+      ])
+      for (const result of [bookingResult, messagesResult, reportsResult, moderationResult, acceptanceResult]) if (result.error) throw result.error
+      if (!bookingResult.data) return res.status(404).json({ error: 'Reserva não encontrada.' })
+      const { error: auditError } = await db.from('admin_audit').insert({ actor_id: auth.user.id, action: 'view_booking_chat', entity_id: bookingId, reason: 'Consulta da conversa no painel de administração.' })
+      if (auditError) throw auditError
+      return res.status(200).json({ booking: bookingResult.data, messages: (messagesResult.data || []).reverse(), reports: reportsResult.data || [], moderation: moderationResult.data || [], acceptances: acceptanceResult.data || [], hasMore: messagesResult.data?.length === 500 })
+    }
+
     if (req.method === 'POST') {
       const { action, id, reason } = req.body || {}
       if (!actions.has(action) || !uuid.test(id || '') || typeof reason !== 'string' || reason.trim().length < 5 || reason.length > 1000) return res.status(400).json({ error: 'Ação, registro e motivo válido são obrigatórios.' })
@@ -47,7 +64,7 @@ export default async function handler(req, res) {
     const [users, properties, bookings, payments, events, audit] = await Promise.all([
       rows('profiles', 'id,name,email,phone,city,state,municipality_code,role,verified,suspended,mp_connected,created_at'),
       rows('properties', 'id,host_id,name,description,city,state,price_per_day,images,is_active,moderation_status,moderation_note,created_at'),
-      rows('bookings', 'id,client_id,host_id,property_id,date,status,total_amount,platform_fee,host_amount,promotion_applied,hold_expires_at,created_at,payment_id'),
+      rows('bookings', 'id,client_id,host_id,property_id,date,status,total_amount,paid_amount,payment_state,platform_fee,host_amount,promotion_applied,hold_expires_at,created_at,payment_id'),
       rows('payment_ledger', '*'), rows('admin_events', '*'), rows('admin_audit', 'id,actor_id,action,entity_id,reason,created_at'),
     ])
     return res.status(200).json({ users, properties, bookings, payments, events, audit, generatedAt: new Date().toISOString(), ownerId: auth.user.id })
@@ -56,3 +73,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error.message === 'REPORT_LIMIT' ? 'O volume ultrapassou o limite deste relatório. Nenhum total parcial foi exibido. É necessário ampliar a consulta.' : 'Não foi possível carregar o painel. Tente novamente.' })
   }
 }
+

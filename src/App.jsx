@@ -18,6 +18,7 @@ const PropertyDetail = lazy(() => import('./pages/PropertyDetail'))
 const HostDashboard = lazy(() => import('./pages/HostDashboard'))
 const NewProperty = lazy(() => import('./pages/NewProperty'))
 const ClientProfile = lazy(() => import('./pages/ClientProfile'))
+const BookingChat = lazy(() => import('./pages/BookingChat'))
 const Configuracoes = lazy(() => import('./pages/Configuracoes'))
 const HostWelcome = lazy(() => import('./pages/HostWelcome'))
 const OnboardingWizard = lazy(() => import('./pages/OnboardingWizard'))
@@ -130,6 +131,7 @@ export default function App() {
           <Route path="/perfil" element={<ProtectedRoute><Layout><ClientProfile /></Layout></ProtectedRoute>} />
           <Route path="/configuracoes" element={<ProtectedRoute><Layout><Configuracoes /></Layout></ProtectedRoute>} />
           <Route path="/reservas" element={<ProtectedRoute><Layout><ClientProfile tab="reservas" /></Layout></ProtectedRoute>} />
+          <Route path="/reserva/:id/chat" element={<ProtectedRoute><Layout><BookingChat /></Layout></ProtectedRoute>} />
           <Route path="/favoritos" element={<ProtectedRoute><Layout><ClientProfile tab="favoritos" /></Layout></ProtectedRoute>} />
           <Route path="/anfitriao" element={<ProtectedRoute hostOnly><Layout><HostDashboard /></Layout></ProtectedRoute>} />
           <Route path="/anfitriao/boas-vindas" element={<ProtectedRoute hostOnly><Layout><HostWelcome /></Layout></ProtectedRoute>} />
@@ -145,3 +147,4 @@ export default function App() {
     </ErrorBoundary>
   )
 }
+
