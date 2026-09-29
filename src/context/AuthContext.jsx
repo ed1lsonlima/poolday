@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const AuthContext = createContext({})
@@ -53,19 +53,15 @@ export function AuthProvider({ children }) {
     return () => { alive = false; profileRequest.current++; subscription.unsubscribe() }
   }, [])
 
-  useEffect(() => {
-    if (user) fetchProfile(user)
-    return () => { profileRequest.current++ }
-  }, [user?.id])
-
   // Busca o perfil do usuario. Se nao existir (ex.: primeiro login via Google),
   // cria um automaticamente a partir dos dados da conta.
-  async function fetchProfile(authUser) {
+  const fetchProfile = useCallback(async (authUser, { background = false } = {}) => {
     const userId = typeof authUser === 'string' ? authUser : authUser?.id
     if (!userId || userId !== currentUserId.current) return null
     const request = ++profileRequest.current
     const isCurrent = () => request === profileRequest.current && userId === currentUserId.current
-    setLoading(true)
+    // Refreshes on an already authenticated page must not unmount that page.
+    if (!background) setLoading(true)
     setProfileError('')
     try {
       let { data, error } = await supabase.from('profiles').select('*').eq('id', userId).maybeSingle()
@@ -93,7 +89,8 @@ export function AuthProvider({ children }) {
           data = result.data
         }
       }
-      if (isCurrent()) setProfile(data)
+      if (!isCurrent()) return null
+      setProfile(data)
       return data
     } catch {
       if (isCurrent()) setProfileError('Não foi possível carregar sua conta. Verifique a conexão e tente novamente.')
@@ -101,7 +98,12 @@ export function AuthProvider({ children }) {
     } finally {
       if (isCurrent()) setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (user) fetchProfile(user)
+    return () => { profileRequest.current++ }
+  }, [user?.id, fetchProfile])
 
   async function signUp({ name, email, password, phone, city, state, municipality_code, role }) {
     const { data, error } = await supabase.auth.signUp({

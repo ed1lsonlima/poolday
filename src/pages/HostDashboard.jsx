@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -22,7 +22,9 @@ function ActionButton({ icon, label, onClick, variant = 'primary', disabled = fa
 
 export default function HostDashboard() {
   const { user, profile, fetchProfile } = useAuth()
-  const [tab, setTab] = useState('dashboard')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [tab, setTab] = useState(() => searchParams.get('tab') === 'pagamentos' ? 'pagamentos' : 'dashboard')
+  const handledMpReturn = useRef(false)
   const [properties, setProperties] = useState([])
   const [bookings, setBookings] = useState([])
   const [stats, setStats] = useState({ total: 0, confirmed: 0, pending: 0, revenue: 0, pendingRevenue: 0 })
@@ -32,23 +34,42 @@ export default function HostDashboard() {
   const [hostCancelReason, setHostCancelReason] = useState('')
   const [hostCancelLoading, setHostCancelLoading] = useState(false)
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
 
   useEffect(() => {
     if (user) { fetchProperties(); fetchBookings() }
   }, [user])
 
   useEffect(() => {
-    if (searchParams.get('mp_connected')) {
-      toast.success('Conta do Mercado Pago conectada com sucesso!')
-      setTab('pagamentos')
-      if (user) fetchProfile?.(user.id)
+    const hasResult = searchParams.has('mp_connected') || searchParams.has('mp_error')
+    if (!hasResult) {
+      handledMpReturn.current = false
+      return
     }
-    if (searchParams.get('mp_error')) {
-      toast.error('Não foi possível conectar o Mercado Pago. Tente novamente.')
-      setTab('pagamentos')
+    if (!user?.id || handledMpReturn.current) return
+    handledMpReturn.current = true
+
+    const connected = searchParams.get('mp_connected') === '1' && !searchParams.has('mp_error')
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.delete('mp_connected')
+    nextParams.delete('mp_error')
+    nextParams.set('tab', 'pagamentos')
+    // Consume the callback before refreshing so remounts/back navigation cannot replay it.
+    setSearchParams(nextParams, { replace: true })
+    setTab('pagamentos')
+
+    const toastOptions = { id: 'mercado-pago-connection' }
+    if (!connected) {
+      toast.error('Não foi possível conectar o Mercado Pago. Tente novamente.', toastOptions)
+      return
     }
-  }, [searchParams])
+    fetchProfile(user.id, { background: true }).then(updatedProfile => {
+      if (updatedProfile?.mp_connected) {
+        toast.success('Conta do Mercado Pago conectada com sucesso!', toastOptions)
+      } else {
+        toast.error('Não foi possível confirmar a conexão. Atualize a página para verificar.', toastOptions)
+      }
+    })
+  }, [searchParams, setSearchParams, user?.id, fetchProfile])
 
   async function fetchProperties() {
     const { data, error } = await supabase.from('properties').select('*').eq('host_id', user.id).order('created_at', { ascending: false })
@@ -377,4 +398,3 @@ export default function HostDashboard() {
     </div>
   )
 }
-
