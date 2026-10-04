@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Activity, Bell, Download, MapPin, MessageCircle, RefreshCw, ShieldCheck, Users, Wallet, Waves } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
-import { dayBR, downloadCSV, inPeriod, money, report, riskSignals } from '../lib/adminReports'
+import { dayBR, downloadCSV, inPeriod, isUnpaidHoldExpired, money, report, riskSignals } from '../lib/adminReports'
 import AdminMFA from '../components/common/AdminMFA'
 import BrazilMap from '../components/common/BrazilMap'
 
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
         {summary.payments.map(payment => <tr key={payment.payment_id}><Cell><b>{payment.payment_id}</b><p className="text-xs text-gray-400 break-all">{payment.booking_id}</p></Cell><Cell>{usersById.get(payment.host_id)?.name || '—'}</Cell><Cell><Badge warning={payment.status !== 'approved' || Number(payment.refunded_amount) > 0}>{LABEL[payment.status] || payment.status}{Number(payment.refunded_amount) > 0 ? ' · parcial/total' : ''}</Badge></Cell><Cell>{money(payment.amount)}</Cell><Cell>{money(payment.refunded_amount)}</Cell><Cell>{dayBR(payment.provider_updated_at)}</Cell></tr>)}
       </Table>{!summary.payments.length && <Empty>O histórico financeiro começa com as novas notificações do Mercado Pago.</Empty>}</section>
       <section className="bg-white border border-gray-100 rounded-3xl overflow-hidden"><div className="p-5 flex flex-wrap justify-between gap-3"><h2 className="font-bold text-lg">Reservas</h2><ExportButton name="reservas" rows={summary.bookings.map(booking => ({ reserva: booking.id, espaco: propertiesById.get(booking.property_id)?.name, cliente: usersById.get(booking.client_id)?.name, anfitriao: usersById.get(booking.host_id)?.name, diaria: booking.date, status: booking.status, total: booking.total_amount, promocao: booking.promotion_applied }))}/></div><Table headers={['Espaço', 'Cliente', 'Diária', 'Situação', 'Total']}>
-        {summary.bookings.map(booking => <tr key={booking.id}><Cell>{propertiesById.get(booking.property_id)?.name || '—'}<p className="text-xs text-gray-400">{booking.id.slice(0, 8)}</p></Cell><Cell>{usersById.get(booking.client_id)?.name || '—'}</Cell><Cell>{dayBR(booking.date)}</Cell><Cell><Badge warning={booking.status !== 'confirmed'}>{booking.status === 'pending' && booking.hold_expires_at && new Date(booking.hold_expires_at) < new Date() ? 'Expirada sem pagamento' : LABEL[booking.status]}</Badge></Cell><Cell>{money(booking.total_amount)}</Cell></tr>)}
+        {summary.bookings.map(booking => <tr key={booking.id}><Cell>{propertiesById.get(booking.property_id)?.name || '—'}<p className="text-xs text-gray-400">{booking.id.slice(0, 8)}</p></Cell><Cell>{usersById.get(booking.client_id)?.name || '—'}</Cell><Cell>{dayBR(booking.date)}</Cell><Cell><Badge warning={booking.status !== 'confirmed'}>{isUnpaidHoldExpired(booking) ? 'Expirada sem pagamento' : LABEL[booking.status]}</Badge></Cell><Cell>{money(booking.total_amount)}</Cell></tr>)}
       </Table>{!summary.bookings.length && <Empty/>}</section>
     </div>}
 
@@ -171,4 +171,3 @@ export default function AdminDashboard() {
     <dialog ref={dialog} onCancel={() => { if (!acting) setPendingAction(null) }} onClose={() => setPendingAction(null)} className="date-dialog"><form onSubmit={submitAction} className="p-6"><h2 className="font-bold text-xl">{LABEL[pendingAction?.action]}</h2><p className="text-gray-500 text-sm mt-2 break-words">{pendingAction?.name}</p><label className="text-sm font-semibold block mt-5" htmlFor="admin-reason">Motivo da ação</label><textarea id="admin-reason" className="input-field mt-2" rows={3} minLength={5} maxLength={1000} required value={reason} onChange={e => setReason(e.target.value)} placeholder="Descreva o que foi verificado..."/><p className="text-xs text-gray-400 mt-2">A ação e o motivo ficarão registrados na auditoria.</p><div className="flex gap-3 mt-5"><button type="button" disabled={acting} className="btn-secondary flex-1" onClick={() => dialog.current.close()}>Cancelar</button><button disabled={acting || reason.trim().length < 5} className="btn-primary flex-1">{acting ? 'Salvando...' : 'Confirmar'}</button></div></form></dialog>
   </div></div>
 }
-

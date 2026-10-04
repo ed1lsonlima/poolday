@@ -18,6 +18,11 @@ export const inPeriod = (row, from, to, dateField = 'created_at') => {
 }
 export const sum = (rows, key) => rows.reduce((total, row) => total + Math.round(numeric(row[key]) * 100), 0) / 100
 export const retainedPayment = row => row.status === 'approved' ? Math.max(0, Math.round((numeric(row.amount) - numeric(row.refunded_amount)) * 100) / 100) : 0
+export const isUnpaidHoldExpired = (booking, now = new Date()) => booking.status === 'pending'
+  && booking.payment_state === 'awaiting_first_payment'
+  && numeric(booking.paid_amount) === 0
+  && Boolean(booking.hold_expires_at)
+  && new Date(booking.hold_expires_at) < now
 
 export function report(data, from = '', to = '') {
   const users = (data.users || []).filter(r => inPeriod(r, from, to))
@@ -26,7 +31,7 @@ export function report(data, from = '', to = '') {
   const approved = payments.filter(p => p.status === 'approved')
   // Partial refunds require manual fee reconciliation; never label the old fee as settled income.
   const settled = approved.filter(p => !Number(p.refunded_amount))
-  const expired = bookings.filter(b => b.status === 'pending' && b.hold_expires_at && new Date(b.hold_expires_at) < new Date())
+  const expired = bookings.filter(b => isUnpaidHoldExpired(b))
   const hosts = (data.users || []).filter(u => u.role === 'host').map(host => {
     const list = approved.filter(p => p.host_id === host.id)
     const reconciled = list.filter(p => !numeric(p.refunded_amount) && p.host_net != null)

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { csvText, dayBR, inPeriod, report, riskSignals, sum } from '../src/lib/adminReports.js'
+import { csvText, dayBR, inPeriod, isUnpaidHoldExpired, report, riskSignals, sum } from '../src/lib/adminReports.js'
 
 test('date ranges include complete local days in Brazil and reject missing dates', () => {
   assert.equal(inPeriod({ created_at: '2026-09-17T02:59:59Z' }, '2026-09-16', '2026-09-16'), true)
@@ -46,6 +46,14 @@ test('money totals use integer cents and incomplete datasets do not crash', () =
   assert.equal(sum([{ n: 0.1 }, { n: 0.2 }], 'n'), 0.3)
   assert.equal(report({}).gross, 0)
   assert.deepEqual(riskSignals({}), [])
+})
+
+test('paid deposits are never labeled as unpaid expired holds', () => {
+  const now = new Date('2026-09-20T12:00:00Z')
+  const past = '2026-09-19T12:00:00Z'
+  assert.equal(isUnpaidHoldExpired({ status: 'pending', payment_state: 'awaiting_first_payment', paid_amount: 0, hold_expires_at: past }, now), true)
+  assert.equal(isUnpaidHoldExpired({ status: 'pending', payment_state: 'deposit_paid', paid_amount: 50, hold_expires_at: past }, now), false)
+  assert.equal(isUnpaidHoldExpired({ status: 'confirmed', payment_state: 'fully_paid', paid_amount: 100, hold_expires_at: past }, now), false)
 })
 
 test('CSV exports quote content and neutralize spreadsheet formulas', () => {
