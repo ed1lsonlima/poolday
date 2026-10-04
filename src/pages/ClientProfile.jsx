@@ -410,7 +410,8 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
                       <p>📍 <b>Endereço:</b> {detail.properties.address}</p>
                       {detail.properties.landmark && <p><b>Ponto de referência:</b> {detail.properties.landmark}</p>}
                       {detail.properties.checkin_instructions && <p><b>Como chegar e entrar:</b> {detail.properties.checkin_instructions}</p>}
-                      {detail.properties.map_url && <a href={detail.properties.map_url} target="_blank" rel="noopener noreferrer" className="inline-flex font-semibold text-primary-600 hover:underline">Abrir localização exata no mapa →</a>}
+                      <a href={detail.properties.map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([detail.properties.address, detail.properties.city].filter(Boolean).join(', '))}`} target="_blank" rel="noopener noreferrer" className="inline-flex font-semibold text-primary-600 hover:underline">Ver endereço no mapa →</a>
+                      {!detail.properties.map_url && <p className="text-gray-500">O mapa pesquisa o endereço informado. Para sítios ou entradas difíceis, confirme os detalhes no chat com o anfitrião.</p>}
                     </div>
                   )}
                   <p className="rounded-xl bg-blue-50 border border-blue-100 p-3 text-xs text-blue-800"><b>Recepção:</b> {presenceLabel(detail.host_presence)}.</p>
@@ -517,4 +518,3 @@ function QuickLink({ to, icon, title, description }) {
     </Link>
   )
 }
-
