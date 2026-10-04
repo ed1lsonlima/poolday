@@ -8,7 +8,6 @@ import ArrivalFields from '../components/common/ArrivalFields'
 import { propertyFormError } from '../lib/propertyValidation'
 import CityField from '../components/common/CityField'
 import { buildPublicPropertyTitle, containsExternalContact } from '../lib/propertySafety'
-import { PRESENCE_OPTIONS } from '../lib/presence'
 
 const TYPES = [
   { id: 'pool', label: 'Piscina' }, { id: 'chacara', label: 'Chácara' },
@@ -177,6 +176,7 @@ export default function NewProperty() {
               <div>
                 <label className="text-sm font-medium text-gray-600 mb-1 block">Capacidade máx. *</label>
                 <input className="input-field" type="number" min="1" placeholder="Ex: 20" value={form.max_capacity} onChange={e => setForm({...form, max_capacity: e.target.value})} required />
+                <p className="text-xs text-gray-500 mt-1">Estime quantas pessoas cabem com conforto. Não precisa ser um número exato.</p>
               </div>
             </div>
 
@@ -275,10 +275,11 @@ export default function NewProperty() {
           <div className="bg-white rounded-2xl p-5 shadow-sm border border-gray-100">
             <h2 className="font-bold text-gray-800 mb-3">Disponibilidade</h2>
             <label className="text-sm font-medium text-gray-600 mb-2 block">Dias que você atende</label>
+            <p className="text-xs text-gray-500 mb-3">Verde: recebe reservas. Vermelho: fechado. Toque para mudar.</p>
             <div className="flex gap-2 flex-wrap">
               {DAYS.map((d, i) => (
                 <button key={i} type="button" onClick={() => toggleDay(i)}
-                  className={`px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${availableDays.includes(i) ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-400'}`}>
+                  aria-pressed={availableDays.includes(i)} className={`px-4 py-2 rounded-xl text-sm font-medium border-2 transition-all ${availableDays.includes(i) ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-rose-300 bg-rose-50 text-rose-700'}`}>
                   {d}
                 </button>
               ))}
@@ -286,20 +287,20 @@ export default function NewProperty() {
 
             <div className="mt-5 pt-5 border-t border-gray-100">
               <label className="text-sm font-medium text-gray-600 mb-2 block">Horário de funcionamento</label>
+              <p className="text-xs text-gray-500 mb-2">A diária precisa oferecer pelo menos 7 horas. Ex.: 8h às 15h pode; 8h às 12h não.</p>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm text-gray-500">das</span>
-                <select value={form.hora_inicio} onChange={e => setForm({...form, hora_inicio: e.target.value})} className="input-field w-auto py-2">
-                  {Array.from({length: 24}, (_, h) => <option key={h} value={h}>{String(h).padStart(2,'0')}h</option>)}
+                <select aria-label="Início da diária" value={form.hora_inicio} onChange={e => { const start = Number(e.target.value); setForm(previous => ({ ...previous, hora_inicio: start, hora_fim: Math.max(Number(previous.hora_fim), start + 7) })) }} className="input-field w-auto py-2">
+                  {Array.from({length: 17}, (_, h) => <option key={h} value={h}>{String(h).padStart(2,'0')}h</option>)}
                 </select>
                 <span className="text-sm text-gray-500">às</span>
-                <select value={form.hora_fim} onChange={e => setForm({...form, hora_fim: e.target.value})} className="input-field w-auto py-2">
-                  {Array.from({length: 24}, (_, h) => <option key={h} value={h}>{String(h).padStart(2,'0')}h</option>)}
+                <select aria-label="Fim da diária" value={form.hora_fim} onChange={e => setForm({...form, hora_fim: Number(e.target.value)})} className="input-field w-auto py-2">
+                  {Array.from({length: 24}, (_, h) => h).filter(h => h >= Number(form.hora_inicio) + 7).map(h => <option key={h} value={h}>{String(h).padStart(2,'0')}h</option>)}
                 </select>
               </div>
             </div>
 
             <p className="text-xs text-gray-400 mt-3">O cliente reserva a diária inteira dentro desse horário. Não há seleção de quantidade de horas.</p>
-            <div className="mt-5 pt-5 border-t border-gray-100"><label className="text-sm font-semibold text-gray-700 mb-2 block">Quem recebe o cliente?</label><select className="input-field" value={form.host_presence} onChange={event => setForm(previous => ({ ...previous, host_presence: event.target.value }))}>{PRESENCE_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select><p className="text-xs text-gray-500 mt-2">Você pode definir uma resposta diferente para uma data livre no calendário.</p></div>
           </div>
 
           {/* Descrição */}

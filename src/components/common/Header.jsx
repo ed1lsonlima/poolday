@@ -1,14 +1,37 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { Menu, X, Waves, User, CalendarDays, Heart, Settings, LogOut, LayoutDashboard, Bell, BellOff, House, MessageCircle } from 'lucide-react'
+
+async function playNoticeSound() {
+  const AudioContext = window.AudioContext || window.webkitAudioContext
+  if (!AudioContext) return
+  const context = new AudioContext()
+  try {
+    await context.resume()
+    const oscillator = context.createOscillator()
+    const volume = context.createGain()
+    oscillator.type = 'sine'
+    oscillator.frequency.setValueAtTime(740, context.currentTime)
+    oscillator.frequency.setValueAtTime(980, context.currentTime + 0.12)
+    volume.gain.setValueAtTime(0.0001, context.currentTime)
+    volume.gain.exponentialRampToValueAtTime(0.08, context.currentTime + 0.02)
+    volume.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.32)
+    oscillator.connect(volume).connect(context.destination)
+    oscillator.start()
+    oscillator.stop(context.currentTime + 0.33)
+    setTimeout(() => context.close(), 500)
+  } catch { await context.close() }
+}
 
 export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifs, setNotifs] = useState([])
   const [unseen, setUnseen] = useState(0)
+  const [popupNotification, setPopupNotification] = useState(null)
+  const latestNotifiedId = useRef(null)
   const { user, profile, signOut, isAdmin } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -18,33 +41,59 @@ export default function Header() {
   const notificationsEnabled = bookingNotificationsEnabled || messageNotificationsEnabled
 
   useEffect(() => {
-    if (!user || !notificationsEnabled) { setNotifs([]); setUnseen(0); return }
+    if (!user || !notificationsEnabled) { setNotifs([]); setUnseen(0); setPopupNotification(null); latestNotifiedId.current = null; return }
     fetchNotifs()
-    const interval = setInterval(fetchNotifs, 60000)
-    return () => clearInterval(interval)
+    const interval = setInterval(fetchNotifs, 15000)
+    const onFocus = () => fetchNotifs()
+    window.addEventListener('focus', onFocus)
+    const channel = supabase.channel(`notifications:${user.id}`)
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, fetchNotifs)
+      .subscribe()
+    return () => { clearInterval(interval); window.removeEventListener('focus', onFocus); supabase.removeChannel(channel) }
   }, [user?.id, bookingNotificationsEnabled, messageNotificationsEnabled])
 
   async function fetchNotifs() {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('notifications')
       .select('id,title,message,kind,action_url,read_at,created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20)
+    if (error) return
     const visible = (data || []).filter(item => item.kind?.startsWith('chat') ? messageNotificationsEnabled : bookingNotificationsEnabled)
     setNotifs(visible)
     setUnseen(visible.filter(item => !item.read_at).length)
+    const latest = visible.find(item => !item.read_at)
+    if (latest && latest.id !== latestNotifiedId.current) {
+      const isRecent = Date.now() - new Date(latest.created_at).getTime() < 5 * 60 * 1000
+      if (latestNotifiedId.current || isRecent) { setPopupNotification(latest); playNoticeSound() }
+      latestNotifiedId.current = latest.id
+    }
   }
 
   async function toggleNotifs() {
     const willOpen = !notifOpen
     setNotifOpen(willOpen)
+    if (willOpen) setPopupNotification(null)
     setMenuOpen(false)
     if (willOpen && notificationsEnabled && unseen > 0) {
       const ids = notifs.filter(item => !item.read_at).map(item => item.id)
       await supabase.from('notifications').update({ read_at: new Date().toISOString() }).eq('user_id', user.id).in('id', ids)
       setNotifs(current => current.map(item => ({ ...item, read_at: new Date().toISOString() })))
       setUnseen(0)
+    }
+  }
+
+  async function dismissPopup() {
+    const notice = popupNotification
+    if (!notice) return
+    setPopupNotification(null)
+    if (notice.read_at) return
+    const readAt = new Date().toISOString()
+    const { error } = await supabase.from('notifications').update({ read_at: readAt }).eq('id', notice.id).eq('user_id', user.id)
+    if (!error) {
+      setNotifs(current => current.map(item => item.id === notice.id ? { ...item, read_at: readAt } : item))
+      setUnseen(current => Math.max(0, current - 1))
     }
   }
 
@@ -56,6 +105,7 @@ export default function Header() {
 
   return (
     <header className="bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+      {popupNotification && <div role="status" className="absolute top-[4.5rem] right-3 sm:right-6 z-[70] w-[22rem] max-w-[calc(100vw-1.5rem)] rounded-2xl border border-primary-100 bg-white shadow-2xl p-4 flex gap-3"><button type="button" onClick={toggleNotifs} className="min-w-0 flex-1 text-left"><p className="font-bold text-sm text-gray-900">{popupNotification.title}</p><p className="text-xs text-gray-600 mt-1 line-clamp-2">{popupNotification.message}</p><p className="text-xs font-semibold text-primary-600 mt-2">Abrir notificações →</p></button><button type="button" aria-label="Dispensar aviso" onClick={dismissPopup} className="self-start text-gray-400 hover:text-gray-700"><X size={18}/></button></div>}
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-2 sm:gap-3">
           <Link to="/" className="flex items-center gap-2" aria-label="PoolDay — página inicial">
@@ -218,4 +268,3 @@ function MenuItem({ icon, label, to, onClick }) {
     </Link>
   )
 }
-

@@ -6,7 +6,6 @@ import toast from 'react-hot-toast'
 import { Link, useSearchParams } from 'react-router-dom'
 import { formatDateBR } from '../lib/formatDate'
 import PropertyCard from '../components/common/PropertyCard'
-import { presenceLabel } from '../lib/presence'
 
 const POOLDAY_WHATSAPP = '5582996987838'
 
@@ -414,7 +413,6 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
                       {!detail.properties.map_url && <p className="text-gray-500">O mapa pesquisa o endereço informado. Para sítios ou entradas difíceis, confirme os detalhes no chat com o anfitrião.</p>}
                     </div>
                   )}
-                  <p className="rounded-xl bg-blue-50 border border-blue-100 p-3 text-xs text-blue-800"><b>Recepção:</b> {presenceLabel(detail.host_presence)}.</p>
                   <Link to={`/reserva/${detail.id}/chat`} onClick={() => setDetail(null)} className="btn-primary flex items-center justify-center gap-2 w-full py-3 text-sm"><MessageCircle size={17}/>Abrir conversa com o anfitrião</Link>
                   <div className="rounded-xl border border-green-200 bg-white p-3.5">
                     <p className="text-xs text-gray-500 mb-2">Contato oficial do PoolDay:</p>

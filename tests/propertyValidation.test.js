@@ -14,3 +14,11 @@ test('mantém bloqueio de contatos públicos e valida mapa apenas se preenchido'
   const data = valid(); data.amenities = ['WhatsApp 82999999999']; assert.ok(propertyFormError(data))
   data.amenities = []; data.form.map_url = 'https://example.com'; assert.ok(propertyFormError(data))
 })
+test('descrição pode ficar vazia, mas a diária deve ter pelo menos sete horas', () => {
+  const data = valid(); data.form.description = ''; data.form.rules = ''
+  assert.equal(propertyFormError(data), null)
+  data.form.hora_fim = 12
+  assert.equal(propertyFormError(data).step, 1)
+  data.form.hora_fim = 15
+  assert.equal(propertyFormError(data), null)
+})

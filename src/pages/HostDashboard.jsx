@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { Plus, LayoutDashboard, CreditCard, Calendar, Eye, Edit, Trash2, CheckCircle, XCircle, Clock, Link2, ShieldCheck, MessageCircle, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDateBR } from '../lib/formatDate'
+import { clearPropertyDraft, loadPropertyDraft } from '../lib/propertyDraft'
 
 function ActionButton({ icon, label, onClick, variant = 'primary', disabled = false }) {
   const hover = variant === 'danger' ? 'hover:text-red-500 hover:bg-red-50'
@@ -30,6 +31,7 @@ export default function HostDashboard() {
   const [bookings, setBookings] = useState([])
   const [stats, setStats] = useState({ total: 0, confirmed: 0, pending: 0, revenue: 0, pendingRevenue: 0 })
   const [loading, setLoading] = useState(true)
+  const [draft, setDraft] = useState(null)
   const [deleting, setDeleting] = useState(null)
   const [hostCancellation, setHostCancellation] = useState(null)
   const [hostCancelReason, setHostCancelReason] = useState('')
@@ -46,7 +48,9 @@ export default function HostDashboard() {
       if (document.visibilityState === 'hidden') return
       fetchProperties()
       fetchBookings()
+      setDraft(loadPropertyDraft(window.localStorage, user.id))
     }
+    setDraft(loadPropertyDraft(window.localStorage, user.id))
     window.addEventListener('focus', refresh)
     document.addEventListener('visibilitychange', refresh)
     return () => {
@@ -240,6 +244,7 @@ export default function HostDashboard() {
 
         {tab === 'dashboard' && (
           <>
+            {draft && <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-primary-200 bg-primary-50 p-4 mb-5"><div className="flex-1 min-w-52"><p className="font-bold text-primary-800 text-sm">Você tem um espaço em rascunho</p><p className="text-xs text-primary-700 mt-1">Salvo neste aparelho. Continue de onde parou antes de enviar para análise.</p></div><Link to="/anfitriao/cadastrar-espaco" className="btn-primary text-sm">Continuar cadastro</Link><button type="button" onClick={() => { if (window.confirm('Descartar este rascunho? As fotos enviadas podem continuar armazenadas.')) { clearPropertyDraft(window.localStorage, user.id); setDraft(null) } }} className="text-xs font-semibold text-gray-500 hover:text-red-600">Descartar</button></div>}
             <div className="bg-gradient-to-r from-orange-50 to-primary-50 border border-orange-100 rounded-2xl p-4 mb-6">
               <p className="font-bold text-gray-800 text-sm">🎁 Oferta de lançamento: 3 reservas com taxa zero</p>
               <p className="text-gray-600 text-xs mt-1">{promoRemaining > 0 ? `Você ainda tem ${promoRemaining} reserva${promoRemaining > 1 ? 's' : ''} recebendo 100% do valor anunciado.` : 'Suas 3 reservas promocionais foram utilizadas. Nas próximas, a taxa padrão é de 15%.'}</p>

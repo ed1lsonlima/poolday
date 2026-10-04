@@ -53,10 +53,23 @@ export default async function handler(req, res) {
       return res.status(200).json({ booking: bookingResult.data, messages: (messagesResult.data || []).reverse(), reports: reportsResult.data || [], moderation: moderationResult.data || [], acceptances: acceptanceResult.data || [], hasMore: messagesResult.data?.length === 500 })
     }
 
+    if (req.method === 'GET' && req.query?.action === 'property-detail') {
+      const propertyId = req.query?.propertyId
+      if (!uuid.test(propertyId || '')) return res.status(400).json({ error: 'Espaço inválido.' })
+      const { data: property, error: propertyError } = await db.from('properties').select('*').eq('id', propertyId).maybeSingle()
+      if (propertyError) throw propertyError
+      if (!property) return res.status(404).json({ error: 'Espaço não encontrado.' })
+      const { error: auditError } = await db.from('admin_audit').insert({ actor_id: auth.user.id, action: 'view_property', entity_id: propertyId, reason: 'Revisão completa do anúncio antes da moderação.' })
+      if (auditError) throw auditError
+      return res.status(200).json({ property })
+    }
+
     if (req.method === 'POST') {
       const { action, id, reason } = req.body || {}
-      if (!actions.has(action) || !uuid.test(id || '') || typeof reason !== 'string' || reason.trim().length < 5 || reason.length > 1000) return res.status(400).json({ error: 'Ação, registro e motivo válido são obrigatórios.' })
-      const { error } = await db.rpc('admin_action', { p_actor: auth.user.id, p_action: action, p_id: id, p_reason: reason.trim() })
+      const approval = action === 'approve_property'
+      if (!actions.has(action) || !uuid.test(id || '') || (!approval && (typeof reason !== 'string' || reason.trim().length < 5 || reason.length > 1000))) return res.status(400).json({ error: 'Ação, registro e motivo válido são obrigatórios.' })
+      const resolvedReason = approval ? 'Aprovado após revisão do anúncio.' : reason.trim()
+      const { error } = await db.rpc('admin_action', { p_actor: auth.user.id, p_action: action, p_id: id, p_reason: resolvedReason })
       if (error) { console.error('Admin action:', error.code); return res.status(400).json({ error: 'Não foi possível concluir. Verifique o registro, o motivo e se a conta é protegida.' }) }
       return res.status(200).json({ success: true })
     }
@@ -73,4 +86,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: error.message === 'REPORT_LIMIT' ? 'O volume ultrapassou o limite deste relatório. Nenhum total parcial foi exibido. É necessário ampliar a consulta.' : 'Não foi possível carregar o painel. Tente novamente.' })
   }
 }
-

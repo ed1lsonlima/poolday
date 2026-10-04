@@ -8,10 +8,10 @@ export function propertyStepError(step, { form, images, amenities, availableDays
     if (!availableDays.length) return 'Escolha pelo menos um dia disponível.'
     const start = Number(form.hora_inicio), end = Number(form.hora_fim)
     if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end > 23 || start >= end) return 'O horário final precisa ser depois do inicial.'
+    if (end - start < 7) return 'A diária precisa ter pelo menos 7 horas de funcionamento.'
   }
   if (step === 2 && !images.length) return 'Adicione pelo menos uma foto.'
   if (step === 3) {
-    if (!form.description?.trim()) return 'Conte brevemente como é o espaço.'
     if ([form.description, form.rules, ...amenities].some(value => containsExternalContact(value || ''))) return 'Retire telefone, @, rede social ou link dos campos públicos.'
     if (!form.address?.trim()) return 'Informe o endereço completo do espaço.'
     if (!isTrustedMapLink(form.map_url?.trim())) return 'Confira o link em “Mais detalhes de localização” ou deixe esse campo vazio.'

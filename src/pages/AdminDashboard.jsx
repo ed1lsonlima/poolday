@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Activity, Bell, Download, MapPin, MessageCircle, RefreshCw, ShieldCheck, Users, Wallet, Waves } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { dayBR, downloadCSV, inPeriod, isUnpaidHoldExpired, money, report, riskSignals } from '../lib/adminReports'
 import AdminMFA from '../components/common/AdminMFA'
@@ -19,7 +20,7 @@ const LABEL = {
   in_mediation: 'Em disputa', in_process: 'Em processamento',
   approve_property: 'Aprovar espaço', reject_property: 'Recusar espaço', pause_property: 'Pausar espaço',
   suspend_user: 'Suspender conta', restore_user: 'Restaurar conta', verify_user: 'Marcar verificado',
-  unverify_user: 'Remover verificação', resolve_event: 'Concluir revisão',
+  unverify_user: 'Remover verificação', resolve_event: 'Arquivar aviso (não aprova espaço)',
 }
 
 async function adminRequest(body) {
@@ -44,6 +45,15 @@ async function adminChatRequest(bookingId) {
   return result
 }
 
+async function adminPropertyRequest(propertyId) {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Sua sessão expirou. Entre novamente.')
+  const response = await fetch(`/api/admin?action=property-detail&propertyId=${encodeURIComponent(propertyId)}`, { headers: { Authorization: `Bearer ${session.access_token}` } })
+  const result = await response.json()
+  if (!response.ok) { const error = new Error(result.error); error.code = result.code; throw error }
+  return result.property
+}
+
 function Badge({ children, warning }) {
   return <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${warning ? 'bg-amber-50 text-amber-700' : 'bg-sky-50 text-sky-700'}`}>{children}</span>
 }
@@ -54,17 +64,19 @@ function Table({ headers, children }) {
   return <div className="overflow-x-auto"><table className="w-full text-sm text-left"><thead><tr>{headers.map(h => <th key={h} className="bg-gray-50 px-4 py-3 text-xs uppercase tracking-wide text-gray-500 whitespace-nowrap">{h}</th>)}</tr></thead><tbody className="divide-y divide-gray-100">{children}</tbody></table></div>
 }
 function Cell({ children }) { return <td className="px-4 py-4 align-top">{children}</td> }
+function SummaryLine({ label, value }) { return <div><dt className="text-xs text-gray-500">{label}</dt><dd className="font-semibold text-gray-800 break-words mt-0.5">{value}</dd></div> }
 function Empty({ children = 'Nenhum registro neste período.' }) { return <p className="text-center text-gray-400 text-sm py-12">{children}</p> }
 function ExportButton({ rows, name }) {
   return <button disabled={!rows.length} onClick={() => downloadCSV(rows, name)} className="inline-flex items-center gap-2 text-sm font-semibold text-primary-600 disabled:opacity-40"><Download size={16}/>Exportar CSV</button>
 }
 
 export default function AdminDashboard() {
+  const [params] = useSearchParams()
   const [data, setData] = useState(null)
   const [busy, setBusy] = useState(true)
   const [error, setError] = useState('')
   const [mfa, setMfa] = useState(false)
-  const [tab, setTab] = useState('overview')
+  const [tab, setTab] = useState(() => TABS.some(([id]) => id === params.get('tab')) ? params.get('tab') : 'overview')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [search, setSearch] = useState('')
@@ -75,6 +87,8 @@ export default function AdminDashboard() {
   const [chatSearch, setChatSearch] = useState('')
   const [chatDetail, setChatDetail] = useState(null)
   const [chatBusy, setChatBusy] = useState(false)
+  const [propertyDetail, setPropertyDetail] = useState(null)
+  const [propertyDetailBusy, setPropertyDetailBusy] = useState(false)
   const dialog = useRef(null)
 
   const load = useCallback(async () => {
@@ -84,6 +98,7 @@ export default function AdminDashboard() {
     finally { setBusy(false) }
   }, [])
   useEffect(() => { load() }, [load])
+  useEffect(() => { if (TABS.some(([id]) => id === params.get('tab'))) setTab(params.get('tab')) }, [params])
   useEffect(() => { if (pendingAction) dialog.current?.showModal() }, [pendingAction])
 
   const summary = useMemo(() => data ? report(data, from, to) : null, [data, from, to])
@@ -92,6 +107,21 @@ export default function AdminDashboard() {
   const propertiesById = useMemo(() => new Map(data?.properties.map(property => [property.id, property]) || []), [data])
 
   function startAction(action, id, name) { setReason(''); setPendingAction({ action, id, name }) }
+  async function approveProperty(property) {
+    setActing(true)
+    try {
+      await adminRequest({ action: 'approve_property', id: property.id })
+      toast.success('Espaço aprovado e publicado. O anfitrião foi avisado.')
+      await load()
+    } catch (e) { toast.error(e.message); if (e.code === 'MFA_REQUIRED') { setData(null); setMfa(true) } }
+    finally { setActing(false) }
+  }
+  async function openProperty(propertyId) {
+    setPropertyDetailBusy(true)
+    try { setPropertyDetail(await adminPropertyRequest(propertyId)) }
+    catch (e) { toast.error(e.message); if (e.code === 'MFA_REQUIRED') { setData(null); setMfa(true) } }
+    finally { setPropertyDetailBusy(false) }
+  }
   async function openChat(bookingId) {
     setChatBusy(true)
     try { setChatDetail(await adminChatRequest(bookingId)) }
@@ -156,7 +186,7 @@ export default function AdminDashboard() {
     </Table>{!people.length && <Empty/>}</section>}
 
     {tab === 'properties' && <section className="bg-white border border-gray-100 rounded-3xl p-5"><div className="flex justify-between items-center gap-3 flex-wrap mb-5"><div><h2 className="font-bold text-lg">Moderação de espaços</h2><p className="text-xs text-gray-400">Novos anúncios e edições só aparecem após aprovação.</p></div><Badge warning>{waiting.length} para analisar</Badge></div><input aria-label="Buscar espaços" className="input-field mb-5" placeholder="Buscar espaço ou cidade" value={search} onChange={e => setSearch(e.target.value)}/><div className="space-y-4">
-      {properties.map(property => <article key={property.id} className="border border-gray-100 rounded-2xl p-4 flex flex-col sm:flex-row gap-4">{property.images?.[0] && <img src={property.images[0]} alt={property.name} className="w-full sm:w-32 h-32 object-cover rounded-xl"/>}<div className="flex-1 min-w-0"><div className="flex gap-2 items-center flex-wrap"><h3 className="font-bold">{property.name}</h3><Badge warning={property.moderation_status !== 'approved'}>{property.moderation_status === 'pending' ? 'Em análise' : property.moderation_status === 'rejected' ? 'Recusado' : property.is_active ? 'Publicado' : 'Pausado'}</Badge></div><p className="text-sm text-gray-500 mt-1">{property.city} / {property.state} · {money(property.price_per_day)} por diária · {usersById.get(property.host_id)?.name}</p><p className="text-sm text-gray-600 mt-3 whitespace-pre-wrap break-words">{property.description}</p>{property.moderation_note && <p className="text-xs text-amber-700 mt-2">Última análise: {property.moderation_note}</p>}<details className="mt-3"><summary className="text-xs text-primary-600 cursor-pointer">Ver fotos ({property.images?.length || 0})</summary><div className="flex gap-2 overflow-x-auto mt-2">{property.images?.map((url, index) => <a key={url} href={url} target="_blank" rel="noreferrer"><img src={url} alt={`Foto ${index + 1}`} className="h-28 max-w-40 object-cover rounded-lg" loading="lazy"/></a>)}</div></details><div className="flex flex-wrap mt-3">{actionButton('approve_property', property.id, property.name)}{actionButton('reject_property', property.id, property.name)}{property.is_active && actionButton('pause_property', property.id, property.name)}</div></div></article>)}
+      {properties.map(property => <article key={property.id} className="border border-gray-100 rounded-2xl p-4 flex flex-col sm:flex-row gap-4">{property.images?.[0] && <img src={property.images[0]} alt={property.name} className="w-full sm:w-32 h-32 object-cover rounded-xl"/>}<div className="flex-1 min-w-0"><div className="flex gap-2 items-center flex-wrap"><h3 className="font-bold">{property.name}</h3><Badge warning={property.moderation_status !== 'approved'}>{property.moderation_status === 'pending' ? 'Em análise' : property.moderation_status === 'rejected' ? 'Recusado' : property.is_active ? 'Publicado' : 'Pausado'}</Badge></div><p className="text-sm text-gray-500 mt-1">{property.city} / {property.state} · {money(property.price_per_day)} por diária · {usersById.get(property.host_id)?.name}</p><p className="text-sm text-gray-600 mt-3 whitespace-pre-wrap break-words">{property.description || 'Sem descrição adicional.'}</p>{property.moderation_note && <p className="text-xs text-amber-700 mt-2">Última análise: {property.moderation_note}</p>}<div className="flex flex-wrap items-center gap-3 mt-3"><button type="button" disabled={propertyDetailBusy} onClick={() => openProperty(property.id)} className="text-xs font-semibold text-primary-600 hover:underline disabled:opacity-50">Ver anúncio completo</button>{property.moderation_status !== 'approved' && <button type="button" disabled={acting} onClick={() => approveProperty(property)} className="text-xs font-semibold text-emerald-700 hover:underline disabled:opacity-50">Aprovar e publicar</button>}{property.moderation_status !== 'rejected' && actionButton('reject_property', property.id, property.name)}{property.is_active && actionButton('pause_property', property.id, property.name)}</div></div></article>)}
     </div>{!properties.length && <Empty>Nenhum espaço cadastrado.</Empty>}</section>}
 
     {tab === 'regions' && <BrazilMap users={data.users} bookings={data.bookings} payments={data.payments} from={from} to={to}/>} 
@@ -167,6 +197,7 @@ export default function AdminDashboard() {
       {data.audit.filter(item => inPeriod(item, from, to)).map(item => <tr key={item.id}><Cell>{new Date(item.created_at).toLocaleString('pt-BR')}</Cell><Cell>{LABEL[item.action] || item.action}</Cell><Cell><span className="text-xs break-all">{item.entity_id}</span></Cell><Cell>{item.reason}</Cell></tr>)}
     </Table>{!data.audit.length && <Empty>Nenhuma ação administrativa registrada.</Empty>}</section>}
 
+    {propertyDetail && <div className="fixed inset-0 z-[70] bg-black/50 p-3 sm:p-6 flex items-center justify-center" onClick={() => setPropertyDetail(null)}><div role="dialog" aria-modal="true" aria-label="Anúncio completo para revisão" className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-5 sm:p-6" onClick={event => event.stopPropagation()}><div className="flex items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase text-primary-600">Revisão do espaço</p><h2 className="text-xl font-extrabold mt-1">{propertyDetail.name}</h2><p className="text-xs text-gray-500 mt-1">{usersById.get(propertyDetail.host_id)?.name || 'Anfitrião'} · {propertyDetail.moderation_status === 'pending' ? 'Em análise' : propertyDetail.moderation_status === 'approved' ? 'Aprovado' : 'Recusado'}</p></div><button type="button" onClick={() => setPropertyDetail(null)} className="text-sm font-semibold text-primary-600">Voltar</button></div><div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-5">{(propertyDetail.images || []).map((url, index) => <a href={url} key={url} target="_blank" rel="noreferrer"><img src={url} alt={`Foto ${index + 1}`} className="w-full aspect-square object-cover rounded-xl"/></a>)}</div><dl className="grid sm:grid-cols-2 gap-3 text-sm mt-5 rounded-xl bg-gray-50 p-4"><SummaryLine label="Tipo" value={propertyDetail.type === 'pool' ? 'Piscina' : 'Chácara'}/><SummaryLine label="Cidade e estado" value={`${propertyDetail.city} / ${propertyDetail.state}`}/><SummaryLine label="Bairro" value={propertyDetail.neighborhood || 'Não informado'}/><SummaryLine label="Valor da diária" value={money(propertyDetail.price_per_day)}/><SummaryLine label="Capacidade estimada" value={`${propertyDetail.max_capacity} pessoas`}/><SummaryLine label="Horário" value={`${propertyDetail.hora_inicio}h às ${propertyDetail.hora_fim}h`}/><SummaryLine label="Dias disponíveis" value={(propertyDetail.available_days || []).map(day => ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'][day]).join(', ') || 'Nenhum'}/><SummaryLine label="Comodidades" value={(propertyDetail.amenities || []).join(', ') || 'Nenhuma'}/></dl><div className="space-y-3 text-sm mt-5"><div><b>Descrição</b><p className="whitespace-pre-wrap break-words text-gray-600">{propertyDetail.description || 'Não informada'}</p></div><div><b>Regras</b><p className="whitespace-pre-wrap break-words text-gray-600">{propertyDetail.rules || 'Não informadas'}</p></div><div className="rounded-xl border border-amber-100 bg-amber-50 p-3"><b>Endereço privado · não aparece na busca</b><p className="break-words">{propertyDetail.address || 'Não informado'}{propertyDetail.cep ? ` · CEP ${propertyDetail.cep}` : ''}</p>{propertyDetail.landmark && <p>Ponto de referência: {propertyDetail.landmark}</p>}{propertyDetail.checkin_instructions && <p>Instruções: {propertyDetail.checkin_instructions}</p>}{propertyDetail.map_url && <a href={propertyDetail.map_url} target="_blank" rel="noopener noreferrer" className="text-primary-600 underline">Abrir mapa informado</a>}</div></div><button type="button" onClick={() => setPropertyDetail(null)} className="btn-secondary mt-5 w-full">Voltar à lista para aprovar ou rejeitar</button></div></div>}
     {chatDetail && <div className="fixed inset-0 z-[70] bg-black/50 p-3 sm:p-6 flex items-center justify-center" onClick={() => setChatDetail(null)}><div role="dialog" aria-modal="true" aria-label="Histórico da conversa" className="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-5 sm:p-6" onClick={event => event.stopPropagation()}><div className="flex items-start justify-between gap-3"><div><h2 className="text-xl font-extrabold">Conversa da reserva</h2><p className="text-xs text-gray-500 break-all">{chatDetail.booking.id}</p></div><button onClick={() => setChatDetail(null)} className="text-sm font-semibold text-primary-600">Fechar</button></div><div className="grid sm:grid-cols-3 gap-2 my-4 text-xs">{chatDetail.acceptances.map(item => <p key={item.user_id} className="bg-blue-50 rounded-lg p-2">{item.role === 'host' ? 'Anfitrião' : 'Cliente'} aceitou em {new Date(item.accepted_at).toLocaleString('pt-BR')}</p>)}</div><h3 className="font-bold text-sm mb-2">Mensagens</h3><div className="space-y-2 max-h-72 overflow-y-auto bg-slate-50 rounded-xl p-3">{chatDetail.messages.map(message => <p key={message.id} className="bg-white rounded-lg p-2 text-sm break-words"><b>{usersById.get(message.sender_id)?.name || 'Participante'}:</b> {message.content}<span className="block text-[10px] text-gray-400 mt-1">{new Date(message.created_at).toLocaleString('pt-BR')}</span></p>)}{!chatDetail.messages.length && <p className="text-sm text-gray-500">Nenhuma mensagem enviada.</p>}</div>{chatDetail.hasMore && <p className="text-xs text-amber-700 mt-2">Exibindo as 500 mensagens mais recentes.</p>}<h3 className="font-bold text-sm mt-5 mb-2">Denúncias ({chatDetail.reports.length})</h3>{chatDetail.reports.map(item => <p key={item.id} className="text-sm bg-amber-50 rounded-lg p-2 mb-1 break-words">{item.reason} · {usersById.get(item.reporter_id)?.name || 'Participante'}</p>)}<h3 className="font-bold text-sm mt-5 mb-2">Tentativas bloqueadas ({chatDetail.moderation.length})</h3>{chatDetail.moderation.map(item => <p key={item.id} className="text-sm bg-red-50 rounded-lg p-2 mb-1 break-words"><b>{item.kind}:</b> {item.content}</p>)}</div></div>}
     <dialog ref={dialog} onCancel={() => { if (!acting) setPendingAction(null) }} onClose={() => setPendingAction(null)} className="date-dialog"><form onSubmit={submitAction} className="p-6"><h2 className="font-bold text-xl">{LABEL[pendingAction?.action]}</h2><p className="text-gray-500 text-sm mt-2 break-words">{pendingAction?.name}</p><label className="text-sm font-semibold block mt-5" htmlFor="admin-reason">Motivo da ação</label><textarea id="admin-reason" className="input-field mt-2" rows={3} minLength={5} maxLength={1000} required value={reason} onChange={e => setReason(e.target.value)} placeholder="Descreva o que foi verificado..."/><p className="text-xs text-gray-400 mt-2">A ação e o motivo ficarão registrados na auditoria.</p><div className="flex gap-3 mt-5"><button type="button" disabled={acting} className="btn-secondary flex-1" onClick={() => dialog.current.close()}>Cancelar</button><button disabled={acting || reason.trim().length < 5} className="btn-primary flex-1">{acting ? 'Salvando...' : 'Confirmar'}</button></div></form></dialog>
   </div></div>

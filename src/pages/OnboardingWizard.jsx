@@ -8,7 +8,7 @@ import CityField from '../components/common/CityField'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { buildPublicPropertyTitle, containsExternalContact } from '../lib/propertySafety'
-import { PRESENCE_OPTIONS, presenceLabel } from '../lib/presence'
+import { clearPropertyDraft, loadPropertyDraft, savePropertyDraft } from '../lib/propertyDraft'
 
 const TYPES = [
   { id: 'pool', label: 'Piscina' }, { id: 'chacara', label: 'Chácara' },
@@ -44,33 +44,36 @@ export default function OnboardingWizard() {
   const [newAmenity, setNewAmenity] = useState('')
   const [form, setForm] = useState(DEFAULT_FORM)
   const [draftStatus, setDraftStatus] = useState('')
-  const draftKey = user?.id ? `poolday:property-draft:v1:${user.id}` : null
+  const draftKey = user?.id || null
   const publicTitle = buildPublicPropertyTitle({ ...form, amenities })
 
   useEffect(() => {
     if (!draftKey || restored.current) return
     restored.current = true
     try {
-      const saved = JSON.parse(localStorage.getItem(draftKey) || 'null')
-      if (saved?.version === 1) {
+      const saved = loadPropertyDraft(localStorage, draftKey)
+      if (saved) {
         setForm(previous => ({ ...previous, ...saved.form, type: TYPES.some(type => type.id === saved.form?.type) ? saved.form.type : 'pool' }))
         setImages(Array.isArray(saved.images) ? saved.images : [])
         setAmenities(Array.isArray(saved.amenities) ? saved.amenities : [])
         setAvailableDays(Array.isArray(saved.availableDays) ? saved.availableDays : [0, 1, 2, 3, 4, 5, 6])
         setStep(Math.min(Number(saved.step) || 0, STEPS.length - 1))
-        setDraftStatus('Rascunho recuperado')
+        setDraftStatus('Rascunho recuperado neste aparelho')
       }
-    } catch { localStorage.removeItem(draftKey) }
+    } catch { setDraftStatus('Não foi possível recuperar o rascunho') }
   }, [draftKey])
 
   useEffect(() => {
     if (!draftKey || !restored.current) return
+    if (!step && !form.city && !form.neighborhood && !form.address && !form.price_per_day && !form.max_capacity && !images.length && !amenities.length) return
     const timer = setTimeout(() => {
-      localStorage.setItem(draftKey, JSON.stringify({ version: 1, form, images, amenities, availableDays, step }))
-      setDraftStatus('Salvo automaticamente')
+      setDraftStatus(savePropertyDraft(localStorage, draftKey, { form, images, amenities, availableDays, step })
+        ? 'Rascunho salvo neste aparelho' : 'Não foi possível salvar o rascunho')
     }, 350)
     return () => clearTimeout(timer)
   }, [availableDays, amenities, draftKey, form, images, step])
+
+  useEffect(() => { window.scrollTo({ top: 0, behavior: 'auto' }) }, [step])
 
   function update(field, value) { setForm(previous => ({ ...previous, [field]: value })) }
 
@@ -137,7 +140,7 @@ export default function OnboardingWizard() {
       }
       const { error } = await supabase.from('properties').insert(payload)
       if (error) throw error
-      if (draftKey) localStorage.removeItem(draftKey)
+      if (draftKey) clearPropertyDraft(localStorage, draftKey)
       toast.success('Espaço enviado para análise!')
       navigate('/anfitriao')
     } catch (error) {
@@ -150,7 +153,7 @@ export default function OnboardingWizard() {
       <div className="max-w-3xl mx-auto px-4 py-6 sm:py-10">
         <div className="flex items-center justify-between gap-3 mb-5">
           <button onClick={() => step === 0 ? navigate('/anfitriao') : goBack()} className="flex items-center gap-1.5 text-sm font-semibold text-gray-500 hover:text-gray-800"><ChevronLeft size={19}/>Voltar</button>
-          {draftStatus ? <span className="text-xs text-gray-400">{draftStatus}</span> : null}
+          {draftStatus ? <span role="status" className="text-xs text-gray-400 text-right">{draftStatus}</span> : null}
         </div>
         <div className="flex gap-2 mb-3" aria-label={`Passo ${step + 1} de ${STEPS.length}`}>
           {STEPS.map((item, index) => <div key={item[0]} className={`h-2 flex-1 rounded-full ${index <= step ? 'bg-primary-500' : 'bg-gray-200'}`}/>)}
@@ -186,14 +189,13 @@ function SpaceStep({ form, update, setForm, title }) {
 
 function ScheduleStep({ form, update, availableDays, toggleDay }) {
   return <div className="space-y-4">
-    <div className="card p-5 sm:p-7 space-y-5"><div className="grid sm:grid-cols-2 gap-4"><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Valor da diária *</label><div className="relative"><span className="absolute left-3 top-3 text-gray-400">R$</span><input className="input-field pl-10" type="number" min="30" inputMode="decimal" placeholder="300" value={form.price_per_day} onChange={event => update('price_per_day', event.target.value)}/></div></div><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Capacidade máxima *</label><input className="input-field" type="number" min="1" inputMode="numeric" placeholder="Ex.: 20" value={form.max_capacity} onChange={event => update('max_capacity', event.target.value)}/></div></div>{Number(form.price_per_day) >= 30 ? <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4 text-sm"><div className="flex justify-between gap-3"><span className="text-emerald-800">Nas 3 primeiras reservas</span><b className="text-emerald-700">Você recebe R$ {money(form.price_per_day)}</b></div><p className="text-xs text-emerald-700/80 mt-1">Taxa zero na promoção de lançamento. Depois, a taxa padrão é 15%.</p></div> : null}</div>
-    <div className="card p-5 sm:p-7"><div className="flex items-center gap-2 mb-3"><Clock3 size={19} className="text-primary-500"/><h2 className="font-bold text-gray-800">Dias e horário da diária</h2></div><div className="flex gap-2 flex-wrap">{DAYS.map((day, index) => <button key={day} type="button" onClick={() => toggleDay(index)} className={`min-w-11 px-3 py-2 rounded-xl text-sm font-semibold border-2 ${availableDays.includes(index) ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-400'}`}>{day}</button>)}</div><div className="flex items-center gap-2 flex-wrap mt-5"><span className="text-sm text-gray-500">A diária vai das</span><HourSelect value={form.hora_inicio} onChange={value => update('hora_inicio', value)}/><span className="text-sm text-gray-500">às</span><HourSelect value={form.hora_fim} onChange={value => update('hora_fim', value)}/></div></div>
-    <div className="card p-5 sm:p-7"><h2 className="font-bold text-gray-800">Quem recebe o cliente?</h2><p className="text-sm text-gray-500 mt-1 mb-4">Escolha o padrão do espaço. Você poderá alterar para datas específicas no calendário, antes que alguém reserve.</p><div className="space-y-2">{PRESENCE_OPTIONS.map(option => <label key={option.value} className="flex items-center gap-3 border border-gray-200 rounded-xl p-3 text-sm text-gray-700 cursor-pointer"><input type="radio" name="host_presence" checked={form.host_presence === option.value} onChange={() => update('host_presence', option.value)}/>{option.label}</label>)}</div></div>
+    <div className="card p-5 sm:p-7 space-y-5"><div className="grid sm:grid-cols-2 gap-4"><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Valor da diária *</label><div className="relative"><span className="absolute left-3 top-3 text-gray-400">R$</span><input className="input-field pl-10" type="number" min="30" inputMode="decimal" placeholder="300" value={form.price_per_day} onChange={event => update('price_per_day', event.target.value)}/></div></div><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Capacidade máxima *</label><input className="input-field" type="number" min="1" inputMode="numeric" placeholder="Ex.: 20" value={form.max_capacity} onChange={event => update('max_capacity', event.target.value)}/><p className="text-xs text-gray-500 mt-1">Estime quantas pessoas cabem com conforto no espaço. Não precisa ser um número exato.</p></div></div>{Number(form.price_per_day) >= 30 ? <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4 text-sm"><div className="flex justify-between gap-3"><span className="text-emerald-800">Nas 3 primeiras reservas</span><b className="text-emerald-700">Você recebe R$ {money(form.price_per_day)}</b></div><p className="text-xs text-emerald-700/80 mt-1">Taxa zero na promoção de lançamento. Depois, a taxa padrão é 15%.</p></div> : null}</div>
+    <div className="card p-5 sm:p-7"><div className="flex items-center gap-2 mb-3"><Clock3 size={19} className="text-primary-500"/><h2 className="font-bold text-gray-800">Dias e horário da diária</h2></div><p className="text-xs text-gray-500 mb-3">Dias verdes recebem reservas; dias vermelhos ficam fechados. Toque para mudar.</p><div className="flex gap-2 flex-wrap">{DAYS.map((day, index) => <button key={day} type="button" aria-pressed={availableDays.includes(index)} onClick={() => toggleDay(index)} className={`min-w-11 px-3 py-2 rounded-xl text-sm font-semibold border-2 ${availableDays.includes(index) ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-rose-300 bg-rose-50 text-rose-700'}`}>{day}</button>)}</div><p className="text-xs text-gray-500 mt-5">A diária deve oferecer pelo menos 7 horas. Por exemplo, das 8h às 15h pode; das 8h às 12h não pode.</p><div className="flex items-center gap-2 flex-wrap mt-2"><span className="text-sm text-gray-500">A diária vai das</span><HourSelect ariaLabel="Início da diária" value={form.hora_inicio} onChange={value => { update('hora_inicio', value); if (Number(form.hora_fim) - Number(value) < 7) update('hora_fim', Math.min(23, Number(value) + 7)) }} max={16}/><span className="text-sm text-gray-500">às</span><HourSelect ariaLabel="Fim da diária" value={form.hora_fim} onChange={value => update('hora_fim', value)} min={Number(form.hora_inicio) + 7}/></div></div>
   </div>
 }
 
-function HourSelect({ value, onChange }) {
-  return <select value={value} onChange={event => onChange(event.target.value)} className="input-field w-auto py-2">{Array.from({ length: 24 }, (_, hour) => <option key={hour} value={hour}>{String(hour).padStart(2, '0')}h</option>)}</select>
+function HourSelect({ value, onChange, min = 0, max = 23, ariaLabel }) {
+  return <select aria-label={ariaLabel} value={value} onChange={event => onChange(event.target.value)} className="input-field w-auto py-2">{Array.from({ length: 24 }, (_, hour) => hour).filter(hour => hour >= min && hour <= max).map(hour => <option key={hour} value={hour}>{String(hour).padStart(2, '0')}h</option>)}</select>
 }
 
 function MediaStep({ images, setImages, uploading, uploadImage, chooseCover, amenities, toggleAmenity, newAmenity, setNewAmenity, addCustomAmenity }) {
@@ -205,9 +207,9 @@ function MediaStep({ images, setImages, uploading, uploadImage, chooseCover, ame
 
 function ReviewStep({ form, update, title, images, amenities }) {
   return <div className="space-y-4">
-    <div className="card p-5 sm:p-7 space-y-5"><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Descrição pública *</label><textarea className="input-field resize-y min-h-32" placeholder="Conte como é o espaço e o que torna a experiência especial." value={form.description} onChange={event => update('description', event.target.value)}/><p className="text-xs text-gray-500 mt-1">Pode ser uma frase simples. Não inclua telefone ou redes sociais.</p></div><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Regras <span className="font-normal text-gray-400">(opcional)</span></label><textarea className="input-field resize-y min-h-24" placeholder="Ex.: não é permitido som alto após as 22h." value={form.rules} onChange={event => update('rules', event.target.value)}/></div></div>
+    <div className="card p-5 sm:p-7 space-y-5"><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Descrição pública <span className="font-normal text-gray-400">(opcional)</span></label><textarea className="input-field resize-y min-h-32" placeholder="Conte como é o espaço e o que torna a experiência especial." value={form.description} onChange={event => update('description', event.target.value)}/><p className="text-xs text-gray-500 mt-1">Pode ser uma frase simples. Não inclua telefone ou redes sociais.</p></div><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Regras <span className="font-normal text-gray-400">(opcional)</span></label><textarea className="input-field resize-y min-h-24" placeholder="Ex.: não é permitido som alto após as 22h." value={form.rules} onChange={event => update('rules', event.target.value)}/></div></div>
     <div className="card p-5 sm:p-7"><ArrivalFields form={form} update={update}/></div>
-    <div className="card p-5 sm:p-7"><h2 className="font-bold text-gray-800 mb-3">Confira seu anúncio</h2><div className="rounded-xl bg-primary-50 p-4 mb-4"><p className="text-xs font-bold uppercase text-primary-600">Título público</p><p className="font-bold text-gray-900 mt-1">{title}</p></div><dl className="grid sm:grid-cols-2 gap-3 text-sm"><Summary label="Local aproximado" value={[form.neighborhood, form.city, form.state].filter(Boolean).join(', ')}/><Summary label="Diária" value={`R$ ${money(form.price_per_day)}`}/><Summary label="Horário" value={`${String(form.hora_inicio).padStart(2, '0')}h às ${String(form.hora_fim).padStart(2, '0')}h`}/><Summary label="Recepção" value={presenceLabel(form.host_presence)}/><Summary label="Conteúdo" value={`${images.length} foto(s) · ${amenities.length} item(ns)`}/></dl><div className="flex items-start gap-2 text-xs text-gray-500 border-t mt-4 pt-4"><ShieldCheck size={17} className="text-primary-500 shrink-0"/><p>O anúncio será revisado. Foto ou texto com contato, marca, QR Code ou instrução para reservar por fora será recusado.</p></div></div>
+    <div className="card p-5 sm:p-7"><h2 className="font-bold text-gray-800 mb-3">Confira seu anúncio</h2><div className="rounded-xl bg-primary-50 p-4 mb-4"><p className="text-xs font-bold uppercase text-primary-600">Título público</p><p className="font-bold text-gray-900 mt-1">{title}</p></div><dl className="grid sm:grid-cols-2 gap-3 text-sm"><Summary label="Local aproximado" value={[form.neighborhood, form.city, form.state].filter(Boolean).join(', ')}/><Summary label="Diária" value={`R$ ${money(form.price_per_day)}`}/><Summary label="Horário" value={`${String(form.hora_inicio).padStart(2, '0')}h às ${String(form.hora_fim).padStart(2, '0')}h`}/><Summary label="Conteúdo" value={`${images.length} ${images.length === 1 ? 'foto' : 'fotos'} · ${amenities.length} ${amenities.length === 1 ? 'comodidade' : 'comodidades'}`}/></dl><div className="flex items-start gap-2 text-xs text-gray-500 border-t mt-4 pt-4"><ShieldCheck size={17} className="text-primary-500 shrink-0"/><p>O anúncio será revisado. Foto ou texto com contato, marca, QR Code ou instrução para reservar por fora será recusado.</p></div></div>
   </div>
 }
 
