@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { Plus, LayoutDashboard, CreditCard, Calendar, Eye, Edit, Trash2, CheckCircle, XCircle, Clock, Link2, ShieldCheck, MessageCircle } from 'lucide-react'
+import { Plus, LayoutDashboard, CreditCard, Calendar, Eye, Edit, Trash2, CheckCircle, XCircle, Clock, Link2, ShieldCheck, MessageCircle, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { formatDateBR } from '../lib/formatDate'
 
@@ -25,6 +25,7 @@ export default function HostDashboard() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [tab, setTab] = useState(() => searchParams.get('tab') === 'pagamentos' ? 'pagamentos' : 'dashboard')
   const handledMpReturn = useRef(false)
+  const propertiesRequest = useRef(0)
   const [properties, setProperties] = useState([])
   const [bookings, setBookings] = useState([])
   const [stats, setStats] = useState({ total: 0, confirmed: 0, pending: 0, revenue: 0, pendingRevenue: 0 })
@@ -38,6 +39,21 @@ export default function HostDashboard() {
   useEffect(() => {
     if (user) { fetchProperties(); fetchBookings() }
   }, [user])
+
+  useEffect(() => {
+    if (!user?.id || typeof window === 'undefined') return
+    const refresh = () => {
+      if (document.visibilityState === 'hidden') return
+      fetchProperties()
+      fetchBookings()
+    }
+    window.addEventListener('focus', refresh)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      window.removeEventListener('focus', refresh)
+      document.removeEventListener('visibilitychange', refresh)
+    }
+  }, [user?.id])
 
   useEffect(() => {
     const hasResult = searchParams.has('mp_connected') || searchParams.has('mp_error')
@@ -72,9 +88,11 @@ export default function HostDashboard() {
   }, [searchParams, setSearchParams, user?.id, fetchProfile])
 
   async function fetchProperties() {
+    const request = ++propertiesRequest.current
     const { data, error } = await supabase.from('properties').select('*').eq('host_id', user.id).order('created_at', { ascending: false })
+    if (request !== propertiesRequest.current) return
     if (error) toast.error('Não foi possível carregar seus espaços.')
-    setProperties(data || [])
+    else setProperties(data || [])
     setLoading(false)
   }
 
@@ -245,7 +263,7 @@ export default function HostDashboard() {
 
             {/* Minhas piscinas */}
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
-              <h2 className="font-bold text-gray-800 mb-4">Meus Espaços</h2>
+              <div className="flex items-center justify-between gap-3 mb-4"><h2 className="font-bold text-gray-800">Meus Espaços</h2><button type="button" onClick={fetchProperties} className="inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-700"><RefreshCw size={14}/>Atualizar espaços</button></div>
               {loading ? <p className="text-gray-400 text-sm">Carregando...</p> : properties.length === 0 ? (
                 <div className="text-center py-8">
                   <p className="text-gray-400 mb-3">Nenhum espaço cadastrado ainda.</p>
