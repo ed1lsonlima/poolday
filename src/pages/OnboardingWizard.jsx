@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Camera, Check, ChevronLeft, ChevronRight, Clock3, MapPin, Plus, ShieldCheck, Upload, X } from 'lucide-react'
+import { Camera, Check, ChevronLeft, ChevronRight, Clock3, Plus, ShieldCheck, Upload, X } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ArrivalFields from '../components/common/ArrivalFields'
+import { propertyStepError, propertyFormError } from '../lib/propertyValidation'
 import CityField from '../components/common/CityField'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { buildPublicPropertyTitle, containsExternalContact, isTrustedMapLink } from '../lib/propertySafety'
+import { buildPublicPropertyTitle, containsExternalContact } from '../lib/propertySafety'
 import { PRESENCE_OPTIONS, presenceLabel } from '../lib/presence'
 
 const TYPES = [
@@ -73,16 +75,8 @@ export default function OnboardingWizard() {
   function update(field, value) { setForm(previous => ({ ...previous, [field]: value })) }
 
   function validateStep() {
-    if (step === 0 && (!form.city || !form.state)) { toast.error('Selecione a cidade e o estado.'); return false }
-    if (step === 1 && Number(form.price_per_day) < 30) { toast.error('A diária mínima é R$ 30.'); return false }
-    if (step === 1 && Number(form.max_capacity) < 1) { toast.error('Informe a capacidade máxima.'); return false }
-    if (step === 1 && !availableDays.length) { toast.error('Escolha pelo menos um dia disponível.'); return false }
-    if (step === 1 && Number(form.hora_inicio) >= Number(form.hora_fim)) { toast.error('O horário final precisa ser depois do inicial.'); return false }
-    if (step === 2 && !images.length) { toast.error('Adicione pelo menos uma foto.'); return false }
-    if (step === 3 && form.description.trim().length < 40) { toast.error('Escreva uma descrição com pelo menos 40 caracteres.'); return false }
-    if (step === 3 && [form.description, form.rules, ...amenities].some(containsExternalContact)) { toast.error('Retire telefone, @, rede social ou link dos campos públicos.'); return false }
-    if (step === 3 && (!form.address.trim() || !form.landmark.trim() || form.checkin_instructions.trim().length < 15)) { toast.error('Preencha endereço, ponto de referência e instruções de chegada.'); return false }
-    if (step === 3 && !isTrustedMapLink(form.map_url.trim())) { toast.error('Use um link válido do Google Maps ou Waze.'); return false }
+    const error = propertyStepError(step, { form, images, amenities, availableDays })
+    if (error) { toast.error(error); return false }
     return true
   }
 
@@ -130,7 +124,8 @@ export default function OnboardingWizard() {
   }
 
   async function handlePublish() {
-    if (!validateStep()) return
+    const invalid = propertyFormError({ form, images, amenities, availableDays })
+    if (invalid) { setStep(invalid.step); toast.error(invalid.message); return }
     setLoading(true)
     try {
       const { municipality_code: _municipalityCode, ...propertyForm } = form
@@ -204,20 +199,16 @@ function HourSelect({ value, onChange }) {
 function MediaStep({ images, setImages, uploading, uploadImage, chooseCover, amenities, toggleAmenity, newAmenity, setNewAmenity, addCustomAmenity }) {
   return <div className="space-y-4">
     <div className="card p-5 sm:p-7"><div className="flex items-center gap-2 mb-2"><Camera size={20} className="text-primary-500"/><h2 className="font-bold text-gray-800">Fotos do espaço *</h2></div><div className="rounded-xl border border-amber-200 bg-amber-50 p-3 mb-4 text-xs text-amber-900 leading-relaxed"><b>Importante:</b> não envie fotos nem vídeos com o nome comercial do espaço, placa, telefone, WhatsApp, @ de rede social, QR Code, link ou marca-d’água. Esse conteúdo não será aprovado.</div><div className="grid sm:grid-cols-3 gap-2 text-xs text-gray-500 mb-4"><span>✓ Use boa iluminação</span><span>✓ Mostre a área inteira</span><span>✓ Recomendamos 3 ou mais fotos</span></div><div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{images.map((image, index) => <div key={image} className="relative aspect-square rounded-xl overflow-hidden bg-gray-100"><img src={image} alt={`Foto ${index + 1} do espaço`} className="w-full h-full object-cover"/><button type="button" onClick={() => setImages(previous => previous.filter((_, itemIndex) => itemIndex !== index))} aria-label="Remover foto" className="absolute top-2 right-2 bg-white rounded-full p-1 shadow"><X size={15} className="text-red-500"/></button>{index === 0 ? <span className="absolute bottom-2 left-2 bg-black/65 text-white text-xs px-2 py-1 rounded-full">Capa</span> : <button type="button" onClick={() => chooseCover(index)} className="absolute bottom-2 left-2 bg-white/95 text-gray-700 text-[11px] font-semibold px-2 py-1 rounded-full shadow">Usar como capa</button>}</div>)}{images.length < 10 ? <label className="aspect-square rounded-xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center cursor-pointer hover:border-primary-400 hover:bg-primary-50">{uploading ? <div className="animate-spin w-6 h-6 border-2 border-primary-500 border-t-transparent rounded-full"/> : <><Upload size={22} className="text-gray-400 mb-1"/><span className="text-xs font-semibold text-gray-500">Adicionar foto</span></>}<input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={event => uploadImage(event.target.files?.[0])} disabled={uploading}/></label> : null}</div></div>
-    <div className="card p-5 sm:p-7"><h2 className="font-bold text-gray-800 mb-3">O que está incluído?</h2><div className="flex flex-wrap gap-2 mb-4">{AMENITIES.map(item => <button key={item} type="button" onClick={() => toggleAmenity(item)} className={`px-3 py-2 rounded-full text-sm border-2 ${amenities.includes(item) ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-600'}`}>{amenities.includes(item) ? '✓ ' : ''}{item}</button>)}</div><div className="flex gap-2"><input className="input-field flex-1" placeholder="Outra comodidade" value={newAmenity} onChange={event => setNewAmenity(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addCustomAmenity() } }}/><button type="button" onClick={addCustomAmenity} aria-label="Adicionar comodidade" className="bg-primary-500 text-white px-4 rounded-xl"><Plus size={17}/></button></div></div>
+    <div className="card p-5 sm:p-7"><h2 className="font-bold text-gray-800 mb-3">O que está incluído?</h2><div className="flex flex-wrap gap-2 mb-4">{[...AMENITIES, ...amenities.filter(item => !AMENITIES.includes(item))].map(item => <button key={item} type="button" onClick={() => toggleAmenity(item)} className={`px-3 py-2 rounded-full text-sm border-2 ${amenities.includes(item) ? 'border-primary-500 bg-primary-50 text-primary-700' : 'border-gray-200 text-gray-600'}`}>{amenities.includes(item) ? '✓ ' : ''}{item}</button>)}</div><div className="flex gap-2"><input className="input-field flex-1" placeholder="Outra comodidade" value={newAmenity} onChange={event => setNewAmenity(event.target.value)} onKeyDown={event => { if (event.key === 'Enter') { event.preventDefault(); addCustomAmenity() } }}/><button type="button" onClick={addCustomAmenity} aria-label="Adicionar comodidade" className="bg-primary-500 text-white px-4 rounded-xl"><Plus size={17}/></button></div></div>
   </div>
 }
 
 function ReviewStep({ form, update, title, images, amenities }) {
   return <div className="space-y-4">
-    <div className="card p-5 sm:p-7 space-y-5"><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Descrição pública *</label><textarea className="input-field resize-y min-h-32" maxLength={1200} placeholder="Conte como é o espaço e o que torna a experiência especial." value={form.description} onChange={event => update('description', event.target.value)}/><div className="flex justify-between text-xs mt-1"><span className={form.description.trim().length >= 40 ? 'text-emerald-600' : 'text-gray-400'}>{form.description.trim().length >= 40 ? 'Descrição pronta ✓' : 'Mínimo de 40 caracteres'}</span><span className="text-gray-400">{form.description.length}/1200</span></div></div><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Regras <span className="font-normal text-gray-400">(opcional)</span></label><textarea className="input-field resize-y min-h-24" maxLength={700} placeholder="Ex.: não é permitido som alto após as 22h." value={form.rules} onChange={event => update('rules', event.target.value)}/></div></div>
-    <div className="card p-5 sm:p-7 space-y-4"><div className="flex items-start gap-3"><MapPin size={21} className="text-primary-500 shrink-0 mt-0.5"/><div><h2 className="font-bold text-gray-900">Como o cliente encontra o local</h2><p className="text-xs text-gray-500 mt-1">Essas informações são privadas e só aparecem depois que o pagamento for confirmado. Cadastre detalhes claros, principalmente para sítios e locais afastados.</p></div></div><div className="grid sm:grid-cols-[1fr_140px] gap-3"><PrivateField label="Endereço completo *" value={form.address} onChange={value => update('address', value)} placeholder="Rua/estrada, número e complemento"/><PrivateField label="CEP" value={form.cep} onChange={value => update('cep', value)} placeholder="00000-000"/></div><PrivateField label="Ponto de referência *" value={form.landmark} onChange={value => update('landmark', value)} placeholder="Ex.: portão azul, 500 m depois da igreja"/><PrivateField label="Link do Google Maps ou Waze" value={form.map_url} onChange={value => update('map_url', value)} placeholder="Cole aqui o link da localização exata"/><div><label className="text-xs font-bold text-gray-500 uppercase mb-1 block">Instruções para chegar e entrar *</label><textarea className="input-field resize-y min-h-24" placeholder="Explique a estrada de acesso, entrada correta, portão, interfone e quem recebe o cliente." value={form.checkin_instructions} onChange={event => update('checkin_instructions', event.target.value)}/></div><div className="rounded-xl bg-emerald-50 border border-emerald-100 p-3 text-xs text-emerald-800"><b>Proteção de privacidade:</b> bairro e cidade aparecem no anúncio; endereço, mapa, referência e instruções só são liberados ao cliente com reserva paga.</div></div>
+    <div className="card p-5 sm:p-7 space-y-5"><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Descrição pública *</label><textarea className="input-field resize-y min-h-32" placeholder="Conte como é o espaço e o que torna a experiência especial." value={form.description} onChange={event => update('description', event.target.value)}/><p className="text-xs text-gray-500 mt-1">Pode ser uma frase simples. Não inclua telefone ou redes sociais.</p></div><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Regras <span className="font-normal text-gray-400">(opcional)</span></label><textarea className="input-field resize-y min-h-24" placeholder="Ex.: não é permitido som alto após as 22h." value={form.rules} onChange={event => update('rules', event.target.value)}/></div></div>
+    <div className="card p-5 sm:p-7"><ArrivalFields form={form} update={update}/></div>
     <div className="card p-5 sm:p-7"><h2 className="font-bold text-gray-800 mb-3">Confira seu anúncio</h2><div className="rounded-xl bg-primary-50 p-4 mb-4"><p className="text-xs font-bold uppercase text-primary-600">Título público</p><p className="font-bold text-gray-900 mt-1">{title}</p></div><dl className="grid sm:grid-cols-2 gap-3 text-sm"><Summary label="Local aproximado" value={[form.neighborhood, form.city, form.state].filter(Boolean).join(', ')}/><Summary label="Diária" value={`R$ ${money(form.price_per_day)}`}/><Summary label="Horário" value={`${String(form.hora_inicio).padStart(2, '0')}h às ${String(form.hora_fim).padStart(2, '0')}h`}/><Summary label="Recepção" value={presenceLabel(form.host_presence)}/><Summary label="Conteúdo" value={`${images.length} foto(s) · ${amenities.length} item(ns)`}/></dl><div className="flex items-start gap-2 text-xs text-gray-500 border-t mt-4 pt-4"><ShieldCheck size={17} className="text-primary-500 shrink-0"/><p>O anúncio será revisado. Foto ou texto com contato, marca, QR Code ou instrução para reservar por fora será recusado.</p></div></div>
   </div>
-}
-
-function PrivateField({ label, value, onChange, placeholder }) {
-  return <div><label className="text-xs font-bold text-gray-500 uppercase mb-1 block">{label}</label><input className="input-field" value={value} onChange={event => onChange(event.target.value)} placeholder={placeholder}/></div>
 }
 
 function Summary({ label, value }) {

@@ -4,8 +4,10 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 import { Upload, X, Plus, ChevronLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
+import ArrivalFields from '../components/common/ArrivalFields'
+import { propertyFormError } from '../lib/propertyValidation'
 import CityField from '../components/common/CityField'
-import { buildPublicPropertyTitle, containsExternalContact, isTrustedMapLink } from '../lib/propertySafety'
+import { buildPublicPropertyTitle, containsExternalContact } from '../lib/propertySafety'
 import { PRESENCE_OPTIONS } from '../lib/presence'
 
 const TYPES = [
@@ -110,21 +112,8 @@ export default function NewProperty() {
 
   async function handleSubmit(e) {
     e.preventDefault()
-    if (containsExternalContact(form.description || '')) {
-      toast.error('A descrição não pode conter @, redes sociais, links ou telefone. Use o chat do PoolDay após o pagamento da reserva.')
-      return
-    }
-    if (containsExternalContact(form.rules || '')) {
-      toast.error('As regras não podem conter @, redes sociais, links ou telefone.')
-      return
-    }
-    if (amenities.some(containsExternalContact)) { toast.error('As comodidades não podem conter contato ou link.'); return }
-    if (images.length === 0) { toast.error('Adicione pelo menos 1 foto!'); return }
-    if (!form.city || !form.state) { toast.error('Selecione cidade e estado.'); return }
-    if (!form.address.trim() || !form.landmark.trim() || form.checkin_instructions.trim().length < 15) { toast.error('Preencha endereço, ponto de referência e instruções de chegada.'); return }
-    if (!isTrustedMapLink(form.map_url?.trim())) { toast.error('Use um link válido do Google Maps ou Waze.'); return }
-    if (Number(form.price_per_day) < 30) { toast.error('Preço mínimo é R$ 30!'); return }
-    if (Number(form.hora_inicio) >= Number(form.hora_fim)) { toast.error('O horário de término precisa ser depois do início.'); return }
+    const invalid = propertyFormError({ form, images, amenities, availableDays })
+    if (invalid) { toast.error(invalid.message); return }
     setLoading(true)
     try {
       const { municipality_code: _municipalityCode, ...propertyForm } = form
@@ -325,16 +314,7 @@ export default function NewProperty() {
               <label className="text-sm font-medium text-gray-600 mb-1 block">Regras da casa</label>
               <textarea className="input-field resize-none" rows={3} placeholder="Ex: Proibido fumar, sem barulho após 22h..." value={form.rules} onChange={e => setForm({...form, rules: e.target.value})} />
             </div>
-            <div>
-              <h3 className="font-bold text-gray-800 mb-1">Como chegar</h3>
-              <p className="text-xs text-gray-500 mb-3">Esses dados ficam privados e só são liberados depois do pagamento confirmado.</p>
-              <div className="space-y-3">
-                <input className="input-field" placeholder="Endereço completo *" value={form.address} onChange={e => setForm({...form, address: e.target.value})} />
-                <input className="input-field" placeholder="Ponto de referência *" value={form.landmark} onChange={e => setForm({...form, landmark: e.target.value})} />
-                <input className="input-field" placeholder="Link do Google Maps ou Waze" value={form.map_url} onChange={e => setForm({...form, map_url: e.target.value})} />
-                <textarea className="input-field resize-none" rows={3} placeholder="Explique a estrada de acesso, entrada correta, portão e quem recebe o cliente. *" value={form.checkin_instructions} onChange={e => setForm({...form, checkin_instructions: e.target.value})} />
-              </div>
-            </div>
+            <ArrivalFields form={form} update={(field, value) => setForm(previous => ({ ...previous, [field]: value }))}/>
           </div>
 
           <p className="text-sm text-gray-500">{isEditing ? 'Ao salvar, o anúncio volta para análise e fica oculto até a nova aprovação. Reservas já realizadas não são canceladas.' : 'Seu anúncio será analisado pela equipe PoolDay antes de aparecer nas buscas.'}</p>

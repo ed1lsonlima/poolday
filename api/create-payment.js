@@ -2,6 +2,7 @@ import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { createClient } from '@supabase/supabase-js';
 import { requireUser } from './_lib/auth.js';
 import { getValidHostToken } from './_lib/mercadopago.js';
+import { paymentExpiration } from './_lib/paymentExpiry.js';
 
 const SITE_URL = process.env.SITE_URL || 'https://www.pooldaybr.com';
 const supabase = createClient(
@@ -69,6 +70,8 @@ export default async function handler(req, res) {
     if (!paymentData) throw new Error('EMPTY_PAYMENT');
     const totalAmount = Number(paymentData.payment_amount);
     const platformFee = Number(paymentData.platform_fee);
+    const expiresAt = paymentExpiration(paymentData);
+    if (Date.parse(expiresAt) <= Date.now()) return res.status(409).json({ error: 'Prazo de pagamento encerrado.' });
     if (!Number.isFinite(totalAmount) || totalAmount <= 0 || !Number.isFinite(platformFee) || platformFee < 0 || platformFee > totalAmount) throw new Error('INVALID_AMOUNT');
 
     if (paymentData.payment_init_point && new Date(paymentData.payment_expires_at).getTime() > Date.now()) {
@@ -122,7 +125,7 @@ export default async function handler(req, res) {
         statement_descriptor: 'POOLDAY',
         marketplace_fee: platformFee > 0 ? platformFee : undefined,
         expires: true,
-        expiration_date_to: new Date(paymentData.hold_expires_at).toISOString(),
+        expiration_date_to: expiresAt,
       },
     });
     if (!result.id || typeof result.init_point !== 'string' || !result.init_point.startsWith('https://')) throw new Error('INVALID_PREFERENCE');
