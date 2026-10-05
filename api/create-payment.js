@@ -21,13 +21,13 @@ export default async function handler(req, res) {
     const user = await requireUser(req, res, supabase);
     if (!user) return;
 
-    const { bookingId, stage: requestedStage } = req.body || {};
+    const { bookingId, expectedTotal, stage: requestedStage } = req.body || {};
     if (typeof bookingId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bookingId)) return res.status(400).json({ error: 'bookingId válido é obrigatório' });
 
     // 1. Busca a reserva. NUNCA confia em valores vindos do navegador.
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
-      .select('id, host_id, client_id, property_id, status, date, payment_plan, payment_state')
+      .select('id, host_id, client_id, property_id, status, date, payment_plan, payment_state, total_amount')
       .eq('id', bookingId)
       .single();
 
@@ -36,6 +36,9 @@ export default async function handler(req, res) {
     }
     if (booking.client_id !== user.id) {
       return res.status(403).json({ error: 'Você não pode pagar esta reserva.' });
+    }
+    if (!Number.isFinite(Number(expectedTotal)) || Math.round(Number(expectedTotal) * 100) !== Math.round(Number(booking.total_amount) * 100)) {
+      return res.status(409).json({ error: 'O total da reserva mudou. Confira o preço novamente.' });
     }
     if (booking.status !== 'pending') {
       return res.status(400).json({ error: 'Esta reserva não está mais aguardando pagamento.' });
@@ -58,7 +61,7 @@ export default async function handler(req, res) {
     // Calcula valores e reivindica, de forma transacional, uma das 3 reservas
     // promocionais do anfitrião. Repetir a chamada devolve a mesma promoção.
     const stage = requestedStage || (booking.payment_plan === 'full' ? 'full' : booking.payment_state === 'awaiting_first_payment' ? 'deposit' : 'balance');
-    const { data: paymentRows, error: prepareError } = await supabase.rpc('prepare_booking_installment', { p_booking_id: bookingId, p_stage: stage });
+    const { data: paymentRows, error: prepareError } = await supabase.rpc('prepare_booking_installment_v2', { p_booking_id: bookingId, p_stage: stage });
     if (prepareError) {
       if ((prepareError.message || '').includes('RESERVA_INDISPONIVEL')) {
         return res.status(409).json({ error: 'Reserva expirada ou indisponível.' });
@@ -154,3 +157,4 @@ export default async function handler(req, res) {
     res.status(500).json({ error: 'Erro ao processar pagamento' });
   }
 }
+

@@ -152,7 +152,7 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
     setPaymentLoadingId(booking.id)
     try {
       const stage = booking.payment_plan === 'deposit' && booking.payment_state !== 'awaiting_first_payment' ? 'balance' : booking.payment_plan === 'deposit' ? 'deposit' : 'full'
-      const data = await authenticatedRequest('/api/create-payment', { bookingId: booking.id, stage })
+      const data = await authenticatedRequest('/api/create-payment', { bookingId: booking.id, stage, expectedTotal: Number(booking.total_amount) })
       if (!data.init_point) throw new Error('O Mercado Pago não retornou o checkout.')
       window.location.href = data.init_point
     } catch (error) { toast.error(error.message) }
@@ -516,3 +516,4 @@ function QuickLink({ to, icon, title, description }) {
     </Link>
   )
 }
+

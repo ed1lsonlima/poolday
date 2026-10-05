@@ -15,8 +15,8 @@ export default async function handler(req, res) {
     const user = await requireUser(req, res, supabase);
     if (!user) return;
 
-    const { propertyId, date } = req.body || {};
-    if (typeof propertyId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId) || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T12:00:00Z`)) || new Date(`${date}T12:00:00Z`).toISOString().slice(0, 10) !== date) {
+    const { propertyId, date, expectedTotal } = req.body || {};
+    if (typeof propertyId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId) || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T12:00:00Z`)) || new Date(`${date}T12:00:00Z`).toISOString().slice(0, 10) !== date || !Number.isFinite(Number(expectedTotal)) || Number(expectedTotal) <= 0) {
       return res.status(400).json({ error: 'Espaço e data são obrigatórios.' });
     }
 
@@ -24,16 +24,18 @@ export default async function handler(req, res) {
     if (profileError) throw profileError;
     if (profile.suspended) return res.status(403).json({ error: 'Sua conta está em análise. Entre em contato com o suporte.' });
 
-    const { data, error } = await supabase.rpc('create_booking_hold', {
+    const { data, error } = await supabase.rpc('create_booking_hold_v2', {
       p_property_id: propertyId,
       p_client_id: user.id,
       p_date: date,
       p_guests: null,
+      p_expected_total: Number(expectedTotal),
     });
 
     if (error) {
       const message = error.message || '';
       if (message.includes('DATA_INDISPONIVEL')) return res.status(409).json({ error: 'data_indisponivel', message: 'Essa data acabou de ser reservada. Escolha outra.' });
+      if (message.includes('PRECO_ALTERADO')) return res.status(409).json({ error: 'preco_alterado', message: 'O preço mudou. Confira o novo total antes de reservar.' });
       if (message.includes('ESPACO_INDISPONIVEL')) return res.status(400).json({ error: 'espaco_indisponivel', message: 'Este espaço não está disponível.' });
       throw error;
     }
@@ -41,7 +43,7 @@ export default async function handler(req, res) {
     const booking = Array.isArray(data) ? data[0] : data;
     if (!booking?.booking_id) throw new Error('EMPTY_BOOKING');
     const { data: details, error: detailsError } = await supabase.from('bookings')
-      .select('payment_plan,first_payment_amount,balance_amount,balance_due_at')
+      .select('payment_plan,first_payment_amount,balance_amount,balance_due_at,total_amount,guest_service_fee,promotion_applied')
       .eq('id', booking.booking_id).single();
     if (detailsError) throw detailsError;
     return res.status(200).json({
@@ -51,9 +53,13 @@ export default async function handler(req, res) {
       dueNow: details.first_payment_amount,
       remaining: details.balance_amount,
       balanceDueAt: details.balance_due_at,
+      totalAmount: details.total_amount,
+      guestServiceFee: details.guest_service_fee,
+      promotionApplied: details.promotion_applied,
     });
   } catch (error) {
     console.error('Erro ao criar reserva temporária:', error.code || error.message);
     return res.status(500).json({ error: 'Erro ao iniciar a reserva.' });
   }
 }
+

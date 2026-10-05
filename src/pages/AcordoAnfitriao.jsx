@@ -9,7 +9,7 @@ export default function AcordoAnfitriao() {
       <p>O Anfitrião declara ter autorização legal para alugar o espaço anunciado (seja como proprietário ou responsável autorizado) e se compromete a manter as informações do anúncio — fotos, preço, capacidade, comodidades e regras — sempre atualizadas e verdadeiras.</p>
 
       <h2>2. Taxa de serviço</h2>
-      <p>O PoolDay cobra uma taxa de serviço de 15% sobre cada valor efetivamente recebido ou retido conforme a política de cancelamento. Nas 3 primeiras reservas promocionais, a taxa PoolDay é de 0%. Reservas antecipadas podem ser pagas em duas partes, e reservas próximas da data são pagas integralmente. Processamento, disponibilidade e reembolsos seguem também os prazos e condições do Mercado Pago conectado no painel.</p>
+      <p>O PoolDay cobra do Anfitrião uma taxa de serviço de 15% sobre a diária anunciada nas reservas após a promoção, proporcional aos pagamentos efetivamente recebidos ou retidos conforme a política de cancelamento. Nas 3 primeiras reservas promocionais, a taxa PoolDay descontada da diária do Anfitrião é de 0%; pode haver uma taxa de serviço adicional cobrada do Hóspede, sempre informada antes do pagamento. Reservas antecipadas podem ser pagas em duas partes, e reservas próximas da data são pagas integralmente. Tarifas de processamento, disponibilidade e reembolsos seguem também os prazos e condições do Mercado Pago conectado no painel.</p>
 
       <h2>3. Disponibilidade</h2>
       <p>O Anfitrião é responsável por manter seu calendário atualizado, bloqueando datas em que o espaço não estiver disponível, para evitar reservas duplicadas ou conflitos.</p>
@@ -31,3 +31,4 @@ export default function AcordoAnfitriao() {
     </LegalLayout>
   )
 }
+

@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import ArrivalFields from '../components/common/ArrivalFields'
 import { propertyFormError } from '../lib/propertyValidation'
 import CityField from '../components/common/CityField'
+import HostPriceField from '../components/common/HostPriceField'
 import { buildPublicPropertyTitle, containsExternalContact } from '../lib/propertySafety'
 
 const TYPES = [
@@ -14,14 +15,6 @@ const TYPES = [
 ]
 const AMENITIES = ['Piscina','Wi-Fi','Estacionamento','Spa','Toalhas','Drinks','Vista mar','Jardim','Deck','Churrasqueira','Área gourmet','Som ambiente','Projetor','Câmeras de segurança']
 const DAYS = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb']
-// Taxa que o PoolDay retém sobre cada reserva. Um só lugar pra mexer no dia
-// que mudar (ex: promo de lançamento a 12%). Reflete no cálculo do líquido.
-const TAXA_POOLDAY = 0.15
-
-function formatBRL(valor) {
-  return valor.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-}
-
 export default function NewProperty() {
   const { user } = useAuth()
   const { id } = useParams()
@@ -168,11 +161,7 @@ export default function NewProperty() {
               <p className="font-bold text-gray-900 mt-1">{buildPublicPropertyTitle({ ...form, amenities })}</p>
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium text-gray-600 mb-1 block">Preço por diária (R$) *</label>
-                <input className="input-field" type="number" min="30" placeholder="Mín. R$ 30" value={form.price_per_day} onChange={e => setForm({...form, price_per_day: e.target.value})} required />
-                <p className="text-xs text-gray-400 mt-1">É o valor que o cliente vê e paga.</p>
-              </div>
+              <HostPriceField value={form.price_per_day} onChange={value => setForm(previous => ({ ...previous, price_per_day: value }))} />
               <div>
                 <label className="text-sm font-medium text-gray-600 mb-1 block">Capacidade máx. *</label>
                 <input className="input-field" type="number" min="1" placeholder="Ex: 20" value={form.max_capacity} onChange={e => setForm({...form, max_capacity: e.target.value})} required />
@@ -180,30 +169,6 @@ export default function NewProperty() {
               </div>
             </div>
 
-            {/* Demonstrativo de quanto o anfitrião recebe (taxa transparente).
-                Só aparece quando há um preço válido digitado. */}
-            {Number(form.price_per_day) >= 30 && (() => {
-              const preco = Number(form.price_per_day)
-              const taxa = preco * TAXA_POOLDAY
-              const liquido = preco - taxa
-              return (
-                <div className="bg-primary-50 border border-primary-100 rounded-xl p-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600">Cliente paga</span>
-                    <span className="font-medium text-gray-800">R$ {formatBRL(preco)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm mt-1.5">
-                    <span className="text-green-700 font-medium">Nas 3 primeiras reservas</span>
-                    <span className="font-semibold text-green-700">Taxa zero</span>
-                  </div>
-                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-primary-100">
-                    <span className="font-semibold text-gray-700">Você recebe nas 3 primeiras</span>
-                    <span className="font-bold text-primary-600 text-lg">R$ {formatBRL(preco)}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">A partir da 4ª reserva, a taxa é de {Math.round(TAXA_POOLDAY * 100)}% (R$ {formatBRL(taxa)}) e você recebe R$ {formatBRL(liquido)}. O cliente sempre paga o preço anunciado acima.</p>
-                </div>
-              )
-            })()}
           </div>
 
           {/* Fotos */}
@@ -327,3 +292,4 @@ export default function NewProperty() {
     </div>
   )
 }
+

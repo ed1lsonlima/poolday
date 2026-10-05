@@ -24,6 +24,8 @@ export default function PropertyDetail() {
   const [bookingLoading, setBookingLoading] = useState(false)
   const [isFav, setIsFav] = useState(false)
   const [unavailableDates, setUnavailableDates] = useState(new Set())
+  const [quote, setQuote] = useState(null)
+  const [quoteLoading, setQuoteLoading] = useState(false)
   const [lightbox, setLightbox] = useState(false)
   const propertyRequest = useRef(0)
 
@@ -35,6 +37,26 @@ export default function PropertyDetail() {
   }, [id])
   useEffect(() => { if (user && property) checkFavorite() }, [user, property])
   useEffect(() => { if (property) fetchUnavailable() }, [property])
+  useEffect(() => {
+    if (!property) { setQuote(null); return }
+    const controller = new AbortController()
+    setQuote(null)
+    setQuoteLoading(true)
+    fetch(`/api/booking-quote?propertyId=${encodeURIComponent(property.id)}`, { signal: controller.signal })
+      .then(async response => {
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || 'Não foi possível consultar o preço.')
+        const holdKey = user ? `poolday:hold:${user.id}:${property.id}:${selectedDate}` : null
+        let saved = null
+        try { if (holdKey) saved = JSON.parse(sessionStorage.getItem(holdKey) || 'null') } catch { /* ignora rascunho inválido */ }
+        if (saved?.totalAmount && Date.parse(saved.holdExpiresAt) > Date.now()) {
+          setQuote({ listedPrice: saved.listedPrice, guestServiceFee: saved.guestServiceFee, totalAmount: saved.totalAmount })
+        } else setQuote(data)
+      })
+      .catch(error => { if (error.name !== 'AbortError') toast.error(error.message) })
+      .finally(() => { if (!controller.signal.aborted) setQuoteLoading(false) })
+    return () => controller.abort()
+  }, [property?.id, selectedDate, user?.id])
   useEffect(() => {
     if (!lightbox) return
     const onKey = e => { if (e.key === 'Escape') setLightbox(false) }
@@ -98,7 +120,7 @@ export default function PropertyDetail() {
   async function handleBooking() {
     if (!user) { toast.error('Faça login para reservar!'); navigate('/entrar'); return }
     if (!selectedDate) { toast.error('Selecione uma data!'); return }
-    if (!selectedPresence) { toast.error('Aguarde a confirmação de quem receberá você nesta data.'); return }
+    if (!quote || quoteLoading) { toast.error('Aguarde o cálculo do valor total.'); return }
 
     const weekday = new Date(selectedDate + 'T00:00:00').getDay()
     if (property.available_days?.length && !property.available_days.includes(weekday)) {
@@ -115,25 +137,25 @@ export default function PropertyDetail() {
       const holdKey = `poolday:hold:${user.id}:${property.id}:${selectedDate}`
       let savedHold = null
       try { savedHold = JSON.parse(sessionStorage.getItem(holdKey) || 'null') } catch { sessionStorage.removeItem(holdKey) }
-      let bookingId = savedHold?.bookingId && new Date(savedHold.holdExpiresAt).getTime() > Date.now() ? savedHold.bookingId : null
+      let bookingId = savedHold?.bookingId && new Date(savedHold.holdExpiresAt).getTime() > Date.now() && Math.round(Number(savedHold.totalAmount) * 100) === Math.round(Number(quote.totalAmount) * 100) ? savedHold.bookingId : null
 
       if (!bookingId) {
         const bookingRes = await fetch('/api/create-booking', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-          body: JSON.stringify({ propertyId: property.id, date: selectedDate }),
+          body: JSON.stringify({ propertyId: property.id, date: selectedDate, expectedTotal: quote.totalAmount }),
         })
         const bookingData = await bookingRes.json()
         if (!bookingRes.ok || !bookingData.bookingId) throw new Error(bookingData.message || bookingData.error || 'Não foi possível reservar esta data.')
         bookingId = bookingData.bookingId
-        sessionStorage.setItem(holdKey, JSON.stringify({ bookingId, holdExpiresAt: bookingData.holdExpiresAt }))
+        sessionStorage.setItem(holdKey, JSON.stringify({ bookingId, holdExpiresAt: bookingData.holdExpiresAt, totalAmount: Number(bookingData.totalAmount), listedPrice: Number(quote.listedPrice), guestServiceFee: Number(bookingData.guestServiceFee) }))
       }
 
       // O valor final é recalculado NO SERVIDOR a partir do preço real do espaço.
       const res = await fetch('/api/create-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
-        body: JSON.stringify({ bookingId }),
+        body: JSON.stringify({ bookingId, expectedTotal: quote.totalAmount }),
       })
       const data = await res.json()
       if (data.init_point) {
@@ -165,8 +187,9 @@ export default function PropertyDetail() {
 
   if (!property) return null
   const images = property.images?.length ? property.images : ['https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?w=800&q=80']
-  const totalAmount = Number(property.price_per_day || property.price_per_hour || 0)
-  const paymentSummary = selectedDate ? paymentPlanForDate(selectedDate, totalAmount) : null
+  const listedPrice = Number(quote?.listedPrice ?? property.price_per_day ?? property.price_per_hour ?? 0)
+  const totalAmount = quote ? Number(quote.totalAmount) : listedPrice
+  const paymentSummary = selectedDate && quote ? paymentPlanForDate(selectedDate, totalAmount) : null
   const avgRating = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0
 
   return (
@@ -319,9 +342,10 @@ export default function PropertyDetail() {
           <div className="lg:w-96 shrink-0">
             <div className="sticky top-20 border-2 border-gray-100 rounded-3xl p-6 shadow-xl">
               <div className="flex items-baseline gap-2 mb-1">
-                <span className="text-2xl font-bold text-gray-800">R$ {totalAmount.toLocaleString('pt-BR')}</span>
+                <span className="text-2xl font-bold text-gray-800">R$ {listedPrice.toLocaleString('pt-BR')}</span>
                 <span className="text-gray-500">/diária</span>
               </div>
+              {quote?.guestServiceFee > 0 && <p className="text-xs text-gray-600 mb-2">Nesta reserva, o total inclui R$ {Number(quote.guestServiceFee).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} de taxa de serviço PoolDay, detalhada antes do pagamento.</p>}
               <div className="mb-4" />
 
               <div className="space-y-3 mb-4">
@@ -329,7 +353,7 @@ export default function PropertyDetail() {
                   <label className="text-xs font-semibold text-gray-500 uppercase mb-2 block">Escolha a data</label>
                   <BookingCalendar
                     value={selectedDate}
-                    onChange={value => { setSelectedPresence(null); setSelectedDate(value) }}
+                    onChange={setSelectedDate}
                     availableWeekdays={property.available_days}
                     unavailableDates={unavailableDates}
                   />
@@ -346,14 +370,15 @@ export default function PropertyDetail() {
                 </div>
               )}
 
-              <button onClick={handleBooking} disabled={bookingLoading || !selectedDate || !selectedPresence} className="btn-primary w-full text-center mb-3 disabled:opacity-60">
-                {bookingLoading ? 'Processando...' : paymentSummary?.paymentPlan === 'deposit' ? `Reservar pagando R$ ${paymentSummary.dueNow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Reservar e pagar o total'}
+              <button onClick={handleBooking} disabled={bookingLoading || quoteLoading || !quote || !selectedDate} className="btn-primary w-full text-center mb-3 disabled:opacity-60">
+                {bookingLoading ? 'Processando...' : quoteLoading ? 'Calculando total...' : paymentSummary?.paymentPlan === 'deposit' ? `Reservar pagando R$ ${paymentSummary.dueNow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Reservar e pagar o total'}
               </button>
 
               {selectedDate && (
                 <div className="text-sm text-gray-600 space-y-1.5 pt-3 border-t">
-                  <div className="flex justify-between"><span>R$ {totalAmount.toLocaleString('pt-BR')} x 1 diária</span><span>R$ {totalAmount.toLocaleString('pt-BR')}</span></div>
-                  <div className="flex justify-between font-bold text-gray-800 pt-1 border-t"><span>Total</span><span>R$ {totalAmount.toLocaleString('pt-BR')}</span></div>
+                  <div className="flex justify-between"><span>1 diária</span><span>R$ {listedPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
+                  {quote?.guestServiceFee > 0 && <div className="flex justify-between"><span>Taxa de serviço PoolDay</span><span>R$ {Number(quote.guestServiceFee).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>}
+                  <div className="flex justify-between font-bold text-gray-800 pt-1 border-t"><span>Total a pagar</span><span>{quote ? `R$ ${totalAmount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Calculando...'}</span></div>
                   {paymentSummary?.paymentPlan === 'deposit' ? (
                     <div className="rounded-xl bg-primary-50 border border-primary-100 p-3 mt-3 space-y-1 text-xs">
                       <div className="flex justify-between font-bold text-primary-800"><span>Entrada agora (50%)</span><span>R$ {paymentSummary.dueNow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
@@ -385,8 +410,8 @@ export default function PropertyDetail() {
 
       {/* Bottom bar mobile */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex items-center justify-between lg:hidden z-40">
-        <div><span className="font-bold text-gray-800 text-lg">R$ {totalAmount.toLocaleString('pt-BR')}</span><span className="text-gray-500 text-sm">/diária</span></div>
-        <button onClick={handleBooking} disabled={bookingLoading || !selectedDate || !selectedPresence} className="btn-primary px-8 py-3 text-sm disabled:opacity-60">
+        <div><span className="font-bold text-gray-800 text-lg">R$ {totalAmount.toLocaleString('pt-BR')}</span><span className="text-gray-500 text-sm">{quote ? ' total' : '/diária'}</span></div>
+        <button onClick={handleBooking} disabled={bookingLoading || quoteLoading || !quote || !selectedDate} className="btn-primary px-8 py-3 text-sm disabled:opacity-60">
           {bookingLoading ? 'Aguarde...' : paymentSummary?.paymentPlan === 'deposit' ? 'Pagar 50%' : 'Reservar'}
         </button>
       </div>
@@ -413,3 +438,4 @@ export default function PropertyDetail() {
     </div>
   )
 }
+

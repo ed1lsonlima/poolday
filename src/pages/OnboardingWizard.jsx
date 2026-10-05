@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import ArrivalFields from '../components/common/ArrivalFields'
 import { propertyStepError, propertyFormError } from '../lib/propertyValidation'
 import CityField from '../components/common/CityField'
+import HostPriceField from '../components/common/HostPriceField'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { buildPublicPropertyTitle, containsExternalContact } from '../lib/propertySafety'
@@ -189,7 +190,7 @@ function SpaceStep({ form, update, setForm, title }) {
 
 function ScheduleStep({ form, update, availableDays, toggleDay }) {
   return <div className="space-y-4">
-    <div className="card p-5 sm:p-7 space-y-5"><div className="grid sm:grid-cols-2 gap-4"><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Valor da diária *</label><div className="relative"><span className="absolute left-3 top-3 text-gray-400">R$</span><input className="input-field pl-10" type="number" min="30" inputMode="decimal" placeholder="300" value={form.price_per_day} onChange={event => update('price_per_day', event.target.value)}/></div></div><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Capacidade máxima *</label><input className="input-field" type="number" min="1" inputMode="numeric" placeholder="Ex.: 20" value={form.max_capacity} onChange={event => update('max_capacity', event.target.value)}/><p className="text-xs text-gray-500 mt-1">Estime quantas pessoas cabem com conforto no espaço. Não precisa ser um número exato.</p></div></div>{Number(form.price_per_day) >= 30 ? <div className="rounded-2xl bg-emerald-50 border border-emerald-100 p-4 text-sm"><div className="flex justify-between gap-3"><span className="text-emerald-800">Nas 3 primeiras reservas</span><b className="text-emerald-700">Você recebe R$ {money(form.price_per_day)}</b></div><p className="text-xs text-emerald-700/80 mt-1">Taxa zero na promoção de lançamento. Depois, a taxa padrão é 15%.</p></div> : null}</div>
+    <div className="card p-5 sm:p-7 space-y-5"><div className="grid sm:grid-cols-2 gap-4"><HostPriceField value={form.price_per_day} onChange={value => update('price_per_day', value)}/><div><label className="text-sm font-semibold text-gray-700 mb-1.5 block">Capacidade máxima *</label><input className="input-field" type="number" min="1" inputMode="numeric" placeholder="Ex.: 20" value={form.max_capacity} onChange={event => update('max_capacity', event.target.value)}/><p className="text-xs text-gray-500 mt-1">Estime quantas pessoas cabem com conforto no espaço. Não precisa ser um número exato.</p></div></div></div>
     <div className="card p-5 sm:p-7"><div className="flex items-center gap-2 mb-3"><Clock3 size={19} className="text-primary-500"/><h2 className="font-bold text-gray-800">Dias e horário da diária</h2></div><p className="text-xs text-gray-500 mb-3">Dias verdes recebem reservas; dias vermelhos ficam fechados. Toque para mudar.</p><div className="flex gap-2 flex-wrap">{DAYS.map((day, index) => <button key={day} type="button" aria-pressed={availableDays.includes(index)} onClick={() => toggleDay(index)} className={`min-w-11 px-3 py-2 rounded-xl text-sm font-semibold border-2 ${availableDays.includes(index) ? 'border-emerald-500 bg-emerald-50 text-emerald-800' : 'border-rose-300 bg-rose-50 text-rose-700'}`}>{day}</button>)}</div><p className="text-xs text-gray-500 mt-5">A diária deve oferecer pelo menos 7 horas. Por exemplo, das 8h às 15h pode; das 8h às 12h não pode.</p><div className="flex items-center gap-2 flex-wrap mt-2"><span className="text-sm text-gray-500">A diária vai das</span><HourSelect ariaLabel="Início da diária" value={form.hora_inicio} onChange={value => { update('hora_inicio', value); if (Number(form.hora_fim) - Number(value) < 7) update('hora_fim', Math.min(23, Number(value) + 7)) }} max={16}/><span className="text-sm text-gray-500">às</span><HourSelect ariaLabel="Fim da diária" value={form.hora_fim} onChange={value => update('hora_fim', value)} min={Number(form.hora_inicio) + 7}/></div></div>
   </div>
 }
@@ -216,3 +217,4 @@ function ReviewStep({ form, update, title, images, amenities }) {
 function Summary({ label, value }) {
   return <div><dt className="text-gray-400">{label}</dt><dd className="font-semibold text-gray-700">{value}</dd></div>
 }
+
