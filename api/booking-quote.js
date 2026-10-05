@@ -10,7 +10,7 @@ export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'private, no-store');
   if (req.method !== 'GET') return res.status(405).json({ error: 'Método não permitido' });
   const propertyId = req.query?.propertyId;
-  if (typeof propertyId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId)) {
+  if (typeof propertyId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId)) {
     return res.status(400).json({ error: 'Espaço inválido.' });
   }
   try {

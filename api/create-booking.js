@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     if (!user) return;
 
     const { propertyId, date, expectedTotal } = req.body || {};
-    if (typeof propertyId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId) || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T12:00:00Z`)) || new Date(`${date}T12:00:00Z`).toISOString().slice(0, 10) !== date || !Number.isFinite(Number(expectedTotal)) || Number(expectedTotal) <= 0) {
+    if (typeof propertyId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(propertyId) || typeof date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(date) || Number.isNaN(Date.parse(`${date}T12:00:00Z`)) || new Date(`${date}T12:00:00Z`).toISOString().slice(0, 10) !== date || !Number.isFinite(Number(expectedTotal)) || Number(expectedTotal) <= 0) {
       return res.status(400).json({ error: 'Espaço e data são obrigatórios.' });
     }
 
