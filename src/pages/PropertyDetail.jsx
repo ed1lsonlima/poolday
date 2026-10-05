@@ -385,9 +385,9 @@ export default function PropertyDetail() {
                       <div className="flex justify-between text-primary-700"><span>Saldo vence 72h antes</span><span>R$ {paymentSummary.remaining.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></div>
                       <p className="text-primary-600 pt-1">O prazo final para regularizar é 48h antes da diária.</p>
                     </div>
-                  ) : (
+                  ) : paymentSummary ? (
                     <p className="rounded-xl bg-amber-50 border border-amber-100 p-3 mt-3 text-xs text-amber-800">Como faltam 7 dias ou menos, o pagamento é integral para confirmar a diária.</p>
-                  )}
+                  ) : <p className="text-xs text-gray-500">Calculando condições de pagamento...</p>}
                   <p className="text-[11px] text-gray-500 leading-relaxed pt-2">Antes de cancelar, você verá o valor exato do reembolso. Cancelamentos gratuitos devolvem 100%; fora do período gratuito pode haver retenção de 25% ou 50%, conforme a proximidade da diária.</p>
                   <Link to="/cancelamento" className="inline-block text-[11px] font-semibold text-primary-600 hover:underline">Ver política de cancelamento</Link>
                 </div>
