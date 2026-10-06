@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { requireUser } from './_lib/auth.js';
 import { getValidHostToken } from './_lib/mercadopago.js';
 import { paymentExpiration } from './_lib/paymentExpiry.js';
+import { resolvePaymentReturnOrigin } from './_lib/paymentReturnOrigin.js';
 
 const SITE_URL = process.env.SITE_URL || 'https://www.pooldaybr.com';
 const supabase = createClient(
@@ -97,6 +98,7 @@ export default async function handler(req, res) {
     }
 
     const hostAccessToken = await getValidHostToken(supabase, creds);
+    const returnOrigin = resolvePaymentReturnOrigin(req, SITE_URL);
 
     // 5. Cria a preferência com o token do ANFITRIÃO: o dinheiro cai na conta dele
     //    e o marketplace_fee (15%) é retido automaticamente pela plataforma.
@@ -115,9 +117,9 @@ export default async function handler(req, res) {
         }],
         payer: user.email ? { email: user.email } : undefined,
         back_urls: {
-          success: `${SITE_URL}/reservas?pagamento=sucesso&etapa=${stage}`,
-          failure: `${SITE_URL}/espaco/${property.id}?pagamento=falhou`,
-          pending: `${SITE_URL}/reservas?pagamento=pendente&etapa=${stage}`,
+          success: `${returnOrigin}/reservas?pagamento=sucesso&etapa=${stage}`,
+          failure: `${returnOrigin}/espaco/${property.id}?pagamento=falhou`,
+          pending: `${returnOrigin}/reservas?pagamento=pendente&etapa=${stage}`,
         },
         external_reference: booking.id,
         metadata: { booking_id: booking.id, payment_stage: stage },
