@@ -85,11 +85,11 @@ function ProtectedRoute({ children, hostOnly = false }) {
   return children
 }
 
-function Layout({ children, noFooter = false }) {
+function Layout({ children, noFooter = false, fullHeight = false }) {
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className={`flex flex-col ${fullHeight ? 'h-[100dvh] overflow-hidden' : 'min-h-screen'}`}>
       <Header />
-      <main className="flex-1">{children}</main>
+      <main className="flex-1 min-h-0">{children}</main>
       {!noFooter && <Footer />}
     </div>
   )
@@ -131,7 +131,7 @@ export default function App() {
           <Route path="/perfil" element={<ProtectedRoute><Layout><ClientProfile /></Layout></ProtectedRoute>} />
           <Route path="/configuracoes" element={<ProtectedRoute><Layout><Configuracoes /></Layout></ProtectedRoute>} />
           <Route path="/reservas" element={<ProtectedRoute><Layout><ClientProfile tab="reservas" /></Layout></ProtectedRoute>} />
-          <Route path="/reserva/:id/chat" element={<ProtectedRoute><Layout><BookingChat /></Layout></ProtectedRoute>} />
+          <Route path="/reserva/:id/chat" element={<ProtectedRoute><Layout noFooter fullHeight><BookingChat /></Layout></ProtectedRoute>} />
           <Route path="/favoritos" element={<ProtectedRoute><Layout><ClientProfile tab="favoritos" /></Layout></ProtectedRoute>} />
           <Route path="/anfitriao" element={<ProtectedRoute hostOnly><Layout><HostDashboard /></Layout></ProtectedRoute>} />
           <Route path="/anfitriao/boas-vindas" element={<ProtectedRoute hostOnly><Layout><HostWelcome /></Layout></ProtectedRoute>} />
