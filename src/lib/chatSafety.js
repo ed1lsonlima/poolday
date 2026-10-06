@@ -29,13 +29,53 @@ export function bookingChatWritable(booking) {
     && !booking?.cancelled_at
 }
 
+const DIGIT_WORDS = { zero: '0', um: '1', uma: '1', dois: '2', duas: '2', tres: '3', quatro: '4', cinco: '5', seis: '6', sete: '7', oito: '8', nove: '9' }
+const NUMBER_WORD = /\b(?:zero|um|uma|dois|duas|tres|quatro|cinco|seis|sete|oito|nove)\b/g
+
+function normalizeContactText(value) {
+  return String(value || '').normalize('NFKC').normalize('NFD').replace(/[\p{M}\p{Cf}]/gu, '').toLowerCase()
+}
+
+function replaceDigitWords(text) {
+  return text.replace(NUMBER_WORD, word => DIGIT_WORDS[word])
+}
+
+function numericFragment(value) {
+  const text = replaceDigitWords(normalizeContactText(value)).trim()
+  if (!/^\d[\d\s\p{P}\p{S}]*$/u.test(text)) return null
+  const digits = text.replace(/\D/g, '')
+  return digits.length > 0 && digits.length < 8 ? digits : null
+}
+
+export function fragmentedContactReason(content, recentContents = []) {
+  let digits = numericFragment(content)
+  if (!digits) return null
+  for (const previous of recentContents) {
+    const fragment = numericFragment(previous)
+    if (!fragment) break
+    digits = fragment + digits
+    if (digits.length >= 8 && digits.length <= 14) return 'telefone fragmentado'
+    if (digits.length > 14) break
+  }
+  return null
+}
+
+export function mayBeContactFragment(value) {
+  return numericFragment(value) !== null
+}
+
 export function externalContactReason(value) {
-  const text = String(value || '').normalize('NFKC')
-  const plain = text.toLowerCase()
-  if (/(?:https?:\/\/|www\.|wa\.me\/|t\.me\/|bit\.ly\/|linktr\.ee\/|instagram\.com|facebook\.com|tiktok\.com)/i.test(text)) return 'links'
-  if (/[\w.+-]+\s*@\s*[\w.-]+\.[a-z]{2,}/i.test(text) || /@[a-z][\w.]{2,}/i.test(text)) return 'redes sociais ou e-mail'
-  if (/(?:\+?55[\s().-]*)?(?:\(?\d{2}\)?[\s().-]*)?9?\d{4}[\s().-]*\d{4}\b/.test(text)) return 'telefone'
-  if (/\b(?:whats(?:app)?|insta(?:gram)?|telegram|direct|me chama|chama no|pagar por fora|pix por fora|sem taxa|fora do (?:site|app|poolday))\b/i.test(plain)) return 'contato externo'
+  const plain = normalizeContactText(value)
+  const compact = plain.replace(/[^a-z0-9]+/g, '')
+  const brandText = compact.replace(/4/g, 'a').replace(/3/g, 'e').replace(/1/g, 'i').replace(/0/g, 'o').replace(/5/g, 's')
+  if (/(?:https?:\/\/|www\s*[.]|\b(?:wa|t|bit|linktr)\s*[.]\s*(?:me|ly|ee)\b|\b[a-z0-9-]+\s*[.]\s*(?:com|net|org|br)\b|\bponto\s+(?:com|net|org|br)\b)/u.test(plain) || /(?:https?|www|wame|bitly|linktree)/.test(compact)) return 'links'
+  if (/@\s*[a-z][\w.]{2,}/u.test(plain) || /\barroba\b/u.test(plain) || /(?:gmail|hotmail|outlook|yahoo)/.test(compact)) return 'redes sociais ou e-mail'
+  const withoutDates = replaceDigitWords(plain).replace(/\b(?:0?[1-9]|[12]\d|3[01])[\/.-](?:0?[1-9]|1[0-2])[\/.-](?:20)?\d{2}\b/g, ' ')
+  for (const match of withoutDates.matchAll(/\d(?:[\d\s\p{P}\p{S}]*|[a-z](?=\d))*\d/gu)) {
+    const digits = match[0].replace(/\D/g, '')
+    if (digits.length >= 8 && digits.length <= 14) return 'telefone'
+  }
+  if (/\b(?:whats?(?:app)?|zap(?:zap)?|insta(?:gram)?|telegram|tiktok|tik\s*tok|facebook|direct|me chama|chama no|me liga|meu numero|meu celular|ddd|chave pix|pagar por fora|pix por fora|sem taxa|fora do (?:site|app|poolday))\b/u.test(plain) || /(?:whatsapp|zapzap|instagram|telegram|tiktok|facebook)/.test(brandText)) return 'contato externo'
   return null
 }
 

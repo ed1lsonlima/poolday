@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { requireUser } from './_lib/auth.js'
-import { CHAT_NOTICE_VERSION, bookingChatWritable, externalContactReason } from '../src/lib/chatSafety.js'
+import { CHAT_NOTICE_VERSION, bookingChatWritable, externalContactReason, fragmentedContactReason, mayBeContactFragment } from '../src/lib/chatSafety.js'
 
 const db = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -34,7 +34,7 @@ export default async function handler(req, res) {
       if (!hasAccepted) return res.status(200).json({ role, accepted: false, canWrite, bookingDate: booking.date, messages: [], noticeVersion: CHAT_NOTICE_VERSION })
       const before = req.query?.before
       if (before && Number.isNaN(Date.parse(before))) return sendError(res, 400, 'Página inválida.')
-      let query = db.from('messages').select('id,sender_id,content,created_at,read')
+      let query = db.from('messages').select('id,sender_id,content,created_at,edited_at,deleted_at,read')
         .eq('booking_id', bookingId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(50)
       if (before) query = query.lt('created_at', before)
       const { data: messages, error } = await query
@@ -62,12 +62,59 @@ export default async function handler(req, res) {
       await db.from('admin_events').insert({ kind: 'chat_report', severity: 'review', title: 'Conversa denunciada', detail: reason.slice(0, 200), entity_id: bookingId })
       return res.status(200).json({ reported: true })
     }
+    if (action === 'edit' || action === 'delete') {
+      const messageId = req.body?.messageId
+      if (!uuid.test(messageId || '')) return sendError(res, 400, 'Mensagem inválida.')
+      const { data: original, error: messageError } = await db.from('messages')
+        .select('id,sender_id,content,created_at,deleted_at').eq('id', messageId)
+        .eq('booking_id', bookingId).eq('sender_id', user.id).maybeSingle()
+      if (messageError) throw messageError
+      if (!original || original.deleted_at) return sendError(res, 404, 'Mensagem não encontrada.')
+      if (action === 'edit' && !canWrite) return sendError(res, 403, 'Esta conversa está disponível apenas para consulta.')
+      const content = action === 'edit' ? String(req.body?.content || '').trim() : 'Mensagem excluída'
+      if (action === 'edit' && (!content || content.length > 1000)) return sendError(res, 400, 'Escreva uma mensagem de até 1000 caracteres.')
+      if (action === 'edit' && content === original.content) return res.status(200).json({ unchanged: true })
+      let blockedReason = action === 'edit' ? externalContactReason(content) : null
+      if (!blockedReason && action === 'edit' && mayBeContactFragment(content)) {
+        const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+        const { data: recent, error: recentError } = await db.from('messages').select('content')
+          .eq('booking_id', bookingId).eq('sender_id', user.id).neq('id', messageId)
+          .is('deleted_at', null).gte('created_at', since).order('created_at', { ascending: false }).limit(20)
+        if (recentError) throw recentError
+        blockedReason = fragmentedContactReason(content, (recent || []).map(message => message.content))
+      }
+      if (blockedReason) {
+        await db.from('booking_chat_moderation_events').insert({ booking_id: bookingId, sender_id: user.id, kind: blockedReason, content })
+        await db.from('admin_events').insert({ kind: 'chat_contact', severity: 'review', title: 'Possível contato externo em edição', detail: `Motivo: ${blockedReason}`, entity_id: bookingId })
+        return sendError(res, 422, 'A mensagem parece conter contato externo. Retire telefone, rede social, link ou convite para negociar por fora.')
+      }
+      const changedAt = new Date().toISOString()
+      const { error: auditError } = await db.from('booking_chat_message_audit').insert({ booking_id: bookingId, message_id: messageId, actor_id: user.id, action, old_content: original.content, new_content: action === 'edit' ? content : null })
+      if (auditError) throw auditError
+      const { data: changed, error: changeError } = await db.from('messages').update(action === 'edit'
+        ? { content, edited_at: changedAt }
+        : { content, deleted_at: changedAt })
+        .eq('id', messageId).eq('booking_id', bookingId).eq('sender_id', user.id)
+        .eq('content', original.content).is('deleted_at', null)
+        .select('id,sender_id,content,created_at,edited_at,deleted_at,read').maybeSingle()
+      if (changeError) throw changeError
+      if (!changed) return sendError(res, 409, 'A mensagem mudou. Atualize a conversa e tente novamente.')
+      return res.status(200).json({ message: changed })
+    }
     if (action !== 'send') return sendError(res, 400, 'Ação inválida.')
     if (!canWrite) return sendError(res, 403, 'Esta conversa está disponível apenas para consulta.')
     const content = String(req.body?.content || '').trim()
     if (!content || content.length > 1000) return sendError(res, 400, 'Escreva uma mensagem de até 1000 caracteres.')
     const urgent = req.body?.urgent === true && booking.date === new Date().toLocaleDateString('sv-SE', { timeZone: 'America/Maceio' })
-    const blockedReason = externalContactReason(content)
+    let blockedReason = externalContactReason(content)
+    if (!blockedReason && mayBeContactFragment(content)) {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
+      const { data: recent, error: recentError } = await db.from('messages').select('content')
+        .eq('booking_id', bookingId).eq('sender_id', user.id).is('deleted_at', null).gte('created_at', since)
+        .order('created_at', { ascending: false }).limit(20)
+      if (recentError) throw recentError
+      blockedReason = fragmentedContactReason(content, (recent || []).map(message => message.content))
+    }
     if (blockedReason) {
       await db.from('booking_chat_moderation_events').insert({ booking_id: bookingId, sender_id: user.id, kind: blockedReason, content })
       await db.from('admin_events').insert({ kind: 'chat_contact', severity: 'review', title: 'Possível contato externo no chat', detail: `Motivo: ${blockedReason}`, entity_id: bookingId })
@@ -78,7 +125,7 @@ export default async function handler(req, res) {
       .eq('booking_id', bookingId).eq('sender_id', user.id).gte('created_at', minuteAgo)
     if (limitError) throw limitError
     if (count >= 10) return sendError(res, 429, 'Aguarde um minuto antes de enviar mais mensagens.')
-    const { data: message, error } = await db.from('messages').insert({ booking_id: bookingId, sender_id: user.id, receiver_id: partnerId, content }).select('id,sender_id,content,created_at,read').single()
+    const { data: message, error } = await db.from('messages').insert({ booking_id: bookingId, sender_id: user.id, receiver_id: partnerId, content }).select('id,sender_id,content,created_at,edited_at,deleted_at,read').single()
     if (error) throw error
     await db.from('notifications').insert({ event_key: `chat:${message.id}`, user_id: partnerId, booking_id: bookingId, kind: urgent ? 'chat_urgent' : 'chat', title: urgent ? 'Ajuda urgente na reserva de hoje' : 'Nova mensagem sobre sua reserva', message: 'Abra a conversa no PoolDay para responder.', action_url: `/reserva/${bookingId}/chat` })
     return res.status(200).json({ message })
