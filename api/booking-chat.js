@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { requireUser } from './_lib/auth.js'
 import { CHAT_NOTICE_VERSION, bookingChatWritable, externalContactReason, fragmentedContactReason, mayBeContactFragment } from '../src/lib/chatSafety.js'
+import { shouldNotifyChatRecipient } from '../src/lib/chatNotifications.js'
 
 const db = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -34,15 +35,28 @@ export default async function handler(req, res) {
       if (!hasAccepted) return res.status(200).json({ role, accepted: false, canWrite, bookingDate: booking.date, messages: [], noticeVersion: CHAT_NOTICE_VERSION })
       const before = req.query?.before
       if (before && Number.isNaN(Date.parse(before))) return sendError(res, 400, 'Página inválida.')
-      let query = db.from('messages').select('id,sender_id,content,created_at,edited_at,deleted_at,read')
+      let query = db.from('messages').select('id,sender_id,content,created_at,edited_at,deleted_at,read,reply_to_id')
         .eq('booking_id', bookingId).order('created_at', { ascending: false }).order('id', { ascending: false }).limit(50)
       if (before) query = query.lt('created_at', before)
       const { data: messages, error } = await query
       if (error) throw error
+      const replyIds = [...new Set((messages || []).map(message => message.reply_to_id).filter(Boolean))]
+      let replies = []
+      if (replyIds.length) {
+        const { data, error: replyError } = await db.from('messages')
+          .select('id,sender_id,content,deleted_at').eq('booking_id', bookingId).in('id', replyIds)
+        if (replyError) throw replyError
+        replies = data || []
+      }
+      const replyById = new Map(replies.map(reply => [reply.id, reply]))
       if (messages?.some(message => message.sender_id === partnerId && !message.read)) {
         await db.from('messages').update({ read: true }).eq('booking_id', bookingId).eq('receiver_id', user.id).eq('read', false)
       }
-      return res.status(200).json({ role, accepted: true, canWrite, bookingDate: booking.date, messages: (messages || []).reverse(), hasMore: messages?.length === 50, noticeVersion: CHAT_NOTICE_VERSION })
+      await db.from('notifications').update({ read_at: new Date().toISOString() })
+        .eq('user_id', user.id).eq('booking_id', bookingId).in('kind', ['chat', 'chat_urgent']).is('read_at', null)
+      return res.status(200).json({ role, accepted: true, canWrite, bookingDate: booking.date,
+        messages: (messages || []).reverse().map(message => ({ ...message, reply: replyById.get(message.reply_to_id) || null })),
+        hasMore: messages?.length === 50, noticeVersion: CHAT_NOTICE_VERSION })
     }
 
     const action = req.body?.action
@@ -125,9 +139,17 @@ export default async function handler(req, res) {
       .eq('booking_id', bookingId).eq('sender_id', user.id).gte('created_at', minuteAgo)
     if (limitError) throw limitError
     if (count >= 10) return sendError(res, 429, 'Aguarde um minuto antes de enviar mais mensagens.')
-    const { data: message, error } = await db.from('messages').insert({ booking_id: bookingId, sender_id: user.id, receiver_id: partnerId, content }).select('id,sender_id,content,created_at,edited_at,deleted_at,read').single()
+    const replyToId = req.body?.replyToId || null
+    if (replyToId) {
+      if (!uuid.test(replyToId)) return sendError(res, 400, 'Mensagem original inválida.')
+      const { data: parent, error: parentError } = await db.from('messages').select('id,deleted_at')
+        .eq('id', replyToId).eq('booking_id', bookingId).maybeSingle()
+      if (parentError) throw parentError
+      if (!parent || parent.deleted_at) return sendError(res, 400, 'A mensagem original não está mais disponível.')
+    }
+    const { data: message, error } = await db.from('messages').insert({ booking_id: bookingId, sender_id: user.id, receiver_id: partnerId, content, reply_to_id: replyToId }).select('id,sender_id,content,created_at,edited_at,deleted_at,read,reply_to_id').single()
     if (error) throw error
-    await db.from('notifications').insert({ event_key: `chat:${message.id}`, user_id: partnerId, booking_id: bookingId, kind: urgent ? 'chat_urgent' : 'chat', title: urgent ? 'Ajuda urgente na reserva de hoje' : 'Nova mensagem sobre sua reserva', message: 'Abra a conversa no PoolDay para responder.', action_url: `/reserva/${bookingId}/chat` })
+    if (shouldNotifyChatRecipient(user.id, partnerId)) await db.from('notifications').insert({ event_key: `chat:${message.id}`, user_id: partnerId, booking_id: bookingId, kind: urgent ? 'chat_urgent' : 'chat', title: urgent ? 'Ajuda urgente na reserva de hoje' : 'Nova mensagem sobre sua reserva', message: 'Abra a conversa no PoolDay para responder.', action_url: `/reserva/${bookingId}/chat` })
     return res.status(200).json({ message })
   } catch (error) {
     console.error('Booking chat:', error.code || error.message)

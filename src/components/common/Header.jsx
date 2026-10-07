@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
+import { isNoticeForOpenChat } from '../../lib/chatNotifications'
 import { Menu, X, Waves, User, CalendarDays, Heart, Settings, LogOut, LayoutDashboard, Bell, BellOff, House, MessageCircle } from 'lucide-react'
 
 async function playNoticeSound() {
@@ -31,7 +32,8 @@ export default function Header() {
   const [notifs, setNotifs] = useState([])
   const [unseen, setUnseen] = useState(0)
   const [popupNotification, setPopupNotification] = useState(null)
-  const latestNotifiedId = useRef(null)
+  const seenNoticeIds = useRef(new Set())
+  const noticesInitialized = useRef(false)
   const { user, profile, signOut, isAdmin } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -40,8 +42,11 @@ export default function Header() {
   const messageNotificationsEnabled = profile?.notification_preferences?.in_app_messages !== false
   const notificationsEnabled = bookingNotificationsEnabled || messageNotificationsEnabled
 
+  useEffect(() => { seenNoticeIds.current.clear(); noticesInitialized.current = false }, [user?.id])
+  useEffect(() => { if (isNoticeForOpenChat(popupNotification, pathname)) setPopupNotification(null) }, [pathname, popupNotification])
+
   useEffect(() => {
-    if (!user || !notificationsEnabled) { setNotifs([]); setUnseen(0); setPopupNotification(null); latestNotifiedId.current = null; return }
+    if (!user || !notificationsEnabled) { setNotifs([]); setUnseen(0); setPopupNotification(null); return }
     fetchNotifs()
     const interval = setInterval(fetchNotifs, 15000)
     const onFocus = () => fetchNotifs()
@@ -50,25 +55,27 @@ export default function Header() {
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` }, fetchNotifs)
       .subscribe()
     return () => { clearInterval(interval); window.removeEventListener('focus', onFocus); supabase.removeChannel(channel) }
-  }, [user?.id, bookingNotificationsEnabled, messageNotificationsEnabled])
+  }, [user?.id, bookingNotificationsEnabled, messageNotificationsEnabled, pathname])
 
   async function fetchNotifs() {
     const { data, error } = await supabase
       .from('notifications')
-      .select('id,title,message,kind,action_url,read_at,created_at')
+      .select('id,title,message,kind,booking_id,action_url,read_at,created_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20)
     if (error) return
     const visible = (data || []).filter(item => item.kind?.startsWith('chat') ? messageNotificationsEnabled : bookingNotificationsEnabled)
-    setNotifs(visible)
-    setUnseen(visible.filter(item => !item.read_at).length)
-    const latest = visible.find(item => !item.read_at)
-    if (latest && latest.id !== latestNotifiedId.current) {
-      const isRecent = Date.now() - new Date(latest.created_at).getTime() < 5 * 60 * 1000
-      if (latestNotifiedId.current || isRecent) { setPopupNotification(latest); playNoticeSound() }
-      latestNotifiedId.current = latest.id
+    const fresh = visible.find(item => !item.read_at && !seenNoticeIds.current.has(item.id) && !isNoticeForOpenChat(item, pathname))
+    for (const item of visible) seenNoticeIds.current.add(item.id)
+    const displayed = visible.map(item => isNoticeForOpenChat(item, pathname) ? { ...item, read_at: item.read_at || new Date().toISOString() } : item)
+    setNotifs(displayed)
+    setUnseen(displayed.filter(item => !item.read_at).length)
+    if (fresh && (noticesInitialized.current || Date.now() - new Date(fresh.created_at).getTime() < 5 * 60 * 1000)) {
+      setPopupNotification(fresh)
+      playNoticeSound()
     }
+    noticesInitialized.current = true
   }
 
   async function toggleNotifs() {
@@ -268,3 +275,4 @@ function MenuItem({ icon, label, to, onClick }) {
     </Link>
   )
 }
+
