@@ -3,7 +3,9 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { isNoticeForOpenChat } from '../../lib/chatNotifications'
-import { Menu, X, Waves, User, CalendarDays, Heart, Settings, LogOut, LayoutDashboard, Bell, BellOff, House, MessageCircle } from 'lucide-react'
+import BackButton from './BackButton'
+import toast from 'react-hot-toast'
+import { Menu, X, Waves, User, CalendarDays, Heart, Settings, LogOut, LayoutDashboard, Bell, BellOff, Plus, Trash2, MessageCircle } from 'lucide-react'
 
 async function playNoticeSound() {
   const AudioContext = window.AudioContext || window.webkitAudioContext
@@ -32,12 +34,12 @@ export default function Header() {
   const [notifs, setNotifs] = useState([])
   const [unseen, setUnseen] = useState(0)
   const [popupNotification, setPopupNotification] = useState(null)
+  const [deletingNotice, setDeletingNotice] = useState(null)
   const seenNoticeIds = useRef(new Set())
   const noticesInitialized = useRef(false)
   const { user, profile, signOut, isAdmin } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const showHomeButton = pathname !== '/'
   const bookingNotificationsEnabled = profile?.notification_preferences?.in_app_bookings !== false
   const messageNotificationsEnabled = profile?.notification_preferences?.in_app_messages !== false
   const notificationsEnabled = bookingNotificationsEnabled || messageNotificationsEnabled
@@ -66,9 +68,10 @@ export default function Header() {
       .limit(20)
     if (error) return
     const visible = (data || []).filter(item => item.kind?.startsWith('chat') ? messageNotificationsEnabled : bookingNotificationsEnabled)
-    const fresh = visible.find(item => !item.read_at && !seenNoticeIds.current.has(item.id) && !isNoticeForOpenChat(item, pathname))
+    const currentPath = window.location.pathname
+    const fresh = visible.find(item => !item.read_at && !seenNoticeIds.current.has(item.id) && !isNoticeForOpenChat(item, currentPath))
     for (const item of visible) seenNoticeIds.current.add(item.id)
-    const displayed = visible.map(item => isNoticeForOpenChat(item, pathname) ? { ...item, read_at: item.read_at || new Date().toISOString() } : item)
+    const displayed = visible.filter(item => !isNoticeForOpenChat(item, currentPath))
     setNotifs(displayed)
     setUnseen(displayed.filter(item => !item.read_at).length)
     if (fresh && (noticesInitialized.current || Date.now() - new Date(fresh.created_at).getTime() < 5 * 60 * 1000)) {
@@ -105,9 +108,27 @@ export default function Header() {
   }
 
   async function handleSignOut() {
-    await signOut()
-    setMenuOpen(false)
-    navigate('/')
+    try {
+      await signOut()
+      setMenuOpen(false)
+      navigate('/', { replace: true })
+    } catch { toast.error('Não foi possível sair. Tente novamente.') }
+  }
+
+  async function deleteNotification(notice) {
+    if (deletingNotice) return
+    setDeletingNotice(notice.id)
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) throw new Error('Entre novamente na sua conta.')
+      const response = await fetch('/api/notifications', { method: 'POST', headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete', id: notice.id }) })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Não foi possível excluir.')
+      setNotifs(current => current.filter(item => item.id !== notice.id))
+      if (!notice.read_at) setUnseen(current => Math.max(0, current - 1))
+      setPopupNotification(current => current?.id === notice.id ? null : current)
+    } catch (error) { toast.error(error.message) }
+    finally { setDeletingNotice(null) }
   }
 
   return (
@@ -119,17 +140,7 @@ export default function Header() {
             <Waves className="text-primary-500" size={28} />
             <span className="font-bold text-xl text-gray-800">PoolDay</span>
           </Link>
-          {showHomeButton && (
-            <Link
-              to="/"
-              className="inline-flex items-center gap-1.5 rounded-full border border-primary-100 bg-primary-50 px-2.5 py-1.5 text-xs font-semibold text-primary-600 transition-colors hover:border-primary-200 hover:bg-primary-100"
-              aria-label="Voltar para a página inicial"
-              title="Voltar para a página inicial"
-            >
-              <House size={14} />
-              <span className="hidden sm:inline">Início</span>
-            </Link>
-          )}
+          <BackButton compact />
         </div>
 
         <nav className="hidden md:flex items-center gap-6">
@@ -139,7 +150,7 @@ export default function Header() {
           )}
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {user && (
             <div className="relative">
               <button onClick={toggleNotifs} className="relative flex items-center justify-center w-10 h-10 rounded-full border border-gray-200 hover:shadow-md transition-all" aria-label="Notificações" aria-expanded={notifOpen}>
@@ -163,8 +174,9 @@ export default function Header() {
                         <div className="text-center px-6 py-8"><Bell size={30} className="text-gray-200 mx-auto mb-2" /><p className="font-semibold text-gray-600 text-sm">Tudo tranquilo por aqui</p><p className="text-xs text-gray-400 mt-1">Novas reservas confirmadas aparecerão neste espaço.</p></div>
                       ) : (
                         notifs.map(n => (
-                          <Link key={n.id} to={n.action_url || (profile?.role === 'host' ? '/anfitriao' : '/reservas')} onClick={() => setNotifOpen(false)}
-                            className={`relative flex items-start gap-3 px-4 py-3.5 hover:bg-gray-50 border-b border-gray-50 transition-colors ${!n.read_at ? 'bg-primary-50/50' : ''}`}>
+                          <div key={n.id} className={`relative flex items-start gap-1 pr-2 border-b border-gray-50 ${!n.read_at ? 'bg-primary-50/50' : ''}`}>
+                          <Link to={n.action_url || (profile?.role === 'host' ? '/anfitriao' : '/reservas')} onClick={() => setNotifOpen(false)}
+                            className="min-w-0 flex-1 flex items-start gap-3 pl-4 pr-1 py-3.5 hover:bg-gray-50 transition-colors">
                             {!n.read_at && <span className="absolute left-1.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-primary-500" />}
                             <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                               {n.kind?.startsWith('chat') ? <MessageCircle size={16} className={n.kind === 'chat_urgent' ? 'text-amber-600' : 'text-green-600'} /> : <CalendarDays size={16} className="text-green-600" />}
@@ -174,6 +186,8 @@ export default function Header() {
                               <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{n.message}</p>
                             </div>
                           </Link>
+                          <button type="button" onClick={() => deleteNotification(n)} disabled={Boolean(deletingNotice)} aria-label={`Excluir notificação: ${n.title}`} className="mt-3 shrink-0 rounded-lg p-2 text-gray-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-40"><Trash2 size={15}/></button>
+                          </div>
                         ))
                       )}
                     </div>
@@ -238,7 +252,7 @@ export default function Header() {
                   <MenuItem icon={<CalendarDays size={18}/>} label="Minhas Reservas" to="/reservas" onClick={() => setMenuOpen(false)} />
                   <MenuItem icon={<Heart size={18}/>} label="Favoritos" to="/favoritos" onClick={() => setMenuOpen(false)} />
                   {profile?.role === 'host' && (
-                    <MenuItem icon={<LayoutDashboard size={18}/>} label="Painel do Anfitrião" to="/anfitriao" onClick={() => setMenuOpen(false)} />
+                    <><MenuItem icon={<LayoutDashboard size={18}/>} label="Painel do Anfitrião" to="/anfitriao" onClick={() => setMenuOpen(false)} /><MenuItem icon={<Plus size={18}/>} label="Cadastrar meu espaço" to="/anfitriao/cadastrar-espaco" onClick={() => setMenuOpen(false)} /></>
                   )}
                   <MenuItem icon={<Settings size={18}/>} label="Configurações" to="/configuracoes" onClick={() => setMenuOpen(false)} />
                   <div className="border-t mt-2 pt-2">

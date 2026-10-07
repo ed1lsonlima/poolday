@@ -1,6 +1,7 @@
 import { forwardRef, useState, useMemo, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Waves } from 'lucide-react'
+import BackButton from '../components/common/BackButton'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 import { calculateHostEarnings, saveHostSignupPrefill } from '../lib/hostLanding'
@@ -119,10 +120,10 @@ export default function SejaAnfitriao() {
       {/* ── Barra superior enxuta (sem menu = menos distração) ── */}
       <header className="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-5 h-14 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
+          <div className="flex items-center gap-2"><Link to="/" className="flex items-center gap-2">
             <Waves className="text-primary-500" size={26} />
             <span className="text-xl font-bold text-gray-800 tracking-tight">PoolDay</span>
-          </Link>
+          </Link><BackButton compact /></div>
           <button
             onClick={() => scrollTo(formRef)}
             className="text-sm font-semibold text-primary-600 hover:text-primary-700"
@@ -678,3 +679,4 @@ function FloatingBubbles() {
     </div>
   )
 }
+

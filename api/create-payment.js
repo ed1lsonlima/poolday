@@ -38,6 +38,7 @@ export default async function handler(req, res) {
     if (booking.client_id !== user.id) {
       return res.status(403).json({ error: 'Você não pode pagar esta reserva.' });
     }
+    if (booking.host_id === user.id) return res.status(403).json({ error: 'Você não pode reservar ou pagar pelo seu próprio espaço.' });
     if (!Number.isFinite(Number(expectedTotal)) || Math.round(Number(expectedTotal) * 100) !== Math.round(Number(booking.total_amount) * 100)) {
       return res.status(409).json({ error: 'O total da reserva mudou. Confira o preço novamente.' });
     }

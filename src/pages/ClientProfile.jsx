@@ -407,9 +407,11 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
                   {detail.properties?.address && (
                     <div className="rounded-xl p-3 bg-gray-50 text-xs text-gray-600 space-y-2">
                       <p>📍 <b>Endereço:</b> {detail.properties.address}</p>
+                      <p>{[detail.properties.neighborhood, detail.properties.city].filter(Boolean).join(', ')}</p>
+                      {detail.properties.cep && <p><b>CEP:</b> {detail.properties.cep.replace(/^(\d{5})(\d{3})$/, '$1-$2')}</p>}
                       {detail.properties.landmark && <p><b>Ponto de referência:</b> {detail.properties.landmark}</p>}
                       {detail.properties.checkin_instructions && <p><b>Como chegar e entrar:</b> {detail.properties.checkin_instructions}</p>}
-                      <a href={detail.properties.map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([detail.properties.address, detail.properties.city].filter(Boolean).join(', '))}`} target="_blank" rel="noopener noreferrer" className="inline-flex font-semibold text-primary-600 hover:underline">Ver endereço no mapa →</a>
+                      <a href={detail.properties.map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([detail.properties.address, detail.properties.neighborhood, detail.properties.city, detail.properties.cep].filter(Boolean).join(', '))}`} target="_blank" rel="noopener noreferrer" className="inline-flex font-semibold text-primary-600 hover:underline">Ver endereço no mapa →</a>
                       {!detail.properties.map_url && <p className="text-gray-500">O mapa pesquisa o endereço informado. Para sítios ou entradas difíceis, confirme os detalhes no chat com o anfitrião.</p>}
                     </div>
                   )}
