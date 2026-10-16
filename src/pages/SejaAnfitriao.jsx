@@ -4,6 +4,7 @@ import { Waves } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 import { calculateHostEarnings, saveHostSignupPrefill } from '../lib/hostLanding'
+import { trackHostLead } from '../lib/tiktokPixel'
 
 /* ════════════════════════════════════════════════════════════════
    LANDING PAGE — SEJA ANFITRIÃO  (rota: /seja-anfitriao)
@@ -103,6 +104,7 @@ export default function SejaAnfitriao() {
       } catch { /* o cadastro continua mesmo se o navegador bloquear o armazenamento */ }
 
       dispararConversao(GOOGLE_ADS.label_formulario)   // conversão principal
+      trackHostLead()
       setEnviado(true)
       toast.success('Recebido! Agora é só criar sua conta 👇')
       setTimeout(() => scrollTo(passosRef), 120)

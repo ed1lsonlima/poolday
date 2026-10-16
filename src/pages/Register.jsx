@@ -5,6 +5,7 @@ import { Waves, Mail, Lock, User, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-r
 import toast from 'react-hot-toast'
 import CityField from '../components/common/CityField'
 import { clearHostSignupPrefill, readHostSignupPrefill } from '../lib/hostLanding'
+import { trackHostRegistration } from '../lib/tiktokPixel'
 
 function initialRegisterForm(isHost) {
   const prefill = isHost && typeof window !== 'undefined'
@@ -42,6 +43,7 @@ export default function Register() {
     setLoading(true)
     try {
       const result = await signUp({ ...form, role })
+      trackHostRegistration(result, role)
       if (result?.session) {
         toast.success('Conta criada com sucesso!')
       } else {
