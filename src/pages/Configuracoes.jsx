@@ -59,8 +59,8 @@ export default function Configuracoes() {
   }
 
   async function handleSignOut() {
-    await signOut()
-    navigate('/')
+    try { await signOut(); navigate('/', { replace: true }) }
+    catch { toast.error('Não foi possível sair. Tente novamente.') }
   }
 
   return (

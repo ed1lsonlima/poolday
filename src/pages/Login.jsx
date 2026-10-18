@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Waves, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react'
+import { Waves, Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import BackButton from '../components/common/BackButton'
 import toast from 'react-hot-toast'
 
 export default function Login() {
@@ -17,7 +18,7 @@ export default function Login() {
     try {
       await signIn(form)
       navigate('/')
-    } catch (err) {
+    } catch {
       toast.error('Email ou senha incorretos')
     } finally { setLoading(false) }
   }
@@ -30,7 +31,7 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-lg p-8 w-full max-w-md">
-        <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-600 mb-4"><ArrowLeft size={16}/> Início</Link>
+        <BackButton className="mb-4" />
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-2 mb-4">
             <Waves className="text-primary-500" size={28} />
@@ -79,3 +80,4 @@ export default function Login() {
     </div>
   )
 }
+

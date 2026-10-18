@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import toast from 'react-hot-toast'
 
 const AuthContext = createContext({})
 
@@ -142,6 +143,7 @@ export function AuthProvider({ children }) {
     setProfile(null)
     setProfileError('')
     setIsAdmin(false)
+    toast.success('Você saiu da sua conta.', { duration: 4500 })
   }
 
   async function updateProfile(updates) {
@@ -166,3 +168,4 @@ export function AuthProvider({ children }) {
 }
 
 export const useAuth = () => useContext(AuthContext)
+

@@ -24,6 +24,11 @@ export default async function handler(req, res) {
     if (profileError) throw profileError;
     if (profile.suspended) return res.status(403).json({ error: 'Sua conta está em análise. Entre em contato com o suporte.' });
 
+    const { data: property, error: propertyError } = await supabase.from('properties').select('host_id').eq('id', propertyId).maybeSingle();
+    if (propertyError) throw propertyError;
+    if (!property) return res.status(404).json({ error: 'Espaço não encontrado.' });
+    if (property.host_id === user.id) return res.status(403).json({ error: 'Você não pode reservar seu próprio espaço.' });
+
     const { data, error } = await supabase.rpc('create_booking_hold_v2', {
       p_property_id: propertyId,
       p_client_id: user.id,
@@ -34,6 +39,7 @@ export default async function handler(req, res) {
 
     if (error) {
       const message = error.message || '';
+      if (message.includes('RESERVA_PROPRIO_ESPACO')) return res.status(403).json({ error: 'Você não pode reservar seu próprio espaço.' });
       if (message.includes('DATA_INDISPONIVEL')) return res.status(409).json({ error: 'data_indisponivel', message: 'Essa data acabou de ser reservada. Escolha outra.' });
       if (message.includes('PRECO_ALTERADO')) return res.status(409).json({ error: 'preco_alterado', message: 'O preço mudou. Confira o novo total antes de reservar.' });
       if (message.includes('ESPACO_INDISPONIVEL')) return res.status(400).json({ error: 'espaco_indisponivel', message: 'Este espaço não está disponível.' });

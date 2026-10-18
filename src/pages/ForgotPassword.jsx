@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Mail, Waves } from 'lucide-react'
+import { Mail, Waves } from 'lucide-react'
+import BackButton from '../components/common/BackButton'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -23,7 +24,7 @@ export default function ForgotPassword() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-lg p-8 w-full max-w-md">
-        <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-600 mb-6"><ArrowLeft size={16}/> Início</Link>
+        <BackButton className="mb-6" />
         <div className="flex items-center justify-center gap-2 mb-4"><Waves className="text-primary-500" size={28}/><span className="font-bold text-xl">PoolDay</span></div>
         <h1 className="text-2xl font-bold text-gray-800 text-center">Recuperar senha</h1>
         <p className="text-gray-500 text-sm text-center mt-2 mb-6">Enviaremos um link seguro para você cadastrar uma nova senha.</p>
@@ -41,3 +42,4 @@ export default function ForgotPassword() {
     </div>
   )
 }
+

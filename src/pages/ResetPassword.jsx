@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Lock, Waves } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Lock, Waves } from 'lucide-react'
+import BackButton from '../components/common/BackButton'
 import { supabase } from '../lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -25,7 +26,7 @@ export default function ResetPassword() {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-3xl shadow-lg p-8 w-full max-w-md">
-        <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-primary-600 mb-6"><ArrowLeft size={16}/> Início</Link>
+        <BackButton className="mb-6" />
         <div className="flex items-center justify-center gap-2 mb-4"><Waves className="text-primary-500" size={28}/><span className="font-bold text-xl">PoolDay</span></div>
         <h1 className="text-2xl font-bold text-gray-800 text-center mb-6">Criar nova senha</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -39,3 +40,4 @@ export default function ResetPassword() {
     </div>
   )
 }
+

@@ -119,6 +119,7 @@ export default function PropertyDetail() {
 
   async function handleBooking() {
     if (!user) { toast.error('Faça login para reservar!'); navigate('/entrar'); return }
+    if (property.host_id === user.id) { toast.error('Você não pode reservar seu próprio espaço.'); return }
     if (!selectedDate) { toast.error('Selecione uma data!'); return }
     if (!quote || quoteLoading) { toast.error('Aguarde o cálculo do valor total.'); return }
 
@@ -186,6 +187,7 @@ export default function PropertyDetail() {
   )
 
   if (!property) return null
+  const isOwnProperty = user?.id === property.host_id
   const images = property.images?.length ? property.images : ['https://images.unsplash.com/photo-1575429198097-0414ec08e8cd?w=800&q=80']
   const listedPrice = Number(quote?.listedPrice ?? property.price_per_day ?? property.price_per_hour ?? 0)
   const totalAmount = quote ? Number(quote.totalAmount) : listedPrice
@@ -195,8 +197,8 @@ export default function PropertyDetail() {
   return (
     <div className="min-h-screen bg-white pb-24 lg:pb-0">
       {/* Galeria */}
-      <div className="relative h-72 md:h-96 bg-gray-100 overflow-hidden">
-        <img src={images[imgIndex]} alt={property.name} onClick={() => setLightbox(true)} className="w-full h-full object-cover cursor-zoom-in" />
+      <div className="relative h-72 md:h-[28rem] bg-slate-100 overflow-hidden flex items-center justify-center">
+        <img src={images[imgIndex]} alt={property.name} onClick={() => setLightbox(true)} decoding="async" className="max-w-full max-h-full w-auto h-auto object-contain cursor-zoom-in" />
         {images.length > 1 && (
           <>
             <button aria-label="Foto anterior" onClick={() => setImgIndex(i => (i - 1 + images.length) % images.length)} className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 rounded-full p-2 shadow hover:bg-white">
@@ -370,9 +372,10 @@ export default function PropertyDetail() {
                 </div>
               )}
 
-              <button onClick={handleBooking} disabled={bookingLoading || quoteLoading || !quote || !selectedDate} className="btn-primary w-full text-center mb-3 disabled:opacity-60">
-                {bookingLoading ? 'Processando...' : quoteLoading ? 'Calculando total...' : paymentSummary?.paymentPlan === 'deposit' ? `Reservar pagando R$ ${paymentSummary.dueNow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Reservar e pagar o total'}
+              <button onClick={handleBooking} disabled={isOwnProperty || bookingLoading || quoteLoading || !quote || !selectedDate} className="btn-primary w-full text-center mb-3 disabled:opacity-60">
+                {isOwnProperty ? 'Este é seu espaço' : bookingLoading ? 'Processando...' : quoteLoading ? 'Calculando total...' : paymentSummary?.paymentPlan === 'deposit' ? `Reservar pagando R$ ${paymentSummary.dueNow.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'Reservar e pagar o total'}
               </button>
+              {isOwnProperty && <p className="text-xs text-gray-500 mb-3">Você não pode reservar seu próprio anúncio. <Link to="/anfitriao" className="font-semibold text-primary-600 hover:underline">Gerenciar meu espaço</Link></p>}
 
               {selectedDate && (
                 <div className="text-sm text-gray-600 space-y-1.5 pt-3 border-t">
@@ -411,8 +414,8 @@ export default function PropertyDetail() {
       {/* Bottom bar mobile */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 flex items-center justify-between lg:hidden z-40">
         <div><span className="font-bold text-gray-800 text-lg">R$ {totalAmount.toLocaleString('pt-BR')}</span><span className="text-gray-500 text-sm">{quote ? ' total' : '/diária'}</span></div>
-        <button onClick={handleBooking} disabled={bookingLoading || quoteLoading || !quote || !selectedDate} className="btn-primary px-8 py-3 text-sm disabled:opacity-60">
-          {bookingLoading ? 'Aguarde...' : paymentSummary?.paymentPlan === 'deposit' ? 'Pagar 50%' : 'Reservar'}
+        <button onClick={handleBooking} disabled={isOwnProperty || bookingLoading || quoteLoading || !quote || !selectedDate} className="btn-primary px-8 py-3 text-sm disabled:opacity-60">
+          {isOwnProperty ? 'Seu espaço' : bookingLoading ? 'Aguarde...' : paymentSummary?.paymentPlan === 'deposit' ? 'Pagar 50%' : 'Reservar'}
         </button>
       </div>
       {/* Lightbox */}
