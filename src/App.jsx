@@ -31,6 +31,10 @@ const AcordoAnfitriao = lazy(() => import('./pages/AcordoAnfitriao'))
 const Cancelamento = lazy(() => import('./pages/Cancelamento'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 const SejaAnfitriao = lazy(() => import('./pages/SejaAnfitriao'))
+const ReferralLink = lazy(() => import('./pages/ReferralLink'))
+const IndiqueEGanhe = lazy(() => import('./pages/IndiqueEGanhe'))
+// Pré-visualização com dados fictícios, só no ambiente local (nunca vai para produção).
+const DevPreview = import.meta.env.DEV ? lazy(() => import('./dev/DevPreview')) : null
 
 const META = {
   '/': ['PoolDay — Alugue Piscinas e Espaços de Lazer por Diária', 'Reserve piscinas, chácaras e espaços de lazer por diária com pagamento seguro.'],
@@ -41,6 +45,7 @@ const META = {
   '/recuperar-senha': ['Recuperar senha — PoolDay', 'Receba um link seguro para redefinir sua senha.'],
   '/redefinir-senha': ['Redefinir senha — PoolDay', 'Cadastre uma nova senha para sua conta PoolDay.'],
   '/seja-anfitriao': ['Anuncie seu espaço — PoolDay', 'Anuncie gratuitamente e receba 100% do valor nas 3 primeiras reservas.'],
+  '/indique-e-ganhe': ['Indique e ganhe — PoolDay', 'Indique um dono de espaço e ganhe R$ 20 quando o espaço dele for aprovado.'],
   '/termos': ['Termos de Uso — PoolDay', 'Termos de uso da plataforma PoolDay.'],
   '/privacidade': ['Política de Privacidade — PoolDay', 'Como o PoolDay coleta, utiliza e protege seus dados.'],
   '/acordo-anfitriao': ['Acordo do Anfitrião — PoolDay', 'Condições para anunciar espaços no PoolDay.'],
@@ -122,6 +127,9 @@ export default function App() {
           <Route path="/cadastro" element={<Register />} />
           {/* Landing do Google Ads pra captar anfitriao (standalone, sem Header/Footer) */}
           <Route path="/seja-anfitriao" element={<SejaAnfitriao />} />
+          <Route path="/i/:codigo" element={<ReferralLink />} />
+          <Route path="/indique-e-ganhe" element={<ProtectedRoute><Layout><IndiqueEGanhe /></Layout></ProtectedRoute>} />
+          {DevPreview && <Route path="/dev/:screen" element={<DevPreview />} />}
           <Route path="/entrar" element={<Login />} />
           <Route path="/recuperar-senha" element={<ForgotPassword />} />
           <Route path="/redefinir-senha" element={<ResetPassword />} />

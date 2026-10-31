@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
 import { calculateHostEarnings, saveHostSignupPrefill } from '../lib/hostLanding'
 import { trackHostLead } from '../lib/tiktokPixel'
+import { readReferralCode } from '../lib/referral'
 
 /* ════════════════════════════════════════════════════════════════
    LANDING PAGE — SEJA ANFITRIÃO  (rota: /seja-anfitriao)
@@ -84,14 +85,18 @@ export default function SejaAnfitriao() {
 
     setEnviando(true)
     try {
-      const { error } = await supabase.from('leads_anfitriao').insert({
+      const lead = {
         nome,
         whatsapp: whatsDigits,
         cidade: form.cidade.trim() || null,
         tipo_espaco: form.tipo,
         origem: 'landing_seja_anfitriao',
         consentimento_em: new Date().toISOString(),
-      })
+      }
+      const codigoIndicacao = readReferralCode()
+      let { error } = await supabase.from('leads_anfitriao').insert(codigoIndicacao ? { ...lead, codigo_indicacao: codigoIndicacao } : lead)
+      // O contato nunca se perde por causa do código de indicação.
+      if (error && codigoIndicacao) ({ error } = await supabase.from('leads_anfitriao').insert(lead))
       if (error) throw error
 
       try {
@@ -174,6 +179,9 @@ export default function SejaAnfitriao() {
           </a>
           <p className="mt-5 text-sm text-white/70">
             Sem mensalidade • 3 primeiras reservas sem taxa • Você no controle
+          </p>
+          <p className="mt-2 text-xs text-white/60">
+            O PoolDay está em lançamento: estamos recebendo os primeiros anfitriões agora.
           </p>
         </div>
         {/* onda decorativa */}

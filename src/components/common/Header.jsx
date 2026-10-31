@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { isNoticeForOpenChat } from '../../lib/chatNotifications'
-import { Menu, X, Waves, User, CalendarDays, Heart, Settings, LogOut, LayoutDashboard, Bell, BellOff, House, MessageCircle } from 'lucide-react'
+import { Menu, X, Waves, User, CalendarDays, Heart, Settings, LogOut, LayoutDashboard, Bell, BellOff, House, MessageCircle, Gift } from 'lucide-react'
 
 async function playNoticeSound() {
   const AudioContext = window.AudioContext || window.webkitAudioContext
@@ -237,6 +237,7 @@ export default function Header() {
                   <MenuItem icon={<User size={18}/>} label="Ver perfil" to="/perfil" onClick={() => setMenuOpen(false)} />
                   <MenuItem icon={<CalendarDays size={18}/>} label="Minhas Reservas" to="/reservas" onClick={() => setMenuOpen(false)} />
                   <MenuItem icon={<Heart size={18}/>} label="Favoritos" to="/favoritos" onClick={() => setMenuOpen(false)} />
+                  {profile?.role === 'client' && <MenuItem icon={<Gift size={18}/>} label="Indique e ganhe R$ 20" to="/indique-e-ganhe" onClick={() => setMenuOpen(false)} />}
                   {profile?.role === 'host' && (
                     <MenuItem icon={<LayoutDashboard size={18}/>} label="Painel do Anfitrião" to="/anfitriao" onClick={() => setMenuOpen(false)} />
                   )}
