@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Mail, Waves } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { authRedirectUrl } from '../lib/site'
 import toast from 'react-hot-toast'
 
 export default function ForgotPassword() {
@@ -13,7 +14,7 @@ export default function ForgotPassword() {
     e.preventDefault()
     setLoading(true)
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/redefinir-senha`,
+      redirectTo: authRedirectUrl('/redefinir-senha'),
     })
     setLoading(false)
     if (error) return toast.error('Não foi possível enviar o link. Confira o e-mail e tente novamente.')

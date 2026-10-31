@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import CityField from '../components/common/CityField'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { authRedirectUrl } from '../lib/site'
 
 const DEFAULT_PREFERENCES = { in_app_bookings: true, in_app_messages: true }
 
@@ -52,7 +53,7 @@ export default function Configuracoes() {
   async function sendPasswordReset() {
     if (!user?.email) return
     setSendingPassword(true)
-    const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo: `${window.location.origin}/redefinir-senha` })
+    const { error } = await supabase.auth.resetPasswordForEmail(user.email, { redirectTo: authRedirectUrl('/redefinir-senha') })
     setSendingPassword(false)
     if (error) toast.error('Não foi possível enviar o link.')
     else toast.success('Link de redefinição enviado para seu e-mail.')

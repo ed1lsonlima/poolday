@@ -6,6 +6,7 @@ import Header from './components/common/Header'
 import Footer from './components/common/Footer'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import ScrollToTop from './components/common/ScrollToTop'
+import { SITE_URL } from './lib/site'
 
 const Home = lazy(() => import('./pages/Home'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
@@ -54,11 +55,11 @@ function PageMeta() {
       : ['PoolDay — Piscinas e espaços de lazer', 'Reserve espaços de lazer por diária.'])
     document.title = title
     const canonical = document.querySelector('link[rel="canonical"]')
-    if (canonical) canonical.href = `https://www.pooldaybr.com${pathname === '/' ? '/' : pathname}`
+    if (canonical) canonical.href = `${SITE_URL}${pathname}`
     const descriptionTag = document.querySelector('meta[name="description"]')
     if (descriptionTag) descriptionTag.content = description
     const ogUrl = document.querySelector('meta[property="og:url"]')
-    if (ogUrl) ogUrl.content = `https://www.pooldaybr.com${pathname === '/' ? '/' : pathname}`
+    if (ogUrl) ogUrl.content = `${SITE_URL}${pathname}`
   }, [pathname])
   return null
 }

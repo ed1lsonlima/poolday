@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { authRedirectUrl } from '../lib/site'
 
 const AuthContext = createContext({})
 
@@ -109,7 +110,7 @@ export function AuthProvider({ children }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name, role, phone, city, state, municipality_code } }
+      options: { data: { name, role, phone, city, state, municipality_code }, emailRedirectTo: authRedirectUrl() }
     })
     if (error) throw error
     if (data.session && data.user) {
@@ -128,7 +129,7 @@ export function AuthProvider({ children }) {
   async function signInWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin }
+      options: { redirectTo: authRedirectUrl() }
     })
     if (error) throw error
   }

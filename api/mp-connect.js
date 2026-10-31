@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-
-const SITE_URL = process.env.SITE_URL || 'https://poolday-self.vercel.app';
+import { SITE_URL } from './_lib/site.js';
 
 // Gera a URL de autorização do Mercado Pago para o anfitrião LOGADO.
 // Segurança: o host_id NÃO vem da query string — vem do token de sessão do

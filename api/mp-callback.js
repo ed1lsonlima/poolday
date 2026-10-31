@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
-
-const SITE_URL = process.env.SITE_URL || 'https://poolday-self.vercel.app';
+import { SITE_URL } from './_lib/site.js';
 
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
