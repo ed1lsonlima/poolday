@@ -1,5 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { authRedirectUrl } from '../lib/site'
+import { clearReferralCode, FINAL_REFERRAL_RESULTS, normalizeReferralCode, readReferralCode } from '../lib/referral'
 
 const AuthContext = createContext({})
 
@@ -105,11 +107,22 @@ export function AuthProvider({ children }) {
     return () => { profileRequest.current++ }
   }, [user?.id, fetchProfile])
 
+  // Anfitrião recém-cadastrado que chegou por um link /i/:codigo: registra a indicação uma vez.
+  // O banco decide se vale (conta nova, sem autoindicação, link ativo); a tela nunca bloqueia por isso.
+  useEffect(() => {
+    if (profile?.role !== 'host' || !user?.id) return
+    const code = readReferralCode() || normalizeReferralCode(user.user_metadata?.referral_code)
+    if (!code) return
+    supabase.rpc('registrar_indicacao', { p_codigo: code }).then(({ data, error }) => {
+      if (!error && FINAL_REFERRAL_RESULTS.has(data)) clearReferralCode()
+    }).catch(() => { /* tenta de novo no próximo acesso */ })
+  }, [profile?.id, profile?.role, user?.id])
+
   async function signUp({ name, email, password, phone, city, state, municipality_code, role }) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { data: { name, role, phone, city, state, municipality_code } }
+      options: { data: { name, role, phone, city, state, municipality_code, ...(role === 'host' && readReferralCode() && { referral_code: readReferralCode() }) }, emailRedirectTo: authRedirectUrl() }
     })
     if (error) throw error
     if (data.session && data.user) {
@@ -128,7 +141,7 @@ export function AuthProvider({ children }) {
   async function signInWithGoogle() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.origin }
+      options: { redirectTo: authRedirectUrl() }
     })
     if (error) throw error
   }

@@ -4,8 +4,8 @@ import { requireUser } from './_lib/auth.js';
 import { getValidHostToken } from './_lib/mercadopago.js';
 import { paymentExpiration } from './_lib/paymentExpiry.js';
 import { resolvePaymentReturnOrigin } from './_lib/paymentReturnOrigin.js';
+import { SITE_URL } from './_lib/site.js';
 
-const SITE_URL = process.env.SITE_URL || 'https://www.pooldaybr.com';
 const supabase = createClient(
   process.env.VITE_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY,

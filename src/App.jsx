@@ -6,6 +6,7 @@ import Header from './components/common/Header'
 import Footer from './components/common/Footer'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import ScrollToTop from './components/common/ScrollToTop'
+import { SITE_URL } from './lib/site'
 
 const Home = lazy(() => import('./pages/Home'))
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
@@ -30,6 +31,10 @@ const AcordoAnfitriao = lazy(() => import('./pages/AcordoAnfitriao'))
 const Cancelamento = lazy(() => import('./pages/Cancelamento'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 const SejaAnfitriao = lazy(() => import('./pages/SejaAnfitriao'))
+const ReferralLink = lazy(() => import('./pages/ReferralLink'))
+const IndiqueEGanhe = lazy(() => import('./pages/IndiqueEGanhe'))
+// Pré-visualização com dados fictícios, só no ambiente local (nunca vai para produção).
+const DevPreview = import.meta.env.DEV ? lazy(() => import('./dev/DevPreview')) : null
 
 const META = {
   '/': ['PoolDay — Alugue Piscinas e Espaços de Lazer por Diária', 'Reserve piscinas, chácaras e espaços de lazer por diária com pagamento seguro.'],
@@ -40,6 +45,7 @@ const META = {
   '/recuperar-senha': ['Recuperar senha — PoolDay', 'Receba um link seguro para redefinir sua senha.'],
   '/redefinir-senha': ['Redefinir senha — PoolDay', 'Cadastre uma nova senha para sua conta PoolDay.'],
   '/seja-anfitriao': ['Anuncie seu espaço — PoolDay', 'Anuncie gratuitamente e receba 100% do valor nas 3 primeiras reservas.'],
+  '/indique-e-ganhe': ['Indique e ganhe — PoolDay', 'Indique um dono de espaço e ganhe R$ 20 quando o espaço dele for aprovado.'],
   '/termos': ['Termos de Uso — PoolDay', 'Termos de uso da plataforma PoolDay.'],
   '/privacidade': ['Política de Privacidade — PoolDay', 'Como o PoolDay coleta, utiliza e protege seus dados.'],
   '/acordo-anfitriao': ['Acordo do Anfitrião — PoolDay', 'Condições para anunciar espaços no PoolDay.'],
@@ -54,11 +60,11 @@ function PageMeta() {
       : ['PoolDay — Piscinas e espaços de lazer', 'Reserve espaços de lazer por diária.'])
     document.title = title
     const canonical = document.querySelector('link[rel="canonical"]')
-    if (canonical) canonical.href = `https://www.pooldaybr.com${pathname === '/' ? '/' : pathname}`
+    if (canonical) canonical.href = `${SITE_URL}${pathname}`
     const descriptionTag = document.querySelector('meta[name="description"]')
     if (descriptionTag) descriptionTag.content = description
     const ogUrl = document.querySelector('meta[property="og:url"]')
-    if (ogUrl) ogUrl.content = `https://www.pooldaybr.com${pathname === '/' ? '/' : pathname}`
+    if (ogUrl) ogUrl.content = `${SITE_URL}${pathname}`
   }, [pathname])
   return null
 }
@@ -121,6 +127,9 @@ export default function App() {
           <Route path="/cadastro" element={<Register />} />
           {/* Landing do Google Ads pra captar anfitriao (standalone, sem Header/Footer) */}
           <Route path="/seja-anfitriao" element={<SejaAnfitriao />} />
+          <Route path="/i/:codigo" element={<ReferralLink />} />
+          <Route path="/indique-e-ganhe" element={<ProtectedRoute><Layout><IndiqueEGanhe /></Layout></ProtectedRoute>} />
+          {DevPreview && <Route path="/dev/:screen" element={<DevPreview />} />}
           <Route path="/entrar" element={<Login />} />
           <Route path="/recuperar-senha" element={<ForgotPassword />} />
           <Route path="/redefinir-senha" element={<ResetPassword />} />

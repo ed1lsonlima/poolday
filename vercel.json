@@ -1,4 +1,12 @@
 {
+    "redirects": [
+          {
+                "source": "/:path((?!api/).*)",
+                "has": [{ "type": "host", "value": "poolday-self.vercel.app" }],
+                "destination": "https://www.pooldaybr.com/:path",
+                "permanent": true
+          }
+    ],
     "rewrites": [
           { "source": "/((?!api/).*)", "destination": "/index.html" }
     ]

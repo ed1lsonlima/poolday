@@ -1,19 +1,18 @@
-const PUBLIC_ORIGINS = [
-  'https://www.pooldaybr.com',
-  'https://pooldaybr.com',
-  'https://poolday-self.vercel.app',
-];
+import { LEGACY_HOSTS } from '../../src/lib/siteUrl.js';
+
+// Endereços antigos (poolday-self.vercel.app e a raiz sem www) apenas
+// redirecionam para o domínio oficial; nunca são destino de retorno.
+const LEGACY_ORIGINS = new Set(LEGACY_HOSTS.map(host => `https://${host}`));
 
 export function resolvePaymentReturnOrigin(req, siteUrl) {
   const fallback = new URL(siteUrl).origin;
-  const allowed = new Set([...PUBLIC_ORIGINS, fallback]);
 
   function accepted(value) {
     if (typeof value !== 'string') return null;
     try {
       const url = new URL(value);
       if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/' || url.search || url.hash) return null;
-      return allowed.has(url.origin) ? url.origin : null;
+      return url.origin === fallback && !LEGACY_ORIGINS.has(url.origin) ? url.origin : null;
     } catch {
       return null;
     }
@@ -22,4 +21,3 @@ export function resolvePaymentReturnOrigin(req, siteUrl) {
   // The buyer must return to the exact origin that holds their login session.
   return accepted(req.headers?.origin) || accepted(req.headers?.host && `https://${req.headers.host}`) || fallback;
 }
-

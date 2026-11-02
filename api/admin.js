@@ -2,7 +2,23 @@ import { createClient } from '@supabase/supabase-js'
 
 const db = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_SERVICE_ROLE_KEY, { auth: { persistSession: false, autoRefreshToken: false } })
 const actions = new Set(['approve_property', 'reject_property', 'pause_property', 'suspend_user', 'restore_user', 'verify_user', 'unverify_user', 'resolve_event'])
+const referralActions = new Set(['marcar_indicacao_paga', 'recusar_indicacao', 'desativar_indicador', 'reativar_indicador'])
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const isoDay = /^\d{4}-\d{2}-\d{2}$/
+
+// Programa de indicações. Enquanto a migração não for aplicada, o painel continua funcionando sem esta parte.
+async function referralData() {
+  const [referrers, referrals] = await Promise.all([
+    db.from('indicadores').select('user_id,codigo,nome,whatsapp,chave_pix,ativo,desativado_motivo,created_at').order('created_at', { ascending: false }).limit(5000),
+    db.from('indicacoes').select('id,indicador_id,anfitriao_id,property_id,status,valor_centavos,created_at,aguardando_em,aprovada_em,paga_em,recusada_em,pagamento_observacao,recusa_motivo').order('created_at', { ascending: false }).limit(5000),
+  ])
+  for (const result of [referrers, referrals]) {
+    if (['42P01', 'PGRST205'].includes(result.error?.code)) return null
+    if (result.error) throw result.error
+    if (result.data.length === 5000) throw new Error('REPORT_LIMIT')
+  }
+  return { referrers: referrers.data, referrals: referrals.data }
+}
 
 async function rows(table, columns, limit = 10000) {
   const result = []
@@ -64,6 +80,14 @@ export default async function handler(req, res) {
       return res.status(200).json({ property })
     }
 
+    if (req.method === 'POST' && referralActions.has(req.body?.action)) {
+      const { action, id, reason, paidOn } = req.body
+      if (!uuid.test(id || '') || typeof reason !== 'string' || reason.trim().length < 5 || reason.length > 500 || (action === 'marcar_indicacao_paga' && !isoDay.test(paidOn || ''))) return res.status(400).json({ error: 'Registro, observação (5 a 500 caracteres) e data válidos são obrigatórios.' })
+      const { error } = await db.rpc('admin_indicacao_acao', { p_actor: auth.user.id, p_acao: action, p_id: id, p_texto: reason.trim(), p_pago_em: action === 'marcar_indicacao_paga' ? paidOn : null })
+      if (error) { console.error('Referral action:', error.code); return res.status(400).json({ error: 'Não foi possível concluir. Confira se a indicação está a pagar e se a data não é futura.' }) }
+      return res.status(200).json({ success: true })
+    }
+
     if (req.method === 'POST') {
       const { action, id, reason } = req.body || {}
       const approval = action === 'approve_property'
@@ -74,13 +98,18 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true })
     }
 
-    const [users, properties, bookings, payments, events, audit] = await Promise.all([
+    const [users, properties, bookings, payments, events, audit, referral] = await Promise.all([
       rows('profiles', 'id,name,email,phone,city,state,municipality_code,role,verified,suspended,mp_connected,created_at'),
       rows('properties', 'id,host_id,name,description,city,state,price_per_day,images,is_active,moderation_status,moderation_note,created_at'),
       rows('bookings', 'id,client_id,host_id,property_id,date,status,total_amount,paid_amount,payment_state,platform_fee,host_amount,promotion_applied,hold_expires_at,created_at,payment_id'),
       rows('payment_ledger', '*'), rows('admin_events', '*'), rows('admin_audit', 'id,actor_id,action,entity_id,reason,created_at'),
+      referralData(),
     ])
-    return res.status(200).json({ users, properties, bookings, payments, events, audit, generatedAt: new Date().toISOString(), ownerId: auth.user.id })
+    // Só identificadores e datas: o conteúdo das conversas continua exigindo a consulta registrada.
+    const [chatReports, chatModeration] = await Promise.all([
+      rows('booking_chat_reports', 'id,booking_id,created_at'), rows('booking_chat_moderation_events', 'id,booking_id,created_at'),
+    ])
+    return res.status(200).json({ users, properties, bookings, payments, events, audit, chatReports, chatModeration, referrers: referral?.referrers ?? null, referrals: referral?.referrals ?? null, generatedAt: new Date().toISOString(), ownerId: auth.user.id })
   } catch (error) {
     console.error('Admin request failed:', error.code || error.message)
     return res.status(500).json({ error: error.message === 'REPORT_LIMIT' ? 'O volume ultrapassou o limite deste relatório. Nenhum total parcial foi exibido. É necessário ampliar a consulta.' : 'Não foi possível carregar o painel. Tente novamente.' })
