@@ -6,6 +6,7 @@ import { Plus, LayoutDashboard, CreditCard, Calendar, Eye, Edit, Trash2, CheckCi
 import toast from 'react-hot-toast'
 import { formatDateBR } from '../lib/formatDate'
 import { clearPropertyDraft, loadPropertyDraft } from '../lib/propertyDraft'
+import HostVerificationCard from '../components/host/HostVerificationCard'
 
 function ActionButton({ icon, label, onClick, variant = 'primary', disabled = false }) {
   const hover = variant === 'danger' ? 'hover:text-red-500 hover:bg-red-50'
@@ -37,10 +38,11 @@ export default function HostDashboard() {
   const [hostCancellation, setHostCancellation] = useState(null)
   const [hostCancelReason, setHostCancelReason] = useState('')
   const [hostCancelLoading, setHostCancelLoading] = useState(false)
+  const [verificationDueAt, setVerificationDueAt] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
-    if (user) { fetchProperties(); fetchBookings() }
+    if (user) { fetchProperties(); fetchBookings(); fetchVerificationDeadline() }
   }, [user])
 
   useEffect(() => {
@@ -49,6 +51,7 @@ export default function HostDashboard() {
       if (document.visibilityState === 'hidden') return
       fetchProperties()
       fetchBookings()
+      fetchVerificationDeadline()
       setDraft(loadPropertyDraft(window.localStorage, user.id))
     }
     setDraft(loadPropertyDraft(window.localStorage, user.id))
@@ -70,6 +73,7 @@ export default function HostDashboard() {
     handledMpReturn.current = true
 
     const connected = searchParams.get('mp_connected') === '1' && !searchParams.has('mp_error')
+    const accountLocked = searchParams.get('mp_error') === 'conta_bloqueada'
     const nextParams = new URLSearchParams(searchParams)
     nextParams.delete('mp_connected')
     nextParams.delete('mp_error')
@@ -80,7 +84,7 @@ export default function HostDashboard() {
 
     const toastOptions = { id: 'mercado-pago-connection' }
     if (!connected) {
-      toast.error('Não foi possível conectar o Mercado Pago. Tente novamente.', toastOptions)
+      toast.error(accountLocked ? 'Você tem reserva paga em aberto, então não dá para trocar a conta Mercado Pago agora. Reconecte a mesma conta ou aguarde a diária.' : 'Não foi possível conectar o Mercado Pago. Tente novamente.', { ...toastOptions, duration: accountLocked ? 8000 : undefined })
       return
     }
     fetchProfile(user.id, { background: true }).then(updatedProfile => {
@@ -91,6 +95,11 @@ export default function HostDashboard() {
       }
     })
   }, [searchParams, setSearchParams, user?.id, fetchProfile])
+
+  async function fetchVerificationDeadline() {
+    const { data, error } = await supabase.from('host_verifications').select('due_at').eq('host_id', user.id).maybeSingle()
+    if (!error) setVerificationDueAt(data?.due_at || null)
+  }
 
   async function fetchProperties() {
     const request = ++propertiesRequest.current
@@ -183,7 +192,7 @@ export default function HostDashboard() {
       })
       const data = await response.json()
       if (!response.ok) throw new Error(data.error || 'Não foi possível cancelar.')
-      toast.success('Reserva cancelada e reembolso integral solicitado ao cliente.')
+      toast.success(data.propertyPaused ? 'Reserva cancelada e reembolso integral enviado ao cliente. Seu espaço foi pausado.' : 'Reserva cancelada.', { duration: 6000 })
       setHostCancellation(null); setHostCancelReason(''); await fetchBookings()
     } catch (error) { toast.error(error.message, { duration: 6000 }) }
     finally { setHostCancelLoading(false) }
@@ -260,6 +269,7 @@ export default function HostDashboard() {
                 </div>
               </div>}
             </div>}
+            <HostVerificationCard dueAt={verificationDueAt} verified={profile?.verified}/>
             <div className="bg-gradient-to-r from-orange-50 to-primary-50 border border-orange-100 rounded-2xl p-4 mb-6">
               <p className="font-bold text-gray-800 text-sm">🎁 Oferta de lançamento: 3 reservas com taxa zero</p>
               <p className="text-gray-600 text-xs mt-1">{promoRemaining > 0 ? `Você ainda tem ${promoRemaining} reserva${promoRemaining > 1 ? 's' : ''} recebendo 100% do valor anunciado.` : 'Suas 3 reservas promocionais foram utilizadas. Nas próximas, a taxa padrão é de 15%.'}</p>

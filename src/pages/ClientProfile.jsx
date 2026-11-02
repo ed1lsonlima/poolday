@@ -6,6 +6,7 @@ import toast from 'react-hot-toast'
 import { Link, useSearchParams } from 'react-router-dom'
 import { formatDateBR } from '../lib/formatDate'
 import PropertyCard from '../components/common/PropertyCard'
+import { canReportNoAccess } from '../lib/bookingPolicy'
 
 const POOLDAY_WHATSAPP = '5582996987838'
 
@@ -38,6 +39,7 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
   const [paymentLoadingId, setPaymentLoadingId] = useState(null)
   const [cancellation, setCancellation] = useState(null)
   const [cancelling, setCancelling] = useState(false)
+  const [reportingNoAccess, setReportingNoAccess] = useState(false)
   const [searchParams, setSearchParams] = useSearchParams()
 
   useEffect(() => { if (profile) setForm({ name: profile.name || '', phone: profile.phone || '', city: profile.city || '', state: profile.state || '' }) }, [profile])
@@ -124,6 +126,19 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
     const data = await response.json()
     if (!response.ok) throw new Error(data.error || 'Não foi possível concluir a operação.')
     return data
+  }
+
+  async function reportNoAccess(booking) {
+    if (!window.confirm('Avisar a equipe PoolDay e o anfitrião que você não conseguiu entrar no espaço?')) return
+    setReportingNoAccess(true)
+    try {
+      const { reportedAt } = await authenticatedRequest('/api/report-no-access', { bookingId: booking.id })
+      const mark = current => current.id === booking.id ? { ...current, no_access_reported_at: reportedAt } : current
+      setBookings(list => list.map(mark))
+      setDetail(current => current && mark(current))
+      toast.success('Aviso registrado. A equipe PoolDay vai entrar em contato.', { duration: 6000 })
+    } catch (error) { toast.error(error.message, { duration: 6000 }) }
+    finally { setReportingNoAccess(false) }
   }
 
   async function openCancellation(booking) {
@@ -442,6 +457,9 @@ export default function ClientProfile({ tab: initialTab = 'perfil' }) {
                   Cancelar reserva
                 </button>
               )}
+              {detail.no_access_reported_at
+                ? <p role="status" className="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-xl p-3">Você avisou que não conseguiu entrar. A equipe PoolDay foi avisada e vai entrar em contato.</p>
+                : canReportNoAccess(detail) && <button onClick={() => reportNoAccess(detail)} disabled={reportingNoAccess} className="w-full mt-3 text-sm font-semibold text-gray-800 border border-gray-300 rounded-xl py-2.5 hover:bg-gray-50 transition-colors disabled:opacity-50">{reportingNoAccess ? 'Registrando...' : 'Não consegui entrar'}</button>}
             </div>
           </div>
         </div>

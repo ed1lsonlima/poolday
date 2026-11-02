@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import VisitConsentField from '../components/host/VisitConsentField'
 import { useNavigate } from 'react-router-dom'
 import { Camera, Check, ChevronLeft, ChevronRight, Clock3, Plus, ShieldCheck, Upload, X } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -45,6 +46,7 @@ export default function OnboardingWizard() {
   const [newAmenity, setNewAmenity] = useState('')
   const [form, setForm] = useState(DEFAULT_FORM)
   const [draftStatus, setDraftStatus] = useState('')
+  const [visitConsent, setVisitConsent] = useState(false)
   const draftKey = user?.id || null
   const publicTitle = buildPublicPropertyTitle({ ...form, amenities })
 
@@ -130,6 +132,7 @@ export default function OnboardingWizard() {
   async function handlePublish() {
     const invalid = propertyFormError({ form, images, amenities, availableDays })
     if (invalid) { setStep(invalid.step); toast.error(invalid.message); return }
+    if (!visitConsent) { toast.error('Para publicar, aceite a possível visita do PoolDay.'); return }
     setLoading(true)
     try {
       const { municipality_code: _municipalityCode, ...propertyForm } = form
@@ -138,6 +141,7 @@ export default function OnboardingWizard() {
         host_id: user.id, is_active: false, price_per_hour: null,
         max_capacity: Number(form.max_capacity), price_per_day: Number(form.price_per_day),
         hora_inicio: Number(form.hora_inicio), hora_fim: Number(form.hora_fim), map_url: form.map_url.trim() || null,
+        visit_consent_at: new Date().toISOString(),
       }
       const { error } = await supabase.from('properties').insert(payload)
       if (error) throw error
@@ -167,6 +171,7 @@ export default function OnboardingWizard() {
         {step === 1 ? <ScheduleStep form={form} update={update} availableDays={availableDays} toggleDay={toggleDay}/> : null}
         {step === 2 ? <MediaStep images={images} setImages={setImages} uploading={uploading} uploadImage={uploadImage} chooseCover={chooseCover} amenities={amenities} toggleAmenity={toggleAmenity} newAmenity={newAmenity} setNewAmenity={setNewAmenity} addCustomAmenity={addCustomAmenity}/> : null}
         {step === 3 ? <ReviewStep form={form} update={update} title={publicTitle} images={images} amenities={amenities}/> : null}
+        {step === 3 ? <div className="mt-4"><VisitConsentField checked={visitConsent} onChange={setVisitConsent}/></div> : null}
 
         <div className="flex justify-between gap-3 mt-6">
           {step > 0 ? <button type="button" onClick={goBack} className="btn-secondary py-3 px-5">Voltar</button> : <div/>}

@@ -55,13 +55,15 @@ export default async function handler(req, res) {
       .eq('id', booking.property_id)
       .single();
 
-    if (propError || !property || !property.is_active || property.moderation_status !== 'approved' || property.host_id !== booking.host_id) {
+    const stage = requestedStage || (booking.payment_plan === 'full' ? 'full' : booking.payment_state === 'awaiting_first_payment' ? 'deposit' : 'balance');
+    // Quem já pagou a entrada precisa conseguir pagar o restante, mesmo com o espaço pausado ou em análise.
+    const listed = stage === 'balance' || (property?.is_active && property?.moderation_status === 'approved');
+    if (propError || !property || !listed || property.host_id !== booking.host_id) {
       return res.status(400).json({ error: 'Espaço indisponível.' });
     }
 
     // Calcula valores e reivindica, de forma transacional, uma das 3 reservas
     // promocionais do anfitrião. Repetir a chamada devolve a mesma promoção.
-    const stage = requestedStage || (booking.payment_plan === 'full' ? 'full' : booking.payment_state === 'awaiting_first_payment' ? 'deposit' : 'balance');
     const { data: paymentRows, error: prepareError } = await supabase.rpc('prepare_booking_installment_v2', { p_booking_id: bookingId, p_stage: stage });
     if (prepareError) {
       if ((prepareError.message || '').includes('RESERVA_INDISPONIVEL')) {

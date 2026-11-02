@@ -20,6 +20,15 @@ export function calendarDaysUntil(date, now = new Date()) {
   return Math.round((Date.UTC(year, month - 1, day) - Date.UTC(todayYear, todayMonth - 1, todayDay)) / DAY_MS)
 }
 
+// "Não consegui entrar": reserva confirmada, no dia da diária ou até 12h do dia seguinte.
+export function canReportNoAccess(booking, now = new Date()) {
+  if (booking?.status !== 'confirmed' || !(Number(booking.paid_amount) > 0)) return false
+  const days = calendarDaysUntil(booking.date, now)
+  if (days === 0) return true
+  const hour = Number(new Intl.DateTimeFormat('en-US', { timeZone: 'America/Maceio', hour: '2-digit', hourCycle: 'h23' }).format(now))
+  return days === -1 && hour < 12
+}
+
 export function paymentPlanForDate(date, totalAmount, now = new Date()) {
   const days = calendarDaysUntil(date, now)
   const total = roundMoney(totalAmount)

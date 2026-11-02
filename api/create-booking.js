@@ -36,6 +36,8 @@ export default async function handler(req, res) {
       const message = error.message || '';
       if (message.includes('DATA_INDISPONIVEL')) return res.status(409).json({ error: 'data_indisponivel', message: 'Essa data acabou de ser reservada. Escolha outra.' });
       if (message.includes('PRECO_ALTERADO')) return res.status(409).json({ error: 'preco_alterado', message: 'O preço mudou. Confira o novo total antes de reservar.' });
+      if (message.includes('LIMITE_DATAS_PRESAS')) return res.status(429).json({ error: 'limite_datas_presas', message: 'Você já tem 2 datas aguardando pagamento. Conclua ou cancele uma delas em Minhas Reservas.' });
+      if (message.includes('VERIFICACAO_PENDENTE')) return res.status(409).json({ error: 'espaco_indisponivel', message: 'Este espaço não está recebendo novas reservas no momento.' });
       if (message.includes('ESPACO_INDISPONIVEL')) return res.status(400).json({ error: 'espaco_indisponivel', message: 'Este espaço não está disponível.' });
       throw error;
     }
