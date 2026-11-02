@@ -2,7 +2,7 @@ import LegalLayout from '../components/common/LegalLayout'
 
 export default function AcordoAnfitriao() {
   return (
-    <LegalLayout title="Acordo do Anfitrião" updated="julho de 2026">
+    <LegalLayout title="Acordo do Anfitrião" updated="novembro de 2026">
       <p>Este Acordo estabelece as condições específicas para quem anuncia espaços como Anfitrião no PoolDay, complementando os Termos de Uso gerais da plataforma.</p>
 
       <h2>1. Cadastro do espaço</h2>
@@ -26,7 +26,10 @@ export default function AcordoAnfitriao() {
       <h2>7. Suspensão de anúncios</h2>
       <p>O PoolDay pode suspender ou remover anúncios que violem este Acordo, os Termos de Uso, ou que recebam reclamações recorrentes de Hóspedes.</p>
 
-      <h2>8. Relação de emprego</h2>
+      <h2>8. Verificação e visita</h2>
+      <p>Depois de cadastrar o primeiro espaço, o Anfitrião tem 7 dias para enviar seus documentos ao PoolDay pelo WhatsApp oficial, conforme o passo a passo do painel. Depois desse prazo, sem verificação, o espaço deixa de receber novas reservas, e as já existentes continuam valendo. Ao publicar um espaço, o Anfitrião aceita que o PoolDay pode visitá-lo, com aviso prévio, para conferir se ele corresponde ao anúncio.</p>
+
+      <h2>9. Relação de emprego</h2>
       <p>A atuação como Anfitrião no PoolDay não gera vínculo empregatício, societário ou de representação entre o Anfitrião e o PoolDay.</p>
     </LegalLayout>
   )

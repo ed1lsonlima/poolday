@@ -20,6 +20,14 @@ async function referralData() {
   return { referrers: referrers.data, referrals: referrals.data }
 }
 
+// Enquanto a migração não rodar, o painel continua abrindo, apenas sem os prazos.
+async function verificationData() {
+  const { data, error } = await db.from('host_verifications').select('host_id,due_at').limit(10000)
+  if (['42P01', 'PGRST205'].includes(error?.code)) return []
+  if (error) throw error
+  return data
+}
+
 async function rows(table, columns, limit = 10000) {
   const result = []
   for (let offset = 0; offset < limit; offset += 1000) {
@@ -101,15 +109,15 @@ export default async function handler(req, res) {
     const [users, properties, bookings, payments, events, audit, referral] = await Promise.all([
       rows('profiles', 'id,name,email,phone,city,state,municipality_code,role,verified,suspended,mp_connected,created_at'),
       rows('properties', 'id,host_id,name,description,city,state,price_per_day,images,is_active,moderation_status,moderation_note,created_at'),
-      rows('bookings', 'id,client_id,host_id,property_id,date,status,total_amount,paid_amount,payment_state,platform_fee,host_amount,promotion_applied,hold_expires_at,created_at,payment_id'),
+      rows('bookings', 'id,client_id,host_id,property_id,date,status,total_amount,paid_amount,payment_state,platform_fee,host_amount,promotion_applied,hold_expires_at,created_at,payment_id,cancelled_by,refunded_amount'),
       rows('payment_ledger', '*'), rows('admin_events', '*'), rows('admin_audit', 'id,actor_id,action,entity_id,reason,created_at'),
       referralData(),
     ])
     // Só identificadores e datas: o conteúdo das conversas continua exigindo a consulta registrada.
-    const [chatReports, chatModeration] = await Promise.all([
-      rows('booking_chat_reports', 'id,booking_id,created_at'), rows('booking_chat_moderation_events', 'id,booking_id,created_at'),
+    const [chatReports, chatModeration, verifications] = await Promise.all([
+      rows('booking_chat_reports', 'id,booking_id,created_at'), rows('booking_chat_moderation_events', 'id,booking_id,created_at'), verificationData(),
     ])
-    return res.status(200).json({ users, properties, bookings, payments, events, audit, chatReports, chatModeration, referrers: referral?.referrers ?? null, referrals: referral?.referrals ?? null, generatedAt: new Date().toISOString(), ownerId: auth.user.id })
+    return res.status(200).json({ users, properties, bookings, payments, events, audit, chatReports, chatModeration, verifications, referrers: referral?.referrers ?? null, referrals: referral?.referrals ?? null, generatedAt: new Date().toISOString(), ownerId: auth.user.id })
   } catch (error) {
     console.error('Admin request failed:', error.code || error.message)
     return res.status(500).json({ error: error.message === 'REPORT_LIMIT' ? 'O volume ultrapassou o limite deste relatório. Nenhum total parcial foi exibido. É necessário ampliar a consulta.' : 'Não foi possível carregar o painel. Tente novamente.' })

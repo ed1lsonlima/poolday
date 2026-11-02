@@ -56,6 +56,9 @@ export default async function handler(req, res) {
     });
 
     if (rpcError) {
+      if ((rpcError.message || '').includes('CONTA_MP_BLOQUEADA')) {
+        return res.redirect(`${SITE_URL}/anfitriao?mp_error=conta_bloqueada`);
+      }
       console.error('Erro ao salvar credenciais via RPC:', JSON.stringify(rpcError));
       return res.redirect(`${SITE_URL}/anfitriao?mp_error=falha_salvar`);
     }

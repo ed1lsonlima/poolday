@@ -24,6 +24,9 @@ export const isUnpaidHoldExpired = (booking, now = new Date()) => booking.status
   && Boolean(booking.hold_expires_at)
   && new Date(booking.hold_expires_at) < now
 
+// Só conta o que chegou a devolver dinheiro: reserva não paga cancelada não pesa contra o anfitrião.
+export const hostCancellations = bookings => bookings.filter(b => b.status === 'cancelled' && b.cancelled_by === 'host' && Number(b.refunded_amount) > 0).length
+
 export function report(data, from = '', to = '') {
   const users = (data.users || []).filter(r => inPeriod(r, from, to))
   const bookings = (data.bookings || []).filter(r => inPeriod(r, from, to))
@@ -36,7 +39,7 @@ export function report(data, from = '', to = '') {
     const list = approved.filter(p => p.host_id === host.id)
     const reconciled = list.filter(p => !numeric(p.refunded_amount) && p.host_net != null)
     const all = (data.bookings || []).filter(b => b.host_id === host.id)
-    return { ...host, gross: sum(list.map(p => ({ retained: retainedPayment(p) })), 'retained'), fees: sum(list.filter(p => !numeric(p.refunded_amount)), 'platform_fee'), net: sum(reconciled, 'host_net'), paid: list.length, needsReconciliation: list.length - reconciled.length, promo: all.filter(b => b.promotion_applied && ['confirmed','completed'].includes(b.status)).length }
+    return { ...host, gross: sum(list.map(p => ({ retained: retainedPayment(p) })), 'retained'), fees: sum(list.filter(p => !numeric(p.refunded_amount)), 'platform_fee'), net: sum(reconciled, 'host_net'), paid: list.length, needsReconciliation: list.length - reconciled.length, promo: all.filter(b => b.promotion_applied && ['confirmed','completed'].includes(b.status)).length, hostCancellations: hostCancellations(all) }
   }).sort((a, b) => b.gross - a.gross)
   return { users, bookings, payments, approved, settled, expired, hosts,
     gross: sum(approved.map(p => ({ retained: retainedPayment(p) })), 'retained'), fees: sum(settled, 'platform_fee'),

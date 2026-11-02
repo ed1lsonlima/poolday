@@ -9,6 +9,7 @@ import { propertyFormError } from '../lib/propertyValidation'
 import CityField from '../components/common/CityField'
 import HostPriceField from '../components/common/HostPriceField'
 import { buildPublicPropertyTitle, containsExternalContact } from '../lib/propertySafety'
+import VisitConsentField from '../components/host/VisitConsentField'
 
 const TYPES = [
   { id: 'pool', label: 'Piscina' }, { id: 'chacara', label: 'Chácara' },
@@ -26,6 +27,7 @@ export default function NewProperty() {
   const [amenities, setAmenities] = useState([])
   const [availableDays, setAvailableDays] = useState([1,2,3,4,5,6,0])
   const [newAmenity, setNewAmenity] = useState('')
+  const [visitConsent, setVisitConsent] = useState(false)
   const [form, setForm] = useState({
     type: 'pool', description: '', rules: '', checkin_instructions: '',
     city: '', neighborhood: '', address: '', landmark: '', map_url: '', state: 'AL', cep: '',
@@ -106,6 +108,7 @@ export default function NewProperty() {
     e.preventDefault()
     const invalid = propertyFormError({ form, images, amenities, availableDays })
     if (invalid) { toast.error(invalid.message); return }
+    if (!isEditing && !visitConsent) { toast.error('Para publicar, aceite a possível visita do PoolDay.'); return }
     setLoading(true)
     try {
       const { municipality_code: _municipalityCode, ...propertyForm } = form
@@ -116,7 +119,7 @@ export default function NewProperty() {
         if (!data) throw new Error('Espaço não atualizado')
         toast.success('Alterações enviadas para análise!')
       } else {
-        const { error } = await supabase.from('properties').insert(payload)
+        const { error } = await supabase.from('properties').insert({ ...payload, visit_consent_at: new Date().toISOString() })
         if (error) throw error
         toast.success('Espaço enviado para análise!')
       }
@@ -284,6 +287,7 @@ export default function NewProperty() {
           </div>
 
           <p className="text-sm text-gray-500">{isEditing ? 'Ao salvar, o anúncio volta para análise e fica oculto até a nova aprovação. Reservas já realizadas não são canceladas.' : 'Seu anúncio será analisado pela equipe PoolDay antes de aparecer nas buscas.'}</p>
+          {!isEditing && <VisitConsentField checked={visitConsent} onChange={setVisitConsent}/>}
           <button type="submit" disabled={loading || uploading} className="btn-primary w-full py-4 text-base">
             {loading ? 'Enviando...' : (isEditing ? 'Salvar e enviar para análise' : 'Enviar espaço para análise')}
           </button>

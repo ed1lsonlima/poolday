@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import AdminPanel from '../components/admin/AdminPanel'
 import ReferralView from '../components/referral/ReferralView'
+import HostVerificationCard from '../components/host/HostVerificationCard'
+import VisitConsentField from '../components/host/VisitConsentField'
 
 // Somente em desenvolvimento (import.meta.env.DEV): telas com dados fictícios, sem banco nem login.
 const day = offset => new Date(Date.now() - offset * 864e5).toISOString()
@@ -33,6 +35,7 @@ const data = {
     { id: uid(34), kind: 'contact', severity: 'review', title: 'Possível contato externo no anúncio', entity_id: uid(11), created_at: day(1) },
   ],
   audit: [{ id: uid(41), action: 'approve_property', entity_id: uid(12), reason: 'Aprovado após revisão do anúncio.', created_at: day(3) }],
+  verifications: [{ host_id: uid(2), due_at: day(-5) }, { host_id: uid(5), due_at: day(1) }],
   chatReports: [],
   chatModeration: [{ id: uid(51), booking_id: uid(21), created_at: day(1) }],
   referrers: [{ user_id: uid(4), codigo: 'ab12cd34', nome: 'Carla Indicadora', whatsapp: '82900000004', chave_pix: 'carla@exemplo.test', ativo: true, created_at: day(15) }],
@@ -57,7 +60,13 @@ function ReferralPreview() {
     history={[{ id: 1, anfitriao_primeiro_nome: 'Davi', status: 'a_pagar', valor_centavos: 2000, created_at: day(4) }, { id: 2, anfitriao_primeiro_nome: 'Ana', status: 'aguardando_aprovacao', valor_centavos: 2000, created_at: day(2) }]}/>
 }
 
+function VerificationPreview() {
+  const [checked, setChecked] = useState(false)
+  return <div className="max-w-3xl mx-auto p-4 space-y-4"><HostVerificationCard dueAt={day(-5)} verified={false}/><HostVerificationCard dueAt={day(1)} verified={false}/><VisitConsentField checked={checked} onChange={setChecked}/></div>
+}
+
 export default function DevPreview() {
   const { screen } = useParams()
+  if (screen === 'verificacao') return <VerificationPreview/>
   return screen === 'indique' ? <ReferralPreview/> : <AdminPreview/>
 }
