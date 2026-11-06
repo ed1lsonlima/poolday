@@ -532,7 +532,7 @@ function TelasPorDentro({ onCta }) {
               <div className="mt-4 w-full bg-gray-50 rounded-xl p-3 text-left">
                 <div className="flex justify-between text-[11px] mb-1.5"><span className="text-gray-400">Espaço</span><span className="font-semibold text-gray-700">Piscina do Sítio</span></div>
                 <div className="flex justify-between text-[11px] mb-1.5"><span className="text-gray-400">Data</span><span className="font-semibold text-gray-700">Sáb, 09/08</span></div>
-                <div className="flex justify-between text-[11px]"><span className="text-gray-400">Você recebe</span><span className="font-extrabold text-green-600">R$ 350</span></div>
+                <div className="flex justify-between text-[11px]"><span className="text-gray-400">Diária</span><span className="font-extrabold text-gray-700">R$ 350</span></div>
               </div>
             </div>
           </Phone>
