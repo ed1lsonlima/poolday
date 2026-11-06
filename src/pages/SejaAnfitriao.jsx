@@ -1,9 +1,9 @@
-import { forwardRef, useState, useMemo, useRef } from 'react'
+import { forwardRef, useState, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { Waves } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { supabase } from '../lib/supabase'
-import { calculateHostEarnings, saveHostSignupPrefill } from '../lib/hostLanding'
+import { saveHostSignupPrefill } from '../lib/hostLanding'
 import { trackHostLead } from '../lib/tiktokPixel'
 import { readReferralCode } from '../lib/referral'
 
@@ -44,21 +44,10 @@ function dispararConversao(label) {
   } catch { /* nunca deixa a medição quebrar a página */ }
 }
 
-const BRL = (n) =>
-  n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
-
 const TIPOS = ['Piscina', 'Chácara', 'Área de lazer', 'Sítio', 'Salão de festas', 'Outro']
 const WHATSAPP_AJUDA = `https://wa.me/${WHATSAPP}?text=${encodeURIComponent('Oi! Vi a página Seja Anfitrião do PoolDay e quero ajuda para cadastrar meu espaço.')}`
 
 export default function SejaAnfitriao() {
-  // ── Simulador ──────────────────────────────────────────────
-  const [diaria, setDiaria] = useState(350)
-  const [reservas, setReservas] = useState(8)    // reservas por mês
-  const { monthly: ganhoMes, yearly: ganhoAno } = useMemo(
-    () => calculateHostEarnings(diaria, reservas),
-    [diaria, reservas],
-  )
-
   // ── Formulário ─────────────────────────────────────────────
   const [form, setForm] = useState({ nome: '', whatsapp: '', cidade: '', tipo: 'Piscina', consentimento: false })
   const [enviando, setEnviando] = useState(false)
@@ -147,12 +136,12 @@ export default function SejaAnfitriao() {
             🎁 0% de taxa nas suas 3 primeiras reservas
           </span>
           <h1 className="text-3xl md:text-5xl font-extrabold leading-tight max-w-3xl mx-auto">
-            Transforme seu espaço parado em{' '}
-            <span className="text-orange-400">uma nova fonte de renda</span>
+            Anuncie sua chácara, piscina ou área de lazer{' '}
+            <span className="text-orange-400">para aluguel por diária</span>
           </h1>
           <p className="mt-5 text-lg md:text-xl text-white/90 max-w-2xl mx-auto">
             Cadastre grátis, escolha os dias disponíveis e defina o valor da diária.
-            Nas 3 primeiras reservas, <b>100% do valor anunciado fica com você.</b>
+            Nas 3 primeiras reservas, <b>o PoolDay não cobra taxa.</b>
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <button
@@ -170,13 +159,6 @@ export default function SejaAnfitriao() {
               Prefiro ajuda pelo WhatsApp
             </a>
           </div>
-          <a
-            href="#simulador"
-            onClick={(e) => { e.preventDefault(); document.getElementById('simulador')?.scrollIntoView({ behavior: 'smooth' }) }}
-            className="mt-5 inline-block text-sm font-semibold text-white/90 underline underline-offset-4 hover:text-white"
-          >
-            Simular quanto posso receber
-          </a>
           <p className="mt-5 text-sm text-white/70">
             Sem mensalidade • 3 primeiras reservas sem taxa • Você no controle
           </p>
@@ -192,92 +174,6 @@ export default function SejaAnfitriao() {
 
       <ComoFunciona onCta={() => scrollTo(formRef)} />
 
-      {/* ══ SIMULADOR ══ */}
-      <section id="simulador" className="max-w-3xl mx-auto px-5 py-14 md:py-20">
-        <div className="text-center mb-8">
-          <h2 className="text-2xl md:text-3xl font-extrabold">
-            Faça as contas: <span className="text-primary-500">quanto o seu espaço rende?</span>
-          </h2>
-          <p className="mt-2 text-gray-500">Arraste e veja o valor que pode cair no seu bolso.</p>
-        </div>
-
-        <div className="card p-6 md:p-8 shadow-md border-gray-100">
-          {/* Diária */}
-          <div className="mb-7">
-            <div className="flex items-baseline justify-between mb-2">
-              <label className="font-semibold text-gray-700">Sua diária</label>
-              <span className="text-2xl font-extrabold text-primary-500">{BRL(diaria)}</span>
-            </div>
-            <input
-              type="range" min={150} max={800} step={50}
-              value={diaria}
-              onChange={(e) => setDiaria(Number(e.target.value))}
-              className="w-full accent-orange-500 cursor-pointer"
-            />
-            <div className="flex justify-between text-xs text-gray-400 mt-1">
-              <span>R$ 150</span><span>R$ 800</span>
-            </div>
-          </div>
-
-          {/* Reservas por mês */}
-          <div className="mb-8">
-            <label className="font-semibold text-gray-700 block mb-3">
-              Reservas por mês
-            </label>
-            <div className="grid grid-cols-3 gap-3">
-              {[4, 8, 12].map((n) => (
-                <button
-                  key={n}
-                  onClick={() => setReservas(n)}
-                  className={`py-3 rounded-xl font-bold border-2 transition-all ${
-                    reservas === n
-                      ? 'bg-primary-500 border-primary-500 text-white shadow'
-                      : 'bg-white border-gray-200 text-gray-600 hover:border-primary-300'
-                  }`}
-                >
-                  {n}
-                  <span className="block text-xs font-normal opacity-80">
-                    {n === 4 ? '1 por semana' : n === 8 ? '2 por semana' : '3 por semana'}
-                  </span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Resultado — número GRANDE */}
-          <div className="bg-gradient-to-br from-orange-50 to-primary-50 rounded-2xl p-6 text-center border border-orange-100">
-            <p className="text-gray-600 font-medium">Você pode receber até</p>
-            <p className="text-4xl md:text-5xl font-extrabold text-orange-600 my-1">
-              {BRL(ganhoMes)}
-            </p>
-            <p className="text-gray-600 font-medium">por mês</p>
-            <p className="mt-3 text-sm text-primary-600 font-semibold">
-              São {BRL(ganhoAno)} por ano com um espaço que hoje está parado 💰
-            </p>
-          </div>
-
-          {/* Regra transparente da promoção */}
-          <div className="mt-4 flex items-start gap-2 text-sm text-gray-500 bg-gray-50 rounded-xl p-3">
-            <span className="text-lg leading-none">✅</span>
-            <p>
-              <b>Oferta de lançamento:</b> nas suas 3 primeiras reservas você recebe 100% da diária.
-              A partir da 4ª reserva, o PoolDay desconta 15% e você recebe 85% do valor anunciado.
-              O cálculo acima já considera essa regra.
-            </p>
-          </div>
-          <p className="mt-3 text-xs text-gray-400 text-center">
-            Simulação ilustrativa baseada no valor e na quantidade escolhidos. A procura varia por região, época e qualidade do anúncio; não há garantia de renda.
-          </p>
-
-          <button
-            onClick={() => scrollTo(formRef)}
-            className="mt-6 w-full bg-orange-500 hover:bg-orange-600 text-white font-bold text-lg py-4 rounded-2xl transition-all active:scale-[0.98]"
-          >
-            Quero ganhar isso todo mês
-          </button>
-        </div>
-      </section>
-
       {/* ══ CONFIANÇA ══ */}
       <section className="bg-primary-50/60 py-14 md:py-16">
         <div className="max-w-5xl mx-auto px-5">
@@ -288,7 +184,7 @@ export default function SejaAnfitriao() {
             <Beneficio
               emoji="🆓"
               titulo="3 reservas com taxa zero"
-              texto="Nas 3 primeiras reservas confirmadas, você recebe 100% do valor anunciado. Depois, a taxa é de 15%."
+              texto="Nas 3 primeiras reservas confirmadas, o PoolDay não cobra taxa. A partir da 4ª, a taxa é de 15%."
             />
             <Beneficio
               emoji="🎯"
@@ -413,7 +309,7 @@ export default function SejaAnfitriao() {
           <Waves className="text-primary-500" size={20} />
           <span className="font-bold text-gray-700">PoolDay</span>
         </Link>
-        <p className="mt-2">Seu espaço de lazer, gerando renda.</p>
+        <p className="mt-2">Anuncie seu espaço de lazer por diária.</p>
       </footer>
     </div>
   )
@@ -615,7 +511,6 @@ function TelasPorDentro({ onCta }) {
               <div className="p-3">
                 <div className="flex items-center justify-between">
                   <div className="h-3 w-24 bg-gray-300 rounded" />
-                  <span className="text-[10px] font-bold text-orange-500">★ 4,9</span>
                 </div>
                 <div className="mt-1 h-2 w-16 bg-gray-200 rounded" />
                 <div className="mt-3 grid grid-cols-3 gap-1.5">
