@@ -2,7 +2,7 @@ import LegalLayout from '../components/common/LegalLayout'
 
 export default function Privacidade() {
   return (
-    <LegalLayout title="Política de Privacidade" updated="outubro de 2026">
+    <LegalLayout title="Política de Privacidade" updated="novembro de 2026">
       <p>Esta Política explica como o PoolDay coleta, usa e protege as informações de Hóspedes e Anfitriões.</p>
 
       <h2>1. Dados que coletamos</h2>
@@ -23,7 +23,10 @@ export default function Privacidade() {
       <h2>6. Cookies</h2>
       <p>Utilizamos cookies e ferramentas de medição de publicidade, incluindo Google Ads e TikTok Pixel, para entender visitas e avaliar campanhas. O TikTok Pixel pode receber informações técnicas do navegador e eventos como envio do formulário de interesse e criação de conta de anfitrião. Nos eventos que configuramos, não enviamos os campos preenchidos no formulário, senhas, mensagens ou dados de pagamento. Você pode gerenciar cookies nas configurações do navegador.</p>
 
-      <h2>7. Alterações nesta política</h2>
+      <h2>7. Contagem de visitas</h2>
+      <p>Para entender como o site é usado, o PoolDay conta as páginas visitadas. Guardamos um número aleatório criado no seu navegador, a página aberta, o site de onde você veio (como Instagram ou Google), o tipo de aparelho e a cidade aproximada informada pelo nosso provedor de hospedagem. Não guardamos seu endereço IP. Se você estiver logado, a visita fica ligada à sua conta, e só a administração do PoolDay vê essas informações. Se o seu navegador pedir para não ser rastreado, as visitas não são contadas.</p>
+
+      <h2>8. Alterações nesta política</h2>
       <p>Esta política pode ser atualizada periodicamente. A versão mais recente estará sempre disponível nesta página.</p>
     </LegalLayout>
   )

@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import AdminPanel from '../components/admin/AdminPanel'
 import ReferralView from '../components/referral/ReferralView'
+import { Painel } from '../painel/PainelApp'
 import HostVerificationCard from '../components/host/HostVerificationCard'
 import VisitConsentField from '../components/host/VisitConsentField'
 
@@ -65,8 +66,12 @@ function VerificationPreview() {
   return <div className="max-w-3xl mx-auto p-4 space-y-4"><HostVerificationCard dueAt={day(-5)} verified={false}/><HostVerificationCard dueAt={day(1)} verified={false}/><VisitConsentField checked={checked} onChange={setChecked}/></div>
 }
 
+const painelExemplo = {"dias":7,"gerado_em":"2026-11-21T12:18:16.733Z","visitas":{"paginas":412,"visitantes":138,"sessoes":171,"logados":4,"por_dia":[{"dia":"2026-11-15","visitantes":12,"cadastros":1},{"dia":"2026-11-16","visitantes":20,"cadastros":0},{"dia":"2026-11-17","visitantes":15,"cadastros":0},{"dia":"2026-11-18","visitantes":31,"cadastros":1},{"dia":"2026-11-19","visitantes":18,"cadastros":0},{"dia":"2026-11-20","visitantes":25,"cadastros":0},{"dia":"2026-11-21","visitantes":17,"cadastros":1}],"paginas_top":[{"nome":"/","total":160},{"nome":"/seja-anfitriao","total":88},{"nome":"/espaco/abc","total":70},{"nome":"/explorar","total":52}],"origens":[{"nome":"instagram","total":64},{"nome":"direto","total":51},{"nome":"tiktok","total":33},{"nome":"google","total":12}],"aparelhos":[{"nome":"celular","total":140},{"nome":"computador","total":31}],"cidades":[{"nome":"Maceió / AL","total":70},{"nome":"Arapiraca / AL","total":22},{"nome":"Palmeira dos Índios / AL","total":15}],"campanhas":[{"nome":"tiktok · cpc · anfitrioes","total":28}]},"pessoas":{"clientes":12,"anfitrioes":3,"novos_no_periodo":3,"leads_anfitriao":2,"ultimos_cadastros":[{"nome":"Maria (exemplo)","tipo":"client","cidade":"Maceió / AL","criado":"2026-11-21T11:18:16.735Z"},{"nome":"João (exemplo)","tipo":"host","cidade":"Arapiraca / AL","criado":"2026-11-19T12:18:16.735Z"}],"ultimos_acessos":[{"nome":"Maria (exemplo)","tipo":"client","pagina":"/espaco/abc","quando":"2026-11-21T12:08:16.735Z"}]},"espacos":{"total":5,"no_ar":3,"em_analise":1,"pausados":1,"recusados":0},"reservas":{"iniciadas_no_periodo":4,"confirmadas":1,"aguardando_pagamento":2,"canceladas":4,"proximas":[{"data":"2026-11-27","espaco":"Piscina (exemplo)","status":"confirmed","total":450}]},"dinheiro":{"pago_total":80,"pago_no_periodo":0,"comissao_total":50,"devolvido_total":0},"alertas":{"abertos":2,"urgentes":1,"lista":[{"titulo":"Cliente não conseguiu entrar no espaço (exemplo)","gravidade":"urgent","quando":"2026-11-21T10:18:16.735Z"}]},"indicacoes":{"indicadores":0,"em_andamento":0,"a_pagar":0,"pagas":0}}
+const fontePainel = async () => ({ data: painelExemplo, error: null })
+
 export default function DevPreview() {
   const { screen } = useParams()
   if (screen === 'verificacao') return <VerificationPreview/>
+  if (screen === 'painel') return <Painel sair={() => {}} fonte={fontePainel}/>
   return screen === 'indique' ? <ReferralPreview/> : <AdminPreview/>
 }

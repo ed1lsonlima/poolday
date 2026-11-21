@@ -6,6 +6,7 @@ import Header from './components/common/Header'
 import Footer from './components/common/Footer'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import ScrollToTop from './components/common/ScrollToTop'
+import VisitTracker from './components/common/VisitTracker'
 import { SITE_URL } from './lib/site'
 
 const Home = lazy(() => import('./pages/Home'))
@@ -115,6 +116,7 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <ScrollToTop />
+        <VisitTracker />
         <PageMeta />
         <Toaster position="top-center" toastOptions={{ duration: 3000, style: { borderRadius: '12px', fontFamily: 'Inter, sans-serif' } }} />
         <Suspense fallback={<PageLoading />}>
