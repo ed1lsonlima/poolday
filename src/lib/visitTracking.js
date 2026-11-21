@@ -65,6 +65,15 @@ export function visitorId(storage) {
   } catch { return null }
 }
 
+// Evento do programa de indicação, contado como uma "página" especial no painel do dono.
+export function trackEvent(nome) {
+  try {
+    if (import.meta.env?.DEV) return
+    const visit = buildVisit({ path: `/_evento/${nome}`, storage: globalThis.localStorage })
+    if (visit) import('./supabase').then(({ supabase }) => supabase.rpc('registrar_visita', { p_visit: visit })).then(() => {}, () => {})
+  } catch { /* a contagem nunca atrapalha a página */ }
+}
+
 export function buildVisit({ path, storage, now = Date.now(), win = globalThis.window, doc = globalThis.document, nav = globalThis.navigator }) {
   const userAgent = nav?.userAgent || ''
   if (isBot(userAgent, nav?.webdriver) || nav?.doNotTrack === '1') return null

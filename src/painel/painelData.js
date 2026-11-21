@@ -11,6 +11,13 @@ export function nomePagina(path) {
   if (path.startsWith('/anfitriao/')) return 'Área do anfitrião'
   if (path.startsWith('/reserva/')) return 'Conversa de reserva'
   if (path.startsWith('/i/')) return 'Link de indicação'
+  if (path === '/indique') return 'Indique um anfitrião'
+  if (path === '/indique/painel') return 'Painel do indicador'
+  if (path === '/_evento/indique-visita') return 'Evento: visita ao Indique'
+  if (path === '/_evento/indique-link-gerado') return 'Evento: link de indicação gerado'
+  if (path === '/_evento/indique-whatsapp') return 'Evento: clique em Mandar no WhatsApp'
+  if (path === '/_evento/visita-com-ref') return 'Evento: visita com link de indicação'
+  if (path === '/_evento/anfitriao-indicado') return 'Evento: conta de anfitrião por indicação'
   return path
 }
 

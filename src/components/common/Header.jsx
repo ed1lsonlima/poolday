@@ -238,7 +238,7 @@ export default function Header() {
                   <MenuItem icon={<User size={18}/>} label="Ver perfil" to="/perfil" onClick={() => setMenuOpen(false)} />
                   <MenuItem icon={<CalendarDays size={18}/>} label="Minhas Reservas" to="/reservas" onClick={() => setMenuOpen(false)} />
                   <MenuItem icon={<Heart size={18}/>} label="Favoritos" to="/favoritos" onClick={() => setMenuOpen(false)} />
-                  {profile?.role === 'client' && <MenuItem icon={<Gift size={18}/>} label="Indique e ganhe R$ 20" to="/indique-e-ganhe" onClick={() => setMenuOpen(false)} />}
+                  <MenuItem icon={<Gift size={18}/>} label="Indique um anfitrião" to="/indique" onClick={() => setMenuOpen(false)} />
                   {profile?.role === 'host' && (
                     <MenuItem icon={<LayoutDashboard size={18}/>} label="Painel do Anfitrião" to="/anfitriao" onClick={() => setMenuOpen(false)} />
                   )}

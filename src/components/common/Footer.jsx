@@ -36,6 +36,7 @@ export default function Footer() {
             <ul className="space-y-2 text-sm">
               <li><Link to="/cadastro?role=host" className="hover:text-white transition-colors">Anuncie seu espaço</Link></li>
               <li><Link to="/acordo-anfitriao" className="hover:text-white transition-colors">Como ser anfitrião</Link></li>
+              <li><Link to="/indique" className="hover:text-white transition-colors">Indique um anfitrião</Link></li>
             </ul>
           </div>
 

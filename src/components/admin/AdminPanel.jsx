@@ -2,8 +2,8 @@ import { useMemo, useRef, useState, useEffect } from 'react'
 import { Activity, Bell, CircleAlert, Gift, Home, MessageCircle, RefreshCw, ShieldCheck, Users, Wallet, Waves } from 'lucide-react'
 import { dayBR, hostCancellations, inPeriod, isUnpaidHoldExpired, money, report, riskSignals } from '../../lib/adminReports'
 import { adminHome, referralTotals, splitEvents } from '../../lib/adminInbox'
-import { REFERRAL_STATUS } from '../../lib/referral'
 import BrazilMap from '../common/BrazilMap'
+import ReferralTab from './ReferralTab'
 import { Badge, Cell, Chips, Collapsible, CopyButton, Empty, ExportButton, Metric, SummaryLine, Table } from './AdminUI'
 
 export const TABS = [
@@ -19,7 +19,8 @@ export const LABEL = {
   unverify_user: 'Remover verificação', resolve_event: 'Arquivar aviso (não aprova espaço)',
   view_booking_chat: 'Consulta de conversa', view_property: 'Revisão de anúncio',
   marcar_indicacao_paga: 'Marcar indicação como paga', recusar_indicacao: 'Recusar indicação',
-  desativar_indicador: 'Desativar link do indicador', reativar_indicador: 'Reativar link do indicador',
+  desativar_indicador: 'Bloquear link do indicador', reativar_indicador: 'Reativar link do indicador',
+  invalidar_fraude: 'Invalidar indicação por fraude', configurar_programa: 'Configurar programa de indicação', registrar_verificacao: 'Checklist de indicação',
 }
 const NOTICE_REASON = 'Aviso informativo lido no sino.'
 const cents = value => money(Number(value || 0) / 100)
@@ -47,7 +48,6 @@ export default function AdminPanel({ data, tab, onTab, busy, error, onReload, on
   const [search, setSearch] = useState('')
   const [role, setRole] = useState('')
   const [propertyFilter, setPropertyFilter] = useState('pending')
-  const [referralFilter, setReferralFilter] = useState('a_pagar')
   const [chatSearch, setChatSearch] = useState('')
   const [pending, setPending] = useState(null)
   const [reason, setReason] = useState('')
@@ -69,6 +69,7 @@ export default function AdminPanel({ data, tab, onTab, busy, error, onReload, on
   const bookingsById = useMemo(() => new Map(data.bookings.map(booking => [booking.id, booking])), [data])
   const referrersById = useMemo(() => new Map((data.referrers || []).map(item => [item.user_id, item])), [data])
   const totals = referralTotals(data.referrals)
+  const referralByHost = useMemo(() => new Map((data.referrals || []).filter(item => ['cadastrou', 'aguardando_aprovacao'].includes(item.status)).map(item => [item.anfitriao_id, referrersById.get(item.indicador_id)?.nome || 'indicador'])), [data, referrersById])
 
   function ask(action, id, name, extra = {}) { setReason(''); setPaidOn(today()); setPending({ action, id, name, ...extra }) }
   async function submit(event) {
@@ -100,7 +101,6 @@ export default function AdminPanel({ data, tab, onTab, busy, error, onReload, on
   const withSpace = new Set(data.properties.filter(p => cohortHostIds.has(p.host_id)).map(p => p.host_id))
   const withPayment = new Set(data.payments.filter(p => p.status === 'approved' && withSpace.has(p.host_id)).map(p => p.host_id))
   const chatBookings = data.bookings.filter(b => Number(b.paid_amount) > 0 && `${b.id} ${usersById.get(b.client_id)?.name || ''} ${usersById.get(b.host_id)?.name || ''} ${propertiesById.get(b.property_id)?.name || ''}`.toLowerCase().includes(chatSearch.toLowerCase()))
-  const referrals = (data.referrals || []).filter(item => referralFilter === 'all' || item.status === referralFilter)
   const verificationByHost = new Map((data.verifications || []).map(item => [item.host_id, item.due_at]))
   const hostCancelCount = id => hostCancellations(data.bookings.filter(b => b.host_id === id))
 
@@ -150,7 +150,7 @@ export default function AdminPanel({ data, tab, onTab, busy, error, onReload, on
       <input aria-label="Buscar espaços" className="input-field" placeholder="Buscar espaço ou cidade" value={search} onChange={e => setSearch(e.target.value)}/>
       <p className="text-xs text-gray-400">Novos anúncios e edições só aparecem para clientes após aprovação.</p>
       {properties.map(property => propertyFilter === 'pending'
-        ? <article key={property.id} className="bg-white border border-gray-100 rounded-2xl p-4 flex flex-col sm:flex-row gap-4">{property.images?.[0] && <img src={property.images[0]} alt={property.name} className="w-full sm:w-36 h-40 sm:h-32 object-cover rounded-xl"/>}<div className="flex-1 min-w-0"><div className="flex gap-2 items-center flex-wrap"><h3 className="font-bold">{property.name}</h3><Badge warning>Em análise</Badge></div><p className="text-sm text-gray-500 mt-1">{property.city} / {property.state} · {money(property.price_per_day)} por diária · {usersById.get(property.host_id)?.name}</p><p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap break-words line-clamp-4">{property.description || 'Sem descrição adicional.'}</p>{property.moderation_note && <p className="text-xs text-amber-700 mt-2">Última análise: {property.moderation_note}</p>}<div className="flex flex-wrap gap-2 mt-3"><button type="button" disabled={loadingDetail} onClick={() => showProperty(property.id)} className={ghostBtn}>Ver anúncio completo</button><button type="button" disabled={acting} onClick={() => onApprove(property)} className={primaryBtn}>Aprovar e publicar</button><button type="button" onClick={() => ask('reject_property', property.id, property.name)} className={ghostBtn}>Recusar</button></div></div></article>
+        ? <article key={property.id} className="bg-white border border-gray-100 rounded-2xl p-4 flex flex-col sm:flex-row gap-4">{property.images?.[0] && <img src={property.images[0]} alt={property.name} className="w-full sm:w-36 h-40 sm:h-32 object-cover rounded-xl"/>}<div className="flex-1 min-w-0"><div className="flex gap-2 items-center flex-wrap"><h3 className="font-bold">{property.name}</h3><Badge warning>Em análise</Badge>{referralByHost.has(property.host_id) && <Badge>Indicado por {referralByHost.get(property.host_id)}</Badge>}</div><p className="text-sm text-gray-500 mt-1">{property.city} / {property.state} · {money(property.price_per_day)} por diária · {usersById.get(property.host_id)?.name}</p><p className="text-sm text-gray-600 mt-2 whitespace-pre-wrap break-words line-clamp-4">{property.description || 'Sem descrição adicional.'}</p>{property.moderation_note && <p className="text-xs text-amber-700 mt-2">Última análise: {property.moderation_note}</p>}<div className="flex flex-wrap gap-2 mt-3"><button type="button" disabled={loadingDetail} onClick={() => showProperty(property.id)} className={ghostBtn}>Ver anúncio completo</button><button type="button" disabled={acting} onClick={() => onApprove(property)} className={primaryBtn}>Aprovar e publicar</button><button type="button" onClick={() => ask('reject_property', property.id, property.name)} className={ghostBtn}>Recusar</button></div></div></article>
         : <details key={property.id} className="group bg-white border border-gray-100 rounded-2xl"><summary className="flex items-center gap-3 p-4 cursor-pointer list-none [&::-webkit-details-marker]:hidden">{property.images?.[0] && <img src={property.images[0]} alt="" className="w-12 h-12 object-cover rounded-lg shrink-0"/>}<span className="min-w-0 flex-1"><span className="block font-semibold text-sm truncate">{property.name}</span><span className="block text-xs text-gray-500 truncate">{property.city} / {property.state} · {money(property.price_per_day)} · {usersById.get(property.host_id)?.name}</span></span><Badge tone={propertyFilter === 'active' ? 'success' : 'muted'}>{propertyFilter === 'active' ? 'Publicado' : propertyFilter === 'paused' ? 'Pausado' : 'Recusado'}</Badge></summary>
           <div className="px-4 pb-4 flex flex-wrap gap-2">{property.moderation_note && <p className="text-xs text-amber-700 basis-full">Última análise: {property.moderation_note}</p>}<button type="button" disabled={loadingDetail} onClick={() => showProperty(property.id)} className={ghostBtn}>Ver anúncio</button>{property.moderation_status === 'rejected' && <button type="button" disabled={acting} onClick={() => onApprove(property)} className={primaryBtn}>Aprovar e publicar</button>}{property.is_active && <button type="button" onClick={() => ask('pause_property', property.id, property.name)} className={ghostBtn}>Pausar</button>}{property.moderation_status !== 'rejected' && <button type="button" onClick={() => ask('reject_property', property.id, property.name)} className={ghostBtn}>Recusar</button>}</div></details>)}
       {!properties.length && <Empty>{propertyFilter === 'pending' ? 'Nenhum espaço aguardando aprovação.' : 'Nenhum espaço neste filtro.'}</Empty>}
@@ -185,29 +185,7 @@ export default function AdminPanel({ data, tab, onTab, busy, error, onReload, on
 
     {tab === 'referrals' && (data.referrals === null
       ? <p className="bg-amber-50 border border-amber-100 text-amber-900 text-sm p-4 rounded-2xl">O programa de indicações ainda não está ativo: falta aplicar a migração do banco. Nada é registrado até lá.</p>
-      : <div className="space-y-4">
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-3"><Metric label="A pagar" value={cents(totals.toPay)} note={`${totals.toPayCount} indicação(ões)`} icon={Gift} accent/><Metric label="Pago" value={cents(totals.paid)} note="Total já pago por Pix" icon={Wallet}/><Metric label="Indicadores ativos" value={(data.referrers || []).filter(item => item.ativo).length} note={`${(data.referrers || []).length} cadastrados`} icon={Users}/></div>
-        <p className="text-xs text-gray-500">R$ 20 por anfitrião novo, devidos quando você aprova o primeiro espaço dele. Pagamento manual por Pix. Limite de 10 pagas por indicador por mês; autoindicação é bloqueada no cadastro.</p>
-        <Chips label="Filtrar indicações" value={referralFilter} onChange={setReferralFilter} options={[['a_pagar', 'A pagar', totals.toPayCount], ['aguardando_aprovacao', 'Em análise'], ['cadastrou', 'Cadastrou'], ['paga', 'Pagas'], ['recusada', 'Recusadas'], ['all', 'Todas']]}/>
-        <div className="flex justify-end"><ExportButton name="indicacoes" rows={referrals.map(item => ({ indicacao: item.id, indicador: referrersById.get(item.indicador_id)?.nome, whatsapp_indicador: referrersById.get(item.indicador_id)?.whatsapp, anfitriao: usersById.get(item.anfitriao_id)?.name, espaco: propertiesById.get(item.property_id)?.name, status: REFERRAL_STATUS[item.status], valor: Number(item.valor_centavos) / 100, cadastro: item.created_at, aprovada: item.aprovada_em, paga: item.paga_em, observacao: item.pagamento_observacao || item.recusa_motivo }))}/></div>
-        <ul className="space-y-3">{referrals.map(item => { const referrer = referrersById.get(item.indicador_id); const host = usersById.get(item.anfitriao_id); const property = propertiesById.get(item.property_id); return <li key={item.id} className="bg-white border border-gray-100 rounded-2xl p-4">
-          <div className="flex items-start justify-between gap-3"><div className="min-w-0"><p className="text-xs text-gray-400">Indicador</p><p className="font-semibold">{referrer?.nome || '—'}{referrer && !referrer.ativo && <span className="text-xs text-red-600 font-medium"> · link desativado</span>}</p></div><div className="text-right shrink-0"><Badge tone={item.status === 'paga' ? 'success' : item.status === 'recusada' ? 'muted' : undefined} warning={item.status === 'a_pagar'}>{REFERRAL_STATUS[item.status]}</Badge><p className="font-bold mt-1">{cents(item.valor_centavos)}</p></div></div>
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3 text-sm">
-            <div><dt className="text-xs text-gray-500">WhatsApp</dt><dd className="font-medium flex items-center gap-2 flex-wrap">{referrer?.whatsapp ? <a className="text-primary-600 hover:underline" href={`https://wa.me/55${referrer.whatsapp.replace(/^55(?=\d{10,11}$)/, '')}`} target="_blank" rel="noopener noreferrer">{referrer.whatsapp}</a> : '—'}</dd></div>
-            <div><dt className="text-xs text-gray-500">Chave Pix</dt><dd className="font-medium flex items-center gap-2 flex-wrap break-all">{referrer?.chave_pix || '—'}<CopyButton value={referrer?.chave_pix} label="Copiar Pix"/></dd></div>
-            <div><dt className="text-xs text-gray-500">Anfitrião indicado</dt><dd className="font-medium break-words">{host?.name || '—'}<span className="block text-xs text-gray-400 break-all">{host?.email}</span></dd></div>
-            <div><dt className="text-xs text-gray-500">Espaço</dt><dd className="font-medium">{property ? <button type="button" disabled={loadingDetail} onClick={() => showProperty(property.id)} className="text-primary-600 hover:underline text-left">{property.name}</button> : 'Ainda não enviado'}</dd></div>
-          </dl>
-          <p className="text-xs text-gray-400 mt-3">Cadastro {dayBR(item.created_at)}{item.aprovada_em ? ` · aprovado ${dayBR(item.aprovada_em)}` : ''}{item.paga_em ? ` · pago ${dayBR(item.paga_em)}` : ''}</p>
-          {(item.pagamento_observacao || item.recusa_motivo) && <p className="text-xs text-gray-600 bg-gray-50 rounded-lg p-2 mt-2 break-words">{item.pagamento_observacao || item.recusa_motivo}</p>}
-          {!['paga', 'recusada'].includes(item.status) && <div className="flex flex-wrap gap-2 mt-3">{item.status === 'a_pagar' && <button type="button" onClick={() => ask('marcar_indicacao_paga', item.id, `${cents(item.valor_centavos)} para ${referrer?.nome || 'indicador'}`, { pix: referrer?.chave_pix })} className={primaryBtn}>Marcar como pago</button>}<button type="button" onClick={() => ask('recusar_indicacao', item.id, `Indicação de ${host?.name || 'anfitrião'}`)} className={ghostBtn}>Recusar</button></div>}
-        </li> })}</ul>
-        {!referrals.length && <Empty>Nenhuma indicação neste filtro.</Empty>}
-        <Collapsible title="Indicadores" note="Quem tem link. Desative o link de quem fizer envio em massa.">
-          <ul className="divide-y divide-gray-100 border-t border-gray-100">{(data.referrers || []).map(item => { const mine = (data.referrals || []).filter(ref => ref.indicador_id === item.user_id); return <li key={item.user_id} className="p-4 flex flex-col sm:flex-row sm:items-center gap-2"><div className="flex-1 min-w-0"><p className="font-semibold text-sm">{item.nome || usersById.get(item.user_id)?.name || '—'} <span className="text-xs text-gray-400 font-normal">/i/{item.codigo}</span></p><p className="text-xs text-gray-500">{mine.length} indicação(ões) · {mine.filter(ref => ref.status === 'paga').length} paga(s){!item.ativo && item.desativado_motivo ? ` · desativado: ${item.desativado_motivo}` : ''}</p></div><Badge tone={item.ativo ? 'success' : 'muted'}>{item.ativo ? 'Link ativo' : 'Link desativado'}</Badge>{actionButton(item.ativo ? 'desativar_indicador' : 'reativar_indicador', item.user_id, item.nome || 'Indicador')}</li> })}</ul>
-          {!(data.referrers || []).length && <Empty>Ninguém gerou link ainda.</Empty>}
-        </Collapsible>
-      </div>)}
+      : <ReferralTab data={data} usersById={usersById} propertiesById={propertiesById} ask={ask} onAction={onAction} showProperty={showProperty} acting={acting}/>)}
 
     {tab === 'records' && <div className="space-y-4">
       <p className="bg-amber-50 border border-amber-100 text-amber-900 rounded-2xl p-4 text-sm">Sinais de atenção não são acusações. Confira o contexto e registre o motivo antes de agir. Reembolsos devem ser realizados e conferidos no Mercado Pago.</p>

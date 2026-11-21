@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Waves, Mail, Lock, User, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react'
@@ -6,6 +6,9 @@ import toast from 'react-hot-toast'
 import CityField from '../components/common/CityField'
 import { clearHostSignupPrefill, readHostSignupPrefill } from '../lib/hostLanding'
 import { trackHostRegistration } from '../lib/tiktokPixel'
+import { supabase } from '../lib/supabase'
+import { normalizeReferralCode, readReferralCode, saveReferralCode } from '../lib/referral'
+import { cpfValido, formatCpf } from '../lib/referralProgram'
 
 function initialRegisterForm(isHost) {
   const prefill = isHost && typeof window !== 'undefined'
@@ -21,6 +24,7 @@ function initialRegisterForm(isHost) {
     municipality_code: null,
     password: '',
     confirm: '',
+    cpf: '',
   }
 }
 
@@ -33,12 +37,22 @@ export default function Register() {
   const [showPass, setShowPass] = useState(false)
   const [loading, setLoading] = useState(false)
   const { signUp, signInWithGoogle } = useAuth()
+  const [codigoGuardado] = useState(() => (typeof window === 'undefined' ? null : readReferralCode()))
+  const [indicadoPor, setIndicadoPor] = useState(null)
+  const [codigoDigitado, setCodigoDigitado] = useState('')
+  useEffect(() => {
+    if (!codigoGuardado) return
+    supabase.rpc('indicador_por_codigo', { p_codigo: codigoGuardado }).then(({ data }) => setIndicadoPor(data || null), () => {})
+  }, [codigoGuardado])
   const navigate = useNavigate()
 
   async function handleSubmit(e) {
     e.preventDefault()
     if (form.password !== form.confirm) return toast.error('As senhas não coincidem!')
     if (form.password.length < 8) return toast.error('Senha deve ter pelo menos 8 caracteres!')
+    if (role === 'host' && !cpfValido(form.cpf)) return toast.error('Informe um CPF válido. Ele é usado só para confirmar sua identidade e não aparece para clientes.')
+    if (role === 'host' && codigoDigitado.trim() && !normalizeReferralCode(codigoDigitado)) return toast.error('Confira o código de quem te indicou.')
+    if (role === 'host' && codigoDigitado.trim()) saveReferralCode(codigoDigitado)
     if (role === 'host' && !form.phone.trim()) return toast.error('Como anfitrião, informe um telefone/WhatsApp para o suporte PoolDay falar com você. O número não será exibido aos clientes.')
     setLoading(true)
     try {
@@ -120,6 +134,15 @@ export default function Register() {
             <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input id="register-phone" className="input-field pl-11" type="tel" autoComplete="tel" placeholder={role === 'host' ? 'WhatsApp (obrigatório)' : 'Telefone (opcional)'} value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} required={role === 'host'} />
           </div>
+          {role === 'host' && <div>
+            <label htmlFor="register-cpf" className="sr-only">CPF</label>
+            <input id="register-cpf" className="input-field" inputMode="numeric" autoComplete="off" placeholder="CPF (obrigatório para anfitrião)" value={form.cpf} onChange={e => setForm({ ...form, cpf: formatCpf(e.target.value) })} required />
+            <p className="text-xs text-gray-500 mt-1">Usamos o CPF só para confirmar sua identidade na verificação do espaço. Ele não aparece para clientes.</p>
+          </div>}
+          {role === 'host' && (indicadoPor ? <p className="text-sm rounded-xl bg-primary-50 text-primary-800 px-4 py-3">Indicado por <b>{indicadoPor}</b></p> : !codigoGuardado && <div>
+            <label htmlFor="register-ref" className="text-sm text-gray-600">Alguém te indicou? (código, opcional)</label>
+            <input id="register-ref" className="input-field mt-1 uppercase" autoComplete="off" maxLength={12} placeholder="Ex.: ANA4K2Q" value={codigoDigitado} onChange={e => setCodigoDigitado(e.target.value)} />
+          </div>)}
           <CityField value={form} onChange={location => setForm({ ...form, ...location })} label="Cidade e estado" description="Opcional. Ajuda a PoolDay a chegar à sua região; não coletamos localização exata." />
           <div className="relative">
             <label htmlFor="register-password" className="sr-only">Senha</label>

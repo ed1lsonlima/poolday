@@ -7,6 +7,7 @@ import Footer from './components/common/Footer'
 import ErrorBoundary from './components/common/ErrorBoundary'
 import ScrollToTop from './components/common/ScrollToTop'
 import VisitTracker from './components/common/VisitTracker'
+import ReferralCapture from './components/referral/ReferralCapture'
 import { SITE_URL } from './lib/site'
 
 const Home = lazy(() => import('./pages/Home'))
@@ -33,7 +34,9 @@ const Cancelamento = lazy(() => import('./pages/Cancelamento'))
 const NotFound = lazy(() => import('./pages/NotFound'))
 const SejaAnfitriao = lazy(() => import('./pages/SejaAnfitriao'))
 const ReferralLink = lazy(() => import('./pages/ReferralLink'))
-const IndiqueEGanhe = lazy(() => import('./pages/IndiqueEGanhe'))
+const Indique = lazy(() => import('./pages/Indique'))
+const IndiquePainel = lazy(() => import('./pages/IndiquePainel'))
+const IndiqueRegras = lazy(() => import('./pages/IndiqueRegras'))
 const PainelDono = lazy(() => import('./painel/PainelApp'))
 // Pré-visualização com dados fictícios, só no ambiente local (nunca vai para produção).
 const DevPreview = import.meta.env.DEV ? lazy(() => import('./dev/DevPreview')) : null
@@ -48,7 +51,9 @@ const META = {
   '/recuperar-senha': ['Recuperar senha — PoolDay', 'Receba um link seguro para redefinir sua senha.'],
   '/redefinir-senha': ['Redefinir senha — PoolDay', 'Cadastre uma nova senha para sua conta PoolDay.'],
   '/seja-anfitriao': ['Anuncie seu espaço — PoolDay', 'Anuncie gratuitamente e receba 100% do valor nas 3 primeiras reservas.'],
-  '/indique-e-ganhe': ['Indique e ganhe — PoolDay', 'Indique um dono de espaço e ganhe R$ 20 quando o espaço dele for aprovado.'],
+  '/indique': ['Indique um anfitrião: R$ 30 quando o espaço for aprovado — PoolDay', 'Conhece alguém que aluga piscina ou chácara? Indique e ganhe R$ 30 no Pix quando o espaço dele for cadastrado completo e aprovado no PoolDay.'],
+  '/indique/painel': ['Minhas indicações — PoolDay', 'Acompanhe suas indicações de anfitriões no PoolDay.'],
+  '/indique/regras': ['Regulamento: Indique um anfitrião — PoolDay', 'Regras do programa de indicação de anfitriões do PoolDay.'],
   '/termos': ['Termos de Uso — PoolDay', 'Termos de uso da plataforma PoolDay.'],
   '/privacidade': ['Política de Privacidade — PoolDay', 'Como o PoolDay coleta, utiliza e protege seus dados.'],
   '/acordo-anfitriao': ['Acordo do Anfitrião — PoolDay', 'Condições para anunciar espaços no PoolDay.'],
@@ -119,6 +124,7 @@ export default function App() {
       <BrowserRouter>
         <ScrollToTop />
         <VisitTracker />
+        <ReferralCapture />
         <PageMeta />
         <Toaster position="top-center" toastOptions={{ duration: 3000, style: { borderRadius: '12px', fontFamily: 'Inter, sans-serif' } }} />
         <Suspense fallback={<PageLoading />}>
@@ -133,7 +139,10 @@ export default function App() {
           {/* Landing do Google Ads pra captar anfitriao (standalone, sem Header/Footer) */}
           <Route path="/seja-anfitriao" element={<SejaAnfitriao />} />
           <Route path="/i/:codigo" element={<ReferralLink />} />
-          <Route path="/indique-e-ganhe" element={<ProtectedRoute><Layout><IndiqueEGanhe /></Layout></ProtectedRoute>} />
+          <Route path="/indique" element={<Layout><Indique /></Layout>} />
+          <Route path="/indique/painel" element={<ProtectedRoute><Layout><IndiquePainel /></Layout></ProtectedRoute>} />
+          <Route path="/indique/regras" element={<IndiqueRegras />} />
+          <Route path="/indique-e-ganhe" element={<Navigate to="/indique/painel" replace />} />
           {DevPreview && <Route path="/dev/:screen" element={<DevPreview />} />}
           <Route path="/entrar" element={<Login />} />
           <Route path="/recuperar-senha" element={<ForgotPassword />} />

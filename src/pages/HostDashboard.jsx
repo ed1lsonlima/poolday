@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { formatDateBR } from '../lib/formatDate'
 import { clearPropertyDraft, loadPropertyDraft } from '../lib/propertyDraft'
 import HostVerificationCard from '../components/host/HostVerificationCard'
+import HostCpfCard from '../components/host/HostCpfCard'
 
 function ActionButton({ icon, label, onClick, variant = 'primary', disabled = false }) {
   const hover = variant === 'danger' ? 'hover:text-red-500 hover:bg-red-50'
@@ -269,6 +270,7 @@ export default function HostDashboard() {
                 </div>
               </div>}
             </div>}
+            <HostCpfCard userId={user?.id}/>
             <HostVerificationCard dueAt={verificationDueAt} verified={profile?.verified}/>
             <div className="bg-gradient-to-r from-orange-50 to-primary-50 border border-orange-100 rounded-2xl p-4 mb-6">
               <p className="font-bold text-gray-800 text-sm">🎁 Oferta de lançamento: 3 reservas com taxa zero</p>

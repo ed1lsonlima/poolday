@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import AdminPanel from '../components/admin/AdminPanel'
-import ReferralView from '../components/referral/ReferralView'
 import { Painel } from '../painel/PainelApp'
 import HostVerificationCard from '../components/host/HostVerificationCard'
 import VisitConsentField from '../components/host/VisitConsentField'
@@ -55,11 +54,7 @@ function AdminPreview() {
     onOpenChat={async id => ({ booking: { id }, acceptances: [], messages: [{ id: 'm1', sender_id: uid(3), content: 'Olá! Chego às 9h.', created_at: day(1) }], reports: [], moderation: [{ id: 'x', kind: 'telefone', content: '[bloqueado]' }], hasMore: false })}/>
 }
 
-function ReferralPreview() {
-  const [form, setForm] = useState({ nome: 'Carla Indicadora', whatsapp: '(82) 90000-0004', chave_pix: 'carla@exemplo.test' })
-  return <ReferralView link="https://www.pooldaybr.com/i/ab12cd34" form={form} onChange={patch => setForm(f => ({ ...f, ...patch }))} onSave={fake} saving={false} inactive={false} onCopy={fake}
-    history={[{ id: 1, anfitriao_primeiro_nome: 'Davi', status: 'a_pagar', valor_centavos: 2000, created_at: day(4) }, { id: 2, anfitriao_primeiro_nome: 'Ana', status: 'aguardando_aprovacao', valor_centavos: 2000, created_at: day(2) }]}/>
-}
+
 
 function VerificationPreview() {
   const [checked, setChecked] = useState(false)
@@ -73,5 +68,5 @@ export default function DevPreview() {
   const { screen } = useParams()
   if (screen === 'verificacao') return <VerificationPreview/>
   if (screen === 'painel') return <Painel fonte={fontePainel}/>
-  return screen === 'indique' ? <ReferralPreview/> : <AdminPreview/>
+  return <AdminPreview/>
 }

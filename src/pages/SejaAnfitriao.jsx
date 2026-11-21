@@ -172,6 +172,7 @@ export default function SejaAnfitriao() {
         </svg>
       </section>
 
+      <div className="bg-orange-50 border-b border-orange-100 px-4 py-3 text-center text-sm text-orange-900">Conhece um dono de piscina ou chácara? Ganhe R$ 30 quando o espaço dele for aprovado. <Link to="/indique" className="font-semibold underline">Saiba como</Link></div>
       <ComoFunciona onCta={() => scrollTo(formRef)} />
 
       {/* ══ CONFIANÇA ══ */}

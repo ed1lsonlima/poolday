@@ -8,6 +8,7 @@
           }
     ],
     "rewrites": [
+          { "source": "/indique", "destination": "/indique.html" },
           { "source": "/((?!api/).*)", "destination": "/index.html" }
     ]
 }

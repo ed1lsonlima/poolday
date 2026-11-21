@@ -474,12 +474,13 @@ export default function Home() {
         </div>
       </section>
 
+      <div className="bg-orange-50 border-y border-orange-100 px-4 py-3 text-center text-sm text-orange-900">Conhece um dono de piscina ou chácara? Ganhe R$ 30 quando o espaço dele for aprovado. <Link to="/indique" className="font-semibold underline">Saiba como</Link></div>
       <section className="relative overflow-hidden bg-gradient-to-br from-primary-600 to-blue-400 py-14 px-4">
         <div className="absolute -top-24 -right-24 w-72 h-72 bg-white/10 rounded-full blur-3xl pointer-events-none" />
         <div className="relative max-w-xl mx-auto text-white">
           <Reveal>
             <h2 className="text-3xl font-extrabold leading-tight mb-3">
-              Tem uma piscina?<br/>Ganhe dinheiro com ela!
+              Tem uma piscina?<br/>Anuncie onde tem gente procurando.
             </h2>
             <p className="text-white/80 mb-8 text-base leading-relaxed">
               Cadastre seu espaço gratuitamente e comece a receber reservas. Você define o preço, os dias disponíveis e o horário de uso da diária.
@@ -494,7 +495,7 @@ export default function Home() {
 
           <div className="mt-8 grid grid-cols-1 gap-3">
             {[
-              { icon: <DollarSign size={22}/>, title: 'Ganhe dinheiro', desc: 'Transforme sua piscina em uma fonte de renda extra.' },
+              { icon: <DollarSign size={22}/>, title: 'Seu anúncio, suas regras', desc: 'Você controla o preço, as datas e as regras do seu espaço.' },
               { icon: <Calendar size={22}/>, title: 'Você define o horário', desc: 'Informe o início e o fim da diária para o cliente.' },
               { icon: <Shield size={22}/>, title: 'Pagamento seguro', desc: 'Receba diretamente na sua conta com segurança.' },
             ].map((item, i) => (
