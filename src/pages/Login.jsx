@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Waves, Mail, Lock, Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -10,13 +10,17 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
   const { signIn, signInWithGoogle } = useAuth()
   const navigate = useNavigate()
+  const [params] = useSearchParams()
+  // Volta para a página de onde a pessoa veio (só caminhos do próprio site).
+  const pedido = params.get('next') || ''
+  const next = pedido.startsWith('/') && !pedido.startsWith('//') ? pedido : '/'
 
   async function handleSubmit(e) {
     e.preventDefault()
     setLoading(true)
     try {
       await signIn(form)
-      navigate('/')
+      navigate(next)
     } catch (err) {
       toast.error('Email ou senha incorretos')
     } finally { setLoading(false) }

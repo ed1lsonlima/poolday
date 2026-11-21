@@ -64,7 +64,7 @@ export default function Register() {
         toast.success('Conta criada! Confirme pelo link enviado ao seu email.')
       }
       if (role === 'host') clearHostSignupPrefill(window.sessionStorage)
-      navigate(role === 'host' ? '/anfitriao/boas-vindas' : '/')
+      navigate(role === 'host' ? '/anfitriao/boas-vindas' : ((params.get('next') || '').startsWith('/') && !(params.get('next') || '').startsWith('//') ? params.get('next') : '/'))
     } catch (err) {
       toast.error(err.message || 'Erro ao criar conta')
     } finally { setLoading(false) }
