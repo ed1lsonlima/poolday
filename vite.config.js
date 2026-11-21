@@ -22,7 +22,5 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react(), siteUrlPlugin(siteUrl)],
     define: { 'import.meta.env.VITE_SITE_URL': JSON.stringify(siteUrl) },
-    // O painel do dono é uma página à parte (painel.html), servida em painel.pooldaybr.com.
-    build: { rollupOptions: { input: { main: 'index.html', painel: 'painel.html' } } },
   }
 })

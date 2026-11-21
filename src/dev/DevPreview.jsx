@@ -72,6 +72,6 @@ const fontePainel = async () => ({ data: painelExemplo, error: null })
 export default function DevPreview() {
   const { screen } = useParams()
   if (screen === 'verificacao') return <VerificationPreview/>
-  if (screen === 'painel') return <Painel sair={() => {}} fonte={fontePainel}/>
+  if (screen === 'painel') return <Painel fonte={fontePainel}/>
   return screen === 'indique' ? <ReferralPreview/> : <AdminPreview/>
 }

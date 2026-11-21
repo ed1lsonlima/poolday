@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { isNoticeForOpenChat } from '../../lib/chatNotifications'
-import { Menu, X, Waves, User, CalendarDays, Heart, Settings, LogOut, LayoutDashboard, Bell, BellOff, House, MessageCircle, Gift } from 'lucide-react'
+import { Menu, X, Waves, User, CalendarDays, Heart, Settings, LogOut, LayoutDashboard, Bell, BellOff, House, MessageCircle, Gift, BarChart3 } from 'lucide-react'
 
 async function playNoticeSound() {
   const AudioContext = window.AudioContext || window.webkitAudioContext
@@ -234,6 +234,7 @@ export default function Header() {
                 </div>
                 <div className="p-2">
                   {isAdmin && <MenuItem icon={<LayoutDashboard size={18}/>} label="Administração PoolDay" to="/admin" onClick={() => setMenuOpen(false)} />}
+                  {isAdmin && <MenuItem icon={<BarChart3 size={18}/>} label="Painel do dono" to="/painel" onClick={() => setMenuOpen(false)} />}
                   <MenuItem icon={<User size={18}/>} label="Ver perfil" to="/perfil" onClick={() => setMenuOpen(false)} />
                   <MenuItem icon={<CalendarDays size={18}/>} label="Minhas Reservas" to="/reservas" onClick={() => setMenuOpen(false)} />
                   <MenuItem icon={<Heart size={18}/>} label="Favoritos" to="/favoritos" onClick={() => setMenuOpen(false)} />

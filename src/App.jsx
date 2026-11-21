@@ -34,12 +34,14 @@ const NotFound = lazy(() => import('./pages/NotFound'))
 const SejaAnfitriao = lazy(() => import('./pages/SejaAnfitriao'))
 const ReferralLink = lazy(() => import('./pages/ReferralLink'))
 const IndiqueEGanhe = lazy(() => import('./pages/IndiqueEGanhe'))
+const PainelDono = lazy(() => import('./painel/PainelApp'))
 // Pré-visualização com dados fictícios, só no ambiente local (nunca vai para produção).
 const DevPreview = import.meta.env.DEV ? lazy(() => import('./dev/DevPreview')) : null
 
 const META = {
   '/': ['PoolDay — Alugue Piscinas e Espaços de Lazer por Diária', 'Reserve piscinas, chácaras e espaços de lazer por diária com pagamento seguro.'],
   '/admin': ['Administração — PoolDay', 'Painel privado de administração da plataforma PoolDay.'],
+  '/painel': ['Painel do dono — PoolDay', 'Painel privado com os números do PoolDay.'],
   '/explorar': ['Explorar espaços — PoolDay', 'Encontre piscinas e espaços de lazer disponíveis para reservar por diária.'],
   '/cadastro': ['Criar conta — PoolDay', 'Crie sua conta no PoolDay para reservar ou anunciar um espaço.'],
   '/entrar': ['Entrar — PoolDay', 'Entre na sua conta PoolDay.'],
@@ -123,6 +125,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Layout><Home /></Layout>} />
           <Route path="/admin" element={<ProtectedRoute><Layout noFooter><AdminDashboard /></Layout></ProtectedRoute>} />
+          <Route path="/painel" element={<ProtectedRoute><Layout noFooter><PainelDono /></Layout></ProtectedRoute>} />
           <Route path="/explorar" element={<Layout><Explore /></Layout>} />
           <Route path="/espaco/:id" element={<Layout noFooter><PropertyDetail /></Layout>} />
           <Route path="/anfitriao/:id/perfil" element={<Layout><HostProfile /></Layout>} />

@@ -1,39 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
-import { BarChart3, Bell, CalendarDays, ExternalLink, Gift, LogOut, MapPin, MonitorSmartphone, RefreshCw, Users, Wallet, Waves } from 'lucide-react'
-import toast from 'react-hot-toast'
+import { BarChart3, Bell, CalendarDays, ExternalLink, Gift, MapPin, MonitorSmartphone, RefreshCw, Users, Wallet, Waves } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import AdminMFA from '../components/common/AdminMFA'
 import { PERIODOS, diaCurto, dinheiro, nomeOrigem, nomePagina, nomeTipo, numero, quando, taxaCadastro } from './painelData'
 
-const SITE = 'https://www.pooldaybr.com'
-
-function Entrar() {
-  const [form, setForm] = useState({ email: '', password: '' })
-  const [busy, setBusy] = useState(false)
-  async function entrar(event) {
-    event.preventDefault(); setBusy(true)
-    const { error } = await supabase.auth.signInWithPassword(form)
-    setBusy(false)
-    if (error) toast.error('E-mail ou senha incorretos.')
-  }
-  async function google() {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: window.location.origin } })
-    if (error) toast.error('Não foi possível entrar com o Google.')
-  }
-  return <main className="min-h-screen bg-[#f6f9fc] flex items-center justify-center p-4">
-    <section className="w-full max-w-sm bg-white rounded-3xl border border-gray-100 p-6 sm:p-8 shadow-sm">
-      <p className="text-xs font-bold uppercase tracking-widest text-primary-600">Painel do dono</p>
-      <h1 className="font-bold text-2xl mt-1">PoolDay<span className="text-primary-500">.</span></h1>
-      <p className="text-sm text-gray-500 mt-2 mb-6">Acesso só da administração. Depois de entrar, o painel pede o código do aplicativo autenticador.</p>
-      <button type="button" onClick={google} className="w-full btn-secondary py-3 mb-4">Entrar com Google</button>
-      <form onSubmit={entrar} className="space-y-3">
-        <input className="input-field" type="email" autoComplete="email" placeholder="E-mail" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} required/>
-        <input className="input-field" type="password" autoComplete="current-password" placeholder="Senha" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} required/>
-        <button className="btn-primary w-full py-3" disabled={busy}>{busy ? 'Entrando...' : 'Entrar'}</button>
-      </form>
-    </section>
-  </main>
-}
 
 function Card({ icon: Icon, titulo, children, nota }) {
   return <section className="bg-white rounded-2xl border border-gray-100 p-4 sm:p-5">
@@ -77,7 +48,7 @@ function Lista({ itens, vazio, linha }) {
   return <ul className="divide-y divide-gray-50">{itens.map(linha)}</ul>
 }
 
-export function Painel({ sair, fonte = dias => supabase.rpc('painel_dono', { p_dias: dias }) }) {
+export function Painel({ fonte = dias => supabase.rpc('painel_dono', { p_dias: dias }) }) {
   const [dias, setDias] = useState(7)
   const [dados, setDados] = useState(null)
   const [carregando, setCarregando] = useState(true)
@@ -99,7 +70,6 @@ export function Painel({ sair, fonte = dias => supabase.rpc('painel_dono', { p_d
       <div><p className="text-xs font-bold uppercase tracking-widest text-primary-600">Painel do dono</p><h1 className="font-bold text-2xl sm:text-3xl">PoolDay<span className="text-primary-500">.</span></h1>{dados && <p className="text-xs text-gray-400 mt-1">Atualizado {quando(dados.gerado_em)}. Suas visitas não entram na conta.</p>}</div>
       <div className="flex gap-2 shrink-0">
         <button type="button" onClick={carregar} disabled={carregando} aria-label="Atualizar" className="h-11 w-11 inline-flex items-center justify-center bg-white border border-gray-200 rounded-xl"><RefreshCw size={17} className={carregando ? 'animate-spin' : ''}/></button>
-        <button type="button" onClick={sair} aria-label="Sair" className="h-11 w-11 inline-flex items-center justify-center bg-white border border-gray-200 rounded-xl"><LogOut size={17}/></button>
       </div>
     </header>
 
@@ -147,7 +117,7 @@ export function Painel({ sair, fonte = dias => supabase.rpc('painel_dono', { p_d
         </Card>
         <Card icon={Bell} titulo="Alertas abertos" nota={`${numero(dados.alertas.urgentes)} urgente(s)`}>
           <Lista itens={dados.alertas.lista} vazio="Nenhum alerta aberto." linha={a => <li key={`${a.titulo}${a.quando}`} className="py-2 flex justify-between gap-3 text-sm"><span className={a.gravidade === 'urgent' ? 'text-red-700 font-semibold' : 'text-gray-700'}>{a.titulo}</span><span className="text-xs text-gray-400 shrink-0">{quando(a.quando)}</span></li>}/>
-          <a href={`${SITE}/admin`} className="inline-block text-sm font-semibold text-primary-600 mt-3">Resolver no Adm</a>
+          <Link to="/admin" className="inline-block text-sm font-semibold text-primary-600 mt-3">Resolver no Adm</Link>
         </Card>
       </div>
     </div>}
@@ -159,23 +129,11 @@ function Linha({ rotulo, valor }) {
 }
 
 export default function PainelApp() {
-  const [session, setSession] = useState(undefined)
-  const [mfaOk, setMfaOk] = useState(false)
-
+  const [nivel, setNivel] = useState(null)
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setSession(data.session))
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, next) => setSession(next))
-    return () => listener.subscription.unsubscribe()
+    supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(({ data }) => setNivel(data?.currentLevel || 'aal1'))
   }, [])
-  useEffect(() => {
-    if (!session) { setMfaOk(false); return }
-    supabase.auth.mfa.getAuthenticatorAssuranceLevel().then(({ data }) => setMfaOk(data?.currentLevel === 'aal2'))
-  }, [session])
-
-  async function sair() { await supabase.auth.signOut(); setMfaOk(false) }
-
-  if (session === undefined) return <main className="min-h-screen flex items-center justify-center text-sm text-gray-500">Carregando...</main>
-  if (!session) return <Entrar/>
-  if (!mfaOk) return <main className="min-h-screen bg-[#f6f9fc] p-4"><AdminMFA onVerified={() => setMfaOk(true)}/><p className="text-center"><button type="button" onClick={sair} className="text-sm text-gray-500 underline">Sair</button></p></main>
-  return <Painel sair={sair}/>
+  if (!nivel) return <main className="min-h-[60vh] flex items-center justify-center text-sm text-gray-500">Carregando...</main>
+  if (nivel !== 'aal2') return <main className="min-h-screen bg-[#f6f9fc] p-4"><AdminMFA onVerified={() => setNivel('aal2')}/></main>
+  return <Painel/>
 }

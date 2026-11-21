@@ -8,7 +8,6 @@
           }
     ],
     "rewrites": [
-          { "source": "/((?!api/|assets/|favicon).*)", "has": [{ "type": "host", "value": "painel.pooldaybr.com" }], "destination": "/painel.html" },
           { "source": "/((?!api/).*)", "destination": "/index.html" }
     ]
 }
