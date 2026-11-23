@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { CheckCircle2, ChevronDown, Gift, Info, ShieldCheck, XCircle } from 'lucide-react'
@@ -33,9 +33,15 @@ export default function Indique() {
   const [form, setForm] = useState({ nome: '', whatsapp: '', email: '', cpf: '', chave_pix: '' })
   const [aceite, setAceite] = useState(false)
   const [salvando, setSalvando] = useState(false)
+  const [recemGerado, setRecemGerado] = useState(false)
+  const linkRef = useRef(null)
   const valor = programa.valor_centavos
 
   useEffect(() => { trackEvent('indique-visita') }, [])
+  // Assim que o link nasce, a tela vai até ele: ninguém precisa procurar.
+  useEffect(() => {
+    if (recemGerado) linkRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [recemGerado])
   useEffect(() => {
     if (!user) return
     setForm(atual => ({ ...atual, nome: atual.nome || profile?.name || '', whatsapp: atual.whatsapp || maskWhats(profile?.phone || ''), email: user.email || '' }))
@@ -58,7 +64,7 @@ export default function Indique() {
     })
     setSalvando(false)
     if (error) return toast.error(ERROS[Object.keys(ERROS).find(code => error.message?.includes(code))] || 'Não foi possível salvar. Tente novamente.')
-    if (!indicador) trackEvent('indique-link-gerado')
+    if (!indicador) { trackEvent('indique-link-gerado'); setRecemGerado(true) }
     setIndicador(data)
     toast.success(indicador ? 'Dados atualizados.' : 'Seu link está pronto!')
   }
@@ -71,6 +77,16 @@ export default function Indique() {
       <h1 className="font-extrabold text-2xl sm:text-3xl text-gray-900 mt-2 leading-tight">Conhece alguém que aluga piscina ou chácara? Indique e ganhe {reais(valor)} no Pix quando o espaço dele for aprovado no PoolDay.</h1>
       <p className={`mt-3 text-sm font-semibold ${encerrado ? 'text-red-700' : 'text-orange-700'}`}>{encerrado ? 'Vagas encerradas. Não é possível gerar links novos.' : `Válido para os ${programa.vagas} primeiros espaços aprovados. Restam ${programa.vagas_restantes} vagas.`}</p>
     </header>
+
+    {indicador && <section ref={linkRef} className={`scroll-mt-24 bg-white rounded-3xl p-5 border-2 ${recemGerado ? 'border-emerald-400 shadow-lg shadow-emerald-100' : 'border-primary-100'}`}>
+      <h2 className="font-bold text-lg">{recemGerado ? 'Pronto! Este é o seu link' : 'Seu link'}</h2>
+      <div className="mt-3 space-y-3">
+        <p className="text-sm bg-primary-50 text-primary-900 rounded-xl p-3">Lembre: você recebe {reais(valor)} quando o espaço indicado for cadastrado completo e aprovado pelo PoolDay. Só criar a conta não gera pagamento.</p>
+        {!indicador.ativo && <p role="alert" className="text-sm text-red-700 bg-red-50 rounded-xl p-3">Seu link foi bloqueado pela equipe PoolDay e não registra novas indicações.</p>}
+        <ReferralShare link={link} codigo={indicador.codigo}/>
+        <Link to="/indique/painel" className="inline-block text-sm font-semibold text-primary-600">Acompanhar minhas indicações</Link>
+      </div>
+    </section>}
 
     <section className="bg-white border border-gray-100 rounded-3xl p-5">
       <h2 className="font-bold text-lg mb-4">Como funciona</h2>
@@ -95,18 +111,11 @@ export default function Indique() {
     </section>
 
     <section className="bg-white border border-gray-100 rounded-3xl p-5">
-      <h2 className="font-bold text-lg">{indicador ? 'Seu link' : 'Pegue seu link'}</h2>
-      {indicador && <div className="mt-3 space-y-3">
-        <p className="text-sm bg-primary-50 text-primary-900 rounded-xl p-3">Seu link está pronto. Lembre: você recebe {reais(valor)} quando o espaço indicado for cadastrado completo e aprovado pelo PoolDay. Só criar a conta não gera pagamento.</p>
-        {!indicador.ativo && <p role="alert" className="text-sm text-red-700 bg-red-50 rounded-xl p-3">Seu link foi bloqueado pela equipe PoolDay e não registra novas indicações.</p>}
-        <ReferralShare link={link} codigo={indicador.codigo}/>
-        <Link to="/indique/painel" className="inline-block text-sm font-semibold text-primary-600">Acompanhar minhas indicações</Link>
-      </div>}
+      <h2 className="font-bold text-lg">{indicador ? 'Seus dados para receber' : 'Pegue seu link'}</h2>
       {!user ? <div className="mt-3">
         <p className="text-sm text-gray-600">Para pegar o link e acompanhar suas indicações, entre ou crie sua conta grátis.</p>
         <div className="grid grid-cols-2 gap-2 mt-3"><Link to="/entrar?next=/indique" className="btn-secondary py-3 text-center">Entrar</Link><Link to="/cadastro?next=/indique" className="btn-primary py-3 text-center">Criar conta</Link></div>
       </div> : (encerrado && !indicador) ? <p className="text-sm text-gray-600 mt-3">As vagas acabaram, então não é possível gerar links novos.</p> : <form className="space-y-3 mt-4" onSubmit={gerar}>
-        {indicador && <p className="text-sm font-semibold text-gray-700">Seus dados para receber</p>}
         <label className="block text-sm font-semibold text-gray-700">Nome<input className="input-field mt-1 font-normal" autoComplete="name" value={form.nome} onChange={e => setForm(f => ({ ...f, nome: e.target.value }))} required minLength={2} maxLength={80}/></label>
         <label className="block text-sm font-semibold text-gray-700">WhatsApp<input className="input-field mt-1 font-normal" inputMode="numeric" autoComplete="tel" placeholder="(82) 99999-9999" value={form.whatsapp} onChange={e => setForm(f => ({ ...f, whatsapp: maskWhats(e.target.value) }))} required/></label>
         <label className="block text-sm font-semibold text-gray-700">E-mail<input className="input-field mt-1 font-normal bg-gray-50" value={form.email} readOnly aria-readonly="true"/><span className="text-xs font-normal text-gray-500">É o e-mail da sua conta.</span></label>
